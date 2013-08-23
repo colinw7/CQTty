@@ -28,9 +28,6 @@ CQFont.cpp \
 CQUtil.cpp \
 CEvent.cpp \
 CLogFile.cpp \
-COSErr.cpp \
-COSPty.cpp \
-COSTerm.cpp \
 CRGBName.cpp \
 
 HEADERS += \
@@ -57,9 +54,6 @@ CQFont.h \
 CQUtil.h \
 CEvent.h \
 CLogFile.h \
-COSErr.h \
-COSPty.h \
-COSTerm.h \
 CRGBName.h \
 
 DESTDIR     = ../bin
