@@ -28,7 +28,6 @@ CQFont.cpp \
 CQUtil.cpp \
 CEvent.cpp \
 CLogFile.cpp \
-CRGBName.cpp \
 
 HEADERS += \
 CQTty.h \
@@ -54,7 +53,6 @@ CQFont.h \
 CQUtil.h \
 CEvent.h \
 CLogFile.h \
-CRGBName.h \
 
 DESTDIR     = ../bin
 OBJECTS_DIR = ../obj
@@ -70,6 +68,7 @@ INCLUDEPATH += \
 ../../CRegExp/include \
 ../../CStrUtil/include \
 ../../CUtil/include \
+../../CRGBName/include \
 ../../COS/include \
 
 unix:LIBS += \
@@ -80,11 +79,13 @@ unix:LIBS += \
 -L../../CFile/lib \
 -L../../CRegExp/lib \
 -L../../CStrUtil/lib \
+-L../../CRGBName/lib \
 -L../../COS/lib \
 -lCImageLib \
 -lCFont \
 -lCConfig \
 -lCFile \
+-lCRGBName \
 -lCRegExp \
 -lCStrUtil \
 -lCOS \
