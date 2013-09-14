@@ -21,12 +21,6 @@ CEscapeParse.cpp \
 CQColorChooser.cpp \
 CQAlphaButton.cpp \
 CQIntegerEdit.cpp \
-CQWindow.cpp \
-CWindow.cpp \
-CQImage.cpp \
-CQFont.cpp \
-CQUtil.cpp \
-CEvent.cpp \
 CLogFile.cpp \
 
 HEADERS += \
@@ -46,12 +40,6 @@ CTextPos.h \
 CQColorChooser.h \
 CQAlphaButton.h \
 CQIntegerEdit.h \
-CQWindow.h \
-CWindow.h \
-CQImage.h \
-CQFont.h \
-CQUtil.h \
-CEvent.h \
 CLogFile.h \
 
 DESTDIR     = ../bin
@@ -60,6 +48,7 @@ LIB_DIR     = ../lib
 
 INCLUDEPATH += \
 ../include \
+../../CQUtil/include \
 ../../CImageLib/include \
 ../../CFont/include \
 ../../CConfig/include \
@@ -73,6 +62,7 @@ INCLUDEPATH += \
 
 unix:LIBS += \
 -L$$LIB_DIR \
+-L../../CQUtil/lib \
 -L../../CImageLib/lib \
 -L../../CFont/lib \
 -L../../CConfig/lib \
@@ -81,6 +71,8 @@ unix:LIBS += \
 -L../../CStrUtil/lib \
 -L../../CRGBName/lib \
 -L../../COS/lib \
+-L../../CUtil/lib \
+-lCQUtil \
 -lCImageLib \
 -lCFont \
 -lCConfig \
@@ -88,6 +80,7 @@ unix:LIBS += \
 -lCRGBName \
 -lCRegExp \
 -lCStrUtil \
+-lCUtil \
 -lCOS \
 -ljpeg -lpng \
 -ltre -lcurses
