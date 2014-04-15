@@ -1,7 +1,9 @@
 TEMPLATE = app
 
-TARGET = 
+TARGET = CQTty
+
 DEPENDPATH += .
+
 INCLUDEPATH += . ../include
 
 CONFIG += debug
