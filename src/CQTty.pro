@@ -8,6 +8,8 @@ INCLUDEPATH += . ../include
 
 CONFIG += debug
 
+QT += widgets
+
 # Input
 SOURCES += \
 main.cpp \
@@ -20,8 +22,6 @@ CPageTextEscapeNotifier.cpp \
 CEscape.cpp \
 CEscapeHandler.cpp \
 CEscapeParse.cpp \
-CQColorChooser.cpp \
-CQAlphaButton.cpp \
 CQIntegerEdit.cpp \
 CLogFile.cpp \
 
@@ -39,8 +39,6 @@ CEscapeParse.h \
 CEscapeType.h \
 CCellStyle.h \
 CTextPos.h \
-CQColorChooser.h \
-CQAlphaButton.h \
 CQIntegerEdit.h \
 CLogFile.h \
 
