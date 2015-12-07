@@ -24,8 +24,8 @@ class CPageText {
     int   x, y;
     CRGBA color;
 
-    Pixel(int x1=0, int y1=0, const std::string &color1="white") :
-     x(x1), y(y1), color(CRGBName::toRGBA(color1)) {
+    Pixel(int x1=0, int y1=0, const std::string &name="white") :
+     x(x1), y(y1), color(CRGBName::toRGBA(name)) {
     }
   };
 
@@ -273,7 +273,8 @@ class CPageTextLine {
 
  public:
   CPageTextLine(CPageText *area);
- ~CPageTextLine();
+
+  virtual ~CPageTextLine();
 
   CPageText *getArea() const { return area_; }
 
@@ -333,6 +334,8 @@ class CTextCell {
 
  public:
   CTextCell(CPageTextLine *line, Type type=NO_TYPE);
+
+  virtual ~CTextCell() { }
 
   CPageTextLine *getLine() const { return line_; }
 
