@@ -24,7 +24,7 @@ namespace CEscape {
     WINDOW_OP_REPORT_SCREEN_SIZE = WINDOW_OP_MAXIMIZE   + 10,
     WINDOW_OP_REPORT_ICON_STR    = 20,
     WINDOW_OP_REPORT_TITLE_STR   = 21,
-    WINDOW_OP_LINE_SIZE_24       = 24,
+    WINDOW_OP_LINE_SIZE_24       = 24
     // ...
   };
 
@@ -204,6 +204,6 @@ namespace CEscape {
   bool parseEscape(const std::string &str, std::vector<std::string> &args);
 
   bool parseMouse(const std::string &str, int *button, int *x, int *y, bool *release);
-};
+}
 
 #endif
