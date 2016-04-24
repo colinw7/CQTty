@@ -10,6 +10,8 @@ QMAKE_CXXFLAGS += -std=c++11
 
 CONFIG += debug
 
+MOC_DIR = .moc
+
 QT += widgets
 
 # Input
@@ -24,7 +26,6 @@ CPageTextEscapeNotifier.cpp \
 CEscape.cpp \
 CEscapeHandler.cpp \
 CEscapeParse.cpp \
-CQIntegerEdit.cpp \
 CLogFile.cpp \
 
 HEADERS += \
@@ -41,7 +42,6 @@ CEscapeParse.h \
 CEscapeType.h \
 CCellStyle.h \
 CTextPos.h \
-CQIntegerEdit.h \
 CLogFile.h \
 
 DESTDIR     = ../bin

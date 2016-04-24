@@ -25,7 +25,7 @@ namespace CFileUtil {
     return file->getType();
   }
 
-  inline CFileType getImageType(CFile *file) {
+  inline CFileType getImageType(CFile *) {
     return CFILE_TYPE_NONE;
   }
 
