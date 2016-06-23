@@ -54,6 +54,7 @@ INCLUDEPATH += \
 ../../CImageLib/include \
 ../../CFont/include \
 ../../CConfig/include \
+../../CFileUtil/include \
 ../../CFile/include \
 ../../CMath/include \
 ../../CRegExp/include \
@@ -68,6 +69,7 @@ unix:LIBS += \
 -L../../CImageLib/lib \
 -L../../CFont/lib \
 -L../../CConfig/lib \
+-L../../CFileUtil/lib \
 -L../../CFile/lib \
 -L../../CRegExp/lib \
 -L../../CStrUtil/lib \
@@ -78,6 +80,7 @@ unix:LIBS += \
 -lCImageLib \
 -lCFont \
 -lCConfig \
+-lCFileUtil \
 -lCFile \
 -lCRGBName \
 -lCRegExp \
