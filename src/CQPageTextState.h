@@ -13,63 +13,11 @@ class CQIntegerEdit;
 class CQPageTextState : public QDialog {
   Q_OBJECT
 
- private:
-  CQPageText *text_;
-  QCheckBox  *inverseVideo_;
-  QCheckBox  *sendMousePress_;
-  QCheckBox  *sendMouseRelease_;
-  QCheckBox  *scrollBottomKey_;
-  QCheckBox  *scrollBottomTty_;
-  QCheckBox  *applicationCursorKeys_;
-  QCheckBox  *insertMode_;
-  QCheckBox  *lineWrap_;
-  QCheckBox  *ansiVt52Mode_;
-  QCheckBox  *keyPadMode_;
-  QCheckBox  *lfNlMode_;
-  QCheckBox  *ffNpMode_;
-  QCheckBox  *smoothScroll_;
-  QCheckBox  *originMode_;
-  QCheckBox  *autoRepeat_;
-  QCheckBox  *cursorVisible_;
-  QCheckBox  *cursorBlink_;
-  QCheckBox  *reverseWrap_;
-  QCheckBox  *allow80132_;
-  QCheckBox  *altPage_;
-
-  QCheckBox      *scrollSet_;
-  CQIntegerEdit  *scrollTop_;
-  CQIntegerEdit  *scrollBottom_;
-
-  CQColorChooser *bgColor_;
-  CQColorChooser *fgColor_;
-
-  CQColorChooser *cursorColor_;
-
-  CQColorChooser *color1_;
-  CQColorChooser *color2_;
-  CQColorChooser *color3_;
-  CQColorChooser *color4_;
-  CQColorChooser *color5_;
-  CQColorChooser *color6_;
-  CQColorChooser *color7_;
-  CQColorChooser *color8_;
-
-  QLineEdit     *fontName_;
-  CQIntegerEdit *fontSize_;
-
-  QCheckBox     *iconized_;
-  QCheckBox     *maximized_;
-  QLineEdit     *windowTitle_;
-  QLineEdit     *iconName_;
-  QLineEdit     *windowPos_;
-  QLineEdit     *pixelSize_;
-  QLineEdit     *charSize_;
-
  public:
   CQPageTextState(CQPageText *text);
 
  private:
-  CQColorChooser *addColor(const std::string &name, int pos, QGridLayout *layout);
+  CQColorChooser *addColor(const std::string &name, int pos, int ind, QGridLayout *layout);
 
   QLineEdit *addEdit(const std::string &name, int pos, QGridLayout *layout);
 
@@ -84,6 +32,71 @@ class CQPageTextState : public QDialog {
   void colorChanged(const QColor &);
 
   void updateFont();
+
+ private:
+  CQPageText *text_                  { nullptr };
+  QCheckBox  *inverseVideo_          { nullptr };
+  QCheckBox  *sendMousePress_        { nullptr };
+  QCheckBox  *sendMouseRelease_      { nullptr };
+  QCheckBox  *sendMouseMotion_       { nullptr };
+  QCheckBox  *sendFocusInOut_        { nullptr };
+  QCheckBox  *scrollBottomKey_       { nullptr };
+  QCheckBox  *scrollBottomTty_       { nullptr };
+  QCheckBox  *applicationCursorKeys_ { nullptr };
+  QCheckBox  *insertMode_            { nullptr };
+  QCheckBox  *lineWrap_              { nullptr };
+  QCheckBox  *ansiVt52Mode_          { nullptr };
+  QCheckBox  *tek4014Mode_           { nullptr };
+  QCheckBox  *keyPadMode_            { nullptr };
+  QCheckBox  *lfNlMode_              { nullptr };
+  QCheckBox  *ffNpMode_              { nullptr };
+  QCheckBox  *smoothScroll_          { nullptr };
+  QCheckBox  *originMode_            { nullptr };
+  QCheckBox  *autoRepeat_            { nullptr };
+  QCheckBox  *cursorVisible_         { nullptr };
+  QCheckBox  *cursorBlink_           { nullptr };
+  QCheckBox  *reverseWrap_           { nullptr };
+  QCheckBox  *allow80132_            { nullptr };
+  QCheckBox  *control8Bit_           { nullptr };
+  QCheckBox  *altPage_               { nullptr };
+
+  QCheckBox      *scrollSet_    { nullptr };
+  CQIntegerEdit  *scrollTop_    { nullptr };
+  CQIntegerEdit  *scrollBottom_ { nullptr };
+
+  CQColorChooser *bgColor_ { nullptr };
+  CQColorChooser *fgColor_ { nullptr };
+
+  CQColorChooser *cursorColor_ { nullptr };
+
+  CQColorChooser *color1_ { nullptr };
+  CQColorChooser *color2_ { nullptr };
+  CQColorChooser *color3_ { nullptr };
+  CQColorChooser *color4_ { nullptr };
+  CQColorChooser *color5_ { nullptr };
+  CQColorChooser *color6_ { nullptr };
+  CQColorChooser *color7_ { nullptr };
+  CQColorChooser *color8_ { nullptr };
+
+  CQColorChooser *altColor1_ { nullptr };
+  CQColorChooser *altColor2_ { nullptr };
+  CQColorChooser *altColor3_ { nullptr };
+  CQColorChooser *altColor4_ { nullptr };
+  CQColorChooser *altColor5_ { nullptr };
+  CQColorChooser *altColor6_ { nullptr };
+  CQColorChooser *altColor7_ { nullptr };
+  CQColorChooser *altColor8_ { nullptr };
+
+  QLineEdit     *fontName_ { nullptr };
+  CQIntegerEdit *fontSize_ { nullptr };
+
+  QCheckBox     *iconized_    { nullptr };
+  QCheckBox     *maximized_   { nullptr };
+  QLineEdit     *windowTitle_ { nullptr };
+  QLineEdit     *iconName_    { nullptr };
+  QLineEdit     *windowPos_   { nullptr };
+  QLineEdit     *pixelSize_   { nullptr };
+  QLineEdit     *charSize_    { nullptr };
 };
 
 #endif

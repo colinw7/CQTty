@@ -24,6 +24,7 @@ CQPageTextState.cpp \
 CPageText.cpp \
 CPageTextEscapeNotifier.cpp \
 CEscape.cpp \
+CEscapeColors.cpp \
 CEscapeHandler.cpp \
 CEscapeParse.cpp \
 CLogFile.cpp \
@@ -71,6 +72,7 @@ unix:LIBS += \
 -L../../CConfig/lib \
 -L../../CFileUtil/lib \
 -L../../CFile/lib \
+-L../../CMath/lib \
 -L../../CRegExp/lib \
 -L../../CStrUtil/lib \
 -L../../CRGBName/lib \
@@ -82,6 +84,7 @@ unix:LIBS += \
 -lCConfig \
 -lCFileUtil \
 -lCFile \
+-lCMath \
 -lCRGBName \
 -lCRegExp \
 -lCStrUtil \

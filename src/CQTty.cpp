@@ -1,4 +1,5 @@
 #include <CQTty.h>
+#include <CQTtyPageTextWidget.h>
 
 #include <CTty.h>
 #include <CQPageText.h>
@@ -7,52 +8,22 @@
 #include <CQImagePreview.h>
 #endif
 
-#ifdef DIR_VIEW
-#include <CQDirView.h>
+#ifdef DIR_LIST
 #include <CQDirList.h>
+#include <CQDirView.h>
 #endif
 
-#ifdef EDIT_VIEW
+#ifdef FILE_EDIT
 #include <CQEdit.h>
 #endif
 
 #include <CImageLib.h>
 
-#include <QToolBar>
-#include <QStatusBar>
 #include <QStackedWidget>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QApplication>
 #include <QTimer>
-
-class CQTtyPageTextWidget : public CQPageTextWidget {
- public:
-  CQTtyPageTextWidget(CQTty *qtty) :
-   CQPageTextWidget(NULL), tty_(qtty) {
-  }
-
-  void showToolBar(bool show) {
-    tty_->showToolBar(show);
-  }
-
-  void showStatusBar(bool show) {
-    tty_->showStatusBar(show);
-  }
-
-  void showFileBrowser() {
-    tty_->showFileBrowser();
-  }
-
-  void showImage() {
-    tty_->showImage();
-  }
-
-  CTty *getTty() const { return tty_->getTty(); }
-
- private:
-  CQTty *tty_;
-};
 
 CQTty::
 CQTty(QWidget *parent) :
@@ -63,13 +34,9 @@ CQTty(QWidget *parent) :
 
   //------
 
-  toolbar_ = new QToolBar;
-
-  toolbar_->setFixedHeight(20);
+  stack_ = new QStackedWidget;
 
   //------
-
-  stack_ = new QStackedWidget;
 
   text_ = new CQTtyPageTextWidget(this);
 
@@ -82,13 +49,24 @@ CQTty(QWidget *parent) :
   connect(text_, SIGNAL(dirChangeSignal(const QString &)),
           this, SLOT(updateCurrentDir(const QString &)));
 
+  stack_->addWidget(text_);
+
+  (void) text_->createToolBar();
+
+  CQPageTextStatus *statusBar = text_->createStatusBar();
+
+  statusBar->addMsgLabel();
+  statusBar->addStretch();
+
+  connect(text_, SIGNAL(pageSizeSignal(int, int)), this, SLOT(fitAreaSlot()));
+
+  //------
+
   tty_ = new CTty();
 
   tty_->init();
 
   tty_->setReadWait(1);
-
-  stack_->addWidget(text_);
 
   //------
 
@@ -102,7 +80,7 @@ CQTty(QWidget *parent) :
 
   //------
 
-#ifdef DIR_VIEW
+#ifdef DIR_LIST
   dirList_ = new CQDirList;
 
   connect(dirList_, SIGNAL(cancelSignal()),
@@ -120,7 +98,7 @@ CQTty(QWidget *parent) :
 
   //------
 
-#ifdef EDIT_VIEW
+#ifdef FILE_EDIT
   edit_ = new CQEdit;
 
   connect(edit_, SIGNAL(quitCommand()),
@@ -131,20 +109,7 @@ CQTty(QWidget *parent) :
 
   //------
 
-  status_ = new QStatusBar;
-
-  status_->setFixedHeight(20);
-
-  //------
-
-  layout->addWidget(toolbar_);
   layout->addWidget(stack_);
-  layout->addWidget(status_);
-
-  //------
-
-  showToolBar  (text_->getArea()->getShowToolBar  ());
-  showStatusBar(text_->getArea()->getShowStatusBar());
 
   //------
 
@@ -175,7 +140,7 @@ loadConfig()
   int fontSize;
 
   if (! config_.getValue("fontSize", "", &fontSize))
-    fontSize = 10;
+    fontSize = 12;
 
   text_->getArea()->setFontSet(fontFamily, fontSize);
 }
@@ -191,24 +156,26 @@ void
 CQTty::
 displayImage(const QString &fileName)
 {
-#ifdef IMAGE_PREVIEW
   CImagePtr image = CImageMgrInst->lookupImage(fileName.toStdString());
 
   if (image.isValid()) {
+#ifdef IMAGE_PREVIEW
     imagePreview_->setImage(image);
 
     showImage();
-  }
-#else
-  std::cerr << "Image: " << fileName.toStdString() << std::endl;
 #endif
+  }
 }
 
 void
 CQTty::
 displayFile(const QString &fileName)
 {
-#ifndef EDIT_VIEW
+#ifdef FILE_EDIT
+  edit_->getFile()->loadLines(fileName.toStdString());
+
+  showEdit();
+#else
   showText();
 
   CQPageText *area = text_->getArea();
@@ -216,10 +183,6 @@ displayFile(const QString &fileName)
   std::string cmd = "vi " + fileName.toStdString() + "\n";
 
   area->processString(cmd.c_str());
-#else
-  edit_->getFile()->loadLines(fileName.toStdString());
-
-  showEdit();
 #endif
 }
 
@@ -234,11 +197,11 @@ void
 CQTty::
 updateCurrentDir(const QString &dirName)
 {
-#ifdef DIR_VIEW
+#ifdef DIR_LIST
   CDirViewInst->setDirName(dirName.toStdString());
 #endif
 
-  status_->showMessage(dirName);
+  text_->getStatusBar()->setMsg(dirName);
 }
 
 void
@@ -259,20 +222,6 @@ CQTty::
 flush()
 {
   text_->flush();
-}
-
-void
-CQTty::
-showToolBar(bool show)
-{
-  toolbar_->setVisible(show);
-}
-
-void
-CQTty::
-showStatusBar(bool show)
-{
-  status_->setVisible(show);
 }
 
 void
@@ -318,4 +267,41 @@ showDefault()
   stack_->setCurrentIndex(ind_);
 
   ind_ = 0;
+}
+
+void
+CQTty::
+resizeEvent(QResizeEvent *)
+{
+  if (text_->isVisible()) {
+    int rows, cols;
+
+    text_->sizeToRowCols(width(), height(), &rows, &cols);
+
+    text_->getArea()->setPageSize(rows, cols);
+  }
+}
+
+void
+CQTty::
+fitAreaSlot()
+{
+  QSize s = sizeHint();
+
+  resize(s);
+}
+
+QSize
+CQTty::
+sizeHint() const
+{
+  uint rows, cols;
+
+  text_->getArea()->getPageSize(&rows, &cols);
+
+  int w, h;
+
+  text_->rowColsToSize(rows, cols, &w, &h);
+
+  return QSize(w, h);
 }

@@ -7,6 +7,15 @@ CPageTextEscapeNotifier(CPageText *area) :
 {
 }
 
+void
+CPageTextEscapeNotifier::
+set4014(bool b)
+{
+  area_->set4014(b);
+
+  CEscapeHandler::set4014(b);
+}
+
 const CIPoint2D &
 CPageTextEscapeNotifier::
 getDataPos() const
@@ -89,6 +98,24 @@ resetAll()
   resetScrollArea();
 
   area_->resetAll();
+}
+
+void
+CPageTextEscapeNotifier::
+setLineWidthStyle(uint row, const CCellLineWidthStyle &lineStyle)
+{
+  CPageTextLine *line = area_->getLine(row);
+
+  line->setWidthStyle(lineStyle);
+}
+
+void
+CPageTextEscapeNotifier::
+setLineHeightStyle(uint row, const CCellLineHeightStyle &lineStyle)
+{
+  CPageTextLine *line = area_->getLine(row);
+
+  line->setHeightStyle(lineStyle);
 }
 
 void
@@ -193,7 +220,7 @@ notifyChar(uint, uint, char)
 
 void
 CPageTextEscapeNotifier::
-notifyEnter()
+notifyEnter(char)
 {
 }
 
@@ -460,9 +487,26 @@ addImage(const std::string &name, CImageFile *file)
 
 void
 CPageTextEscapeNotifier::
-addPixel(int x, int y, const std::string &color)
+addImage(const CImagePtr &image)
+{
+  area_->addImage("", image);
+}
+
+void
+CPageTextEscapeNotifier::
+addPixel(int x, int y, const CEscapeColor &color)
 {
   area_->addPixel(x, y, color);
+}
+
+void
+CPageTextEscapeNotifier::
+addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color, const CEscapeLineStyle &style)
+{
+  if (is4014())
+    area_->addLine(x1, y1, x2, y2, color, style);
+  else
+    area_->add4014Line(x1, y1, x2, y2, color, style);
 }
 
 void

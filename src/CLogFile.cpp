@@ -2,7 +2,7 @@
 
 CLogFile::
 CLogFile(const char *fileName) :
- file_(NULL), fileName_(fileName)
+ file_(nullptr), fileName_(fileName)
 {
 }
 
@@ -20,14 +20,14 @@ init()
 
   file_ = new CFile(fileName_);
 
-  file_->open(CFileBase::APPEND);
+  file_->open(CFileBase::Mode::APPEND);
 }
 
 void
 CLogFile::
 write(const std::string &str)
 {
-  if (file_ != NULL) {
+  if (file_) {
     file_->write(str);
 
     file_->flush();

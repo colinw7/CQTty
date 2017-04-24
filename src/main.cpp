@@ -1,26 +1,25 @@
+#include <CQApp.h>
 #include <CQTty.h>
 #include <CQPageText.h>
-#include <CQImage.h>
-#include <CQFont.h>
-#include <CQWindow.h>
-#include <QApplication>
-
-#include <iostream>
+#ifdef DIR_LIST
+#include <CQDirView.h>
+#endif
+#ifdef FILE_EDIT
+#include <CQEdit.h>
+#endif
 
 int
 main(int argc, char **argv)
 {
-  QApplication app(argc, argv);
+  CQApp app(argc, argv);
 
-  CQImage::setPrototype();
+#ifdef DIR_LIST
+  CQDirViewFactory::init();
+#endif
 
-  CQFontMgrInst->setPrototype();
-
-  CQWindow::setFactory();
-
-  //CQDirViewFactory::init();
-
-  //CQEdit::init();
+#ifdef FILE_EDIT
+  CQEdit::init();
+#endif
 
   bool debug = false;
   bool trace = false;

@@ -2,9 +2,6 @@
 #define CTEXT_POS_H
 
 class CTextPos {
- private:
-  int row_, col_;
-
  public:
   CTextPos(int row=0, int col=0) :
    row_(row), col_(col) {
@@ -23,6 +20,9 @@ class CTextPos {
 
   void setX(int x) { setCol(x); }
   void setY(int y) { setRow(y); }
+
+ private:
+  int row_ { 0 }, col_ { 0 };
 };
 
 #endif

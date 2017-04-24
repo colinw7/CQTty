@@ -6,116 +6,126 @@
 class CPageText;
 
 class CPageTextEscapeNotifier : public CEscapeHandler {
- private:
-  CPageText *area_;
-  bool       cursor_blink_;
-
-  mutable CIPoint2D pos_;
-
  public:
   CPageTextEscapeNotifier(CPageText *area);
 
-  const CIPoint2D &getDataPos() const;
-  void setDataPos(const CIPoint2D &pos);
+  void set4014(bool b) override;
+
+  const CIPoint2D &getDataPos() const override;
+  void setDataPos(const CIPoint2D &pos) override;
 
   // Display Position Get/Set
-  void getDispPos(int *row, int *col) const;
-  void setDispPos(int row, int col);
+  void getDispPos(int *row, int *col) const override;
+  void setDispPos(int row, int col) override;
 
-  void setDispRow(int row);
-  void setDispCol(int col);
+  void setDispRow(int row) override;
+  void setDispCol(int col) override;
 
-  void setDispSize(uint, uint);
-  void getDispSize(uint *, uint *) const;
+  void setDispSize(uint, uint) override;
+  void getDispSize(uint *, uint *) const override;
 
-  void resetAll();
+  void resetAll() override;
 
-  void setCell(uint row, uint col, char c, const CCellStyle &style);
+  void setLineWidthStyle(uint row, const CCellLineWidthStyle &lineStyle) override;
+  void setLineHeightStyle(uint row, const CCellLineHeightStyle &lineStyle) override;
 
-  void addSizedImageChar(const std::string &, CImageFile *file, int, int, int, int);
-  void addImageChar(const std::string &, CImageFile *file, int, int, int, int);
-  void addImage(const std::string &, CImageFile *file);
+  void setCell(uint row, uint col, char c, const CCellStyle &style) override;
 
-  void addPixel(int x, int y, const std::string &color);
+  void addSizedImageChar(const std::string &, CImageFile *file, int, int, int, int) override;
+  void addImageChar(const std::string &, CImageFile *file, int, int, int, int) override;
+  void addImage(const std::string &, CImageFile *file) override;
+  void addImage(const CImagePtr &image) override;
 
-  void setLinkCell(uint, uint, char, const CCellStyle &, const std::string &, const std::string &);
-  void addLink(const std::string &name, const std::string &path, const std::string &);
+  void addPixel(int x, int y, const CEscapeColor &color) override;
 
-  void resetCell();
+  void addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+               const CEscapeLineStyle &style) override;
 
-  void pixelsToChars(int w, int h, int *cols, int *rows);
-  void charsToPixels(int cols, int rows, int *w, int *h);
+  void setLinkCell(uint, uint, char, const CCellStyle &,
+                   const std::string &, const std::string &) override;
+  void addLink(const std::string &name, const std::string &path,
+               const std::string &) override;
 
-  uint getNumDispRows() const;
-  uint getNumDispCols() const;
+  void resetCell() override;
 
-  uint getNumDataRows() const;
-  uint getNumDataCols() const;
+  void pixelsToChars(int w, int h, int *cols, int *rows) override;
+  void charsToPixels(int cols, int rows, int *w, int *h) override;
 
-  void shiftLeft ();
-  void shiftRight();
+  uint getNumDispRows() const override;
+  uint getNumDispCols() const override;
 
-  const CCellStyle &getStyle() const;
+  uint getNumDataRows() const override;
+  uint getNumDataCols() const override;
 
-  void setStyle(const CCellStyle &style);
+  void shiftLeft () override;
+  void shiftRight() override;
 
-  void notifyChar(uint, uint, char);
-  void notifyEnter();
+  const CCellStyle &getStyle() const override;
+  void setStyle(const CCellStyle &style) override;
 
-  void paste(const std::string &str);
+  void notifyChar(uint, uint, char) override;
+  void notifyEnter(char c) override;
 
-  void setTrace(bool);
-  bool getTrace() const;
+  void paste(const std::string &str) override;
 
-  void setDebug(bool);
-  bool getDebug() const;
+  void setTrace(bool) override;
+  bool getTrace() const override;
 
-  void setAlternative(bool alt);
+  void setDebug(bool) override;
+  bool getDebug() const override;
 
-  void insertLine(uint num);
-  void deleteLine(uint num);
+  void setAlternative(bool alt) override;
 
-  void replicatePrevChar();
+  void insertLine(uint num) override;
+  void deleteLine(uint num) override;
 
-  void eraseLineLeft();
-  void eraseLineRight();
-  void eraseLineAll();
+  void replicatePrevChar() override;
 
-  void scrollUp  ();
-  void scrollDown();
+  void eraseLineLeft() override;
+  void eraseLineRight() override;
+  void eraseLineAll() override;
 
-  void clearScreenBelow();
-  void clearScreenAbove();
-  void clearScreen     ();
-  void clearScreenSaved();
+  void scrollUp  () override;
+  void scrollDown() override;
 
-  void fill(char);
+  void clearScreenBelow() override;
+  void clearScreenAbove() override;
+  void clearScreen     () override;
+  void clearScreenSaved() override;
 
-  void startPrintLog();
-  void stopPrintLog();
-  void printLine();
-  void printScreen();
-  void printComposedScreen();
-  void printAllPages();
+  void fill(char) override;
 
-  CWindow *getWindow() const;
+  void startPrintLog() override;
+  void stopPrintLog() override;
+  void printLine() override;
+  void printScreen() override;
+  void printComposedScreen() override;
+  void printAllPages() override;
+
+  CWindow *getWindow() const override;
 
   void setWindowTextSize(uint, uint);
 
-  void beep();
+  void beep() override;
 
-  void setShowToolBar  (bool);
-  void setShowScrollBar(bool);
-  void setShowStatusBar(bool);
+  void setShowToolBar  (bool) override;
+  void setShowScrollBar(bool) override;
+  void setShowStatusBar(bool) override;
 
-  void previewFile(const std::string &);
-  void setDirName(const std::string &);
+  void previewFile(const std::string &) override;
+  void setDirName(const std::string &) override;
 
-  void processString(const char *);
+  void processString(const char *) override;
 
-  void logDebug(const std::string &) const;
-  void logTrace(char) const;
-  void logTrace(const std::string &) const;
+  void logDebug(const std::string &) const override;
+  void logTrace(char) const override;
+  void logTrace(const std::string &) const override;
+
+ private:
+  CPageText *area_ { nullptr };
+  bool       cursor_blink_ { false };
+
+  mutable CIPoint2D pos_ { 0, 0 };
 };
 
 #endif

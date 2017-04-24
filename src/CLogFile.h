@@ -5,10 +5,6 @@
 #include <CAutoPtr.h>
 
 class CLogFile {
- private:
-  CAutoPtr<CFile> file_;
-  std::string     fileName_;
-
  public:
   CLogFile(const char *fileName);
  ~CLogFile();
@@ -17,6 +13,10 @@ class CLogFile {
 
   void write(const std::string &str);
   void write(char c);
+
+ private:
+  CAutoPtr<CFile> file_;
+  std::string     fileName_;
 };
 
 #endif

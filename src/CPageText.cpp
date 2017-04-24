@@ -2,32 +2,23 @@
 #include <CPageTextEscapeNotifier.h>
 #include <CStrParse.h>
 #include <CFontMgr.h>
+#include <CEscape.h>
 #include <CWindow.h>
+#include <CEnv.h>
 #include <CTty.h>
-#include <CFuncs.h>
 #include <CDir.h>
-#include <COSEnv.h>
 
 CPageText::
 CPageText() :
- pos_          (0,0),
- is_alt_       (false),
- window_       (NULL),
- notifier_     (NULL),
- showScrollBar_(true),
- showToolBar_  (false),
- showStatusBar_(false),
- debug_        (false),
- trace_        (false),
- log_          (".page_text.log")
+ log_(".page_text.log")
 {
   page_rows_ = 60;
   page_cols_ = 100;
 
-  setFontSet("courier", 8);
+  setFontSet("courier", 12);
 
-  COSEnv::setenv("LINES"  , page_rows_);
-  COSEnv::setenv("COLUMNS", page_cols_);
+  CEnvInst.set("LINES"  , page_rows_);
+  CEnvInst.set("COLUMNS", page_cols_);
 
   dirName_ = CDir::getCurrent();
 }
@@ -35,7 +26,8 @@ CPageText() :
 CPageText::
 ~CPageText()
 {
-  for_each(old_lines_.begin(), old_lines_.end(), CDeletePointer());
+  for (auto &old_line : old_lines_)
+    delete old_line;
 }
 
 void
@@ -90,7 +82,8 @@ void
 CPageText::
 beep()
 {
-  window_->beep();
+  if (window_)
+    window_->beep();
 }
 
 CPageTextEscapeNotifier *
@@ -115,8 +108,10 @@ setFontSet(const std::string &family, uint size)
   uint char_width  = getCharWidth ();
   uint char_height = getCharHeight();
 
-  COSEnv::setenv("CTERM_CHAR_WIDTH" , char_width );
-  COSEnv::setenv("CTERM_CHAR_HEIGHT", char_height);
+  CEnvInst.set("CTERM_CHAR_WIDTH" , char_width );
+  CEnvInst.set("CTERM_CHAR_HEIGHT", char_height);
+
+  notifyCharSize(char_width, char_height);
 }
 
 void
@@ -147,9 +142,39 @@ getBg() const
   CPageTextEscapeNotifier *notifier = getEscapeNotifier();
 
   if (! notifier->getInverseVideo())
-    return notifier->getColor(CESCAPE_COLOR_BG);
+    return notifier->getColor(CEscapeColor::BG);
   else
-    return notifier->getColor(CESCAPE_COLOR_BG).inverse();
+    return notifier->getColor(CEscapeColor::BG).inverse();
+}
+
+CRGBA
+CPageText::
+getBg(const CCellStyle &style)
+{
+  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
+
+  if (! notifier->getInverseVideo()) {
+    if (! style.isBgRGB())
+      return notifier->getColor(style.getBg());
+    else {
+      CRGB rgb;
+
+      style.getBg(rgb);
+
+      return rgb;
+    }
+  }
+  else {
+    if (! style.isBgRGB())
+      return notifier->getColor(style.getBg()).inverse();
+    else {
+      CRGB rgb;
+
+      style.getBg(rgb);
+
+      return rgb.inverse();
+    }
+  }
 }
 
 void
@@ -158,7 +183,49 @@ setBg(const CRGBA &bg)
 {
   CPageTextEscapeNotifier *notifier = getEscapeNotifier();
 
-  notifier->setColor(CESCAPE_COLOR_BG, bg);
+  notifier->setColor(CEscapeColor::BG, bg);
+}
+
+CRGBA
+CPageText::
+getFg() const
+{
+  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
+
+  if (! notifier->getInverseVideo())
+    return notifier->getColor(CEscapeColor::FG);
+  else
+    return notifier->getColor(CEscapeColor::FG).inverse();
+}
+
+CRGBA
+CPageText::
+getFg(const CCellStyle &style)
+{
+  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
+
+  if (! notifier->getInverseVideo()) {
+    if (! style.isFgRGB())
+      return notifier->getColor(style.getFg());
+    else {
+      CRGB rgb;
+
+      style.getFg(rgb);
+
+      return rgb;
+    }
+  }
+  else {
+    if (! style.isFgRGB())
+      return notifier->getColor(style.getFg()).inverse();
+    else {
+      CRGB rgb;
+
+      style.getFg(rgb);
+
+      return rgb.inverse();
+    }
+  }
 }
 
 const CPageText::Page &
@@ -259,7 +326,8 @@ std::string
 CPageText::
 getSelectionText() const
 {
-  if (! hasSelection()) return "";
+  if (! hasSelection())
+    return "";
 
   std::string selText;
 
@@ -277,10 +345,8 @@ getSelectionText() const
 
     CPageTextLine::CellList::const_iterator pc1, pc2;
 
-    for (pc1 = line->beginCell(), pc2 = line->endCell(); pc1 != pc2; ++pc1) {
-      const CTextCell *cell = *pc1;
-
-      if      (cell->getType() == CTextCell::CHAR_TYPE) {
+    for (const auto &cell : line->cells()) {
+      if      (cell->getType() == CTextCell::Type::CHAR) {
         const CTextCharCell *char_cell = dynamic_cast<const CTextCharCell *>(cell);
 
         if (isSelected(row, col)) {
@@ -301,17 +367,13 @@ getSelectionText() const
     ++row;
   }
 
-  for (pl1 = beginLine(), pl2 = endLine(); pl1 != pl2; ++pl1) {
-    const CPageTextLine *line = *pl1;
-
+  for (const auto &line : lines()) {
     col = 0;
 
     CPageTextLine::CellList::const_iterator pc1, pc2;
 
-    for (pc1 = line->beginCell(), pc2 = line->endCell(); pc1 != pc2; ++pc1) {
-      const CTextCell *cell = *pc1;
-
-      if      (cell->getType() == CTextCell::CHAR_TYPE) {
+    for (const auto &cell : line->cells()) {
+      if      (cell->getType() == CTextCell::Type::CHAR) {
         const CTextCharCell *char_cell = dynamic_cast<const CTextCharCell *>(cell);
 
         if (isSelected(row, col)) {
@@ -409,9 +471,11 @@ void
 CPageText::
 setPosition(const CTextPos &pos)
 {
-  assert(pos.getRow() >= 0 && pos.getRow() < int(page_rows_));
+  assert(pos.getRow() >= 0 && pos.getRow() < int(getPageRows()));
 
   pos_ = pos;
+
+  notifyPosition(pos_);
 }
 
 void
@@ -435,6 +499,13 @@ getPageRows() const
   return page_rows_;
 }
 
+void
+CPageText::
+setPageRows(uint n)
+{
+  setPageSize(n, getPageCols());
+}
+
 uint
 CPageText::
 getPageCols() const
@@ -444,16 +515,36 @@ getPageCols() const
 
 void
 CPageText::
+setPageCols(uint n)
+{
+  setPageSize(getPageRows(), n);
+}
+
+void
+CPageText::
+getPageSize(uint *rows, uint *cols)
+{
+  *rows = getPageRows();
+  *cols = getPageCols();
+}
+
+void
+CPageText::
 setPageSize(uint rows, uint cols)
 {
-  setPosition(CTextPos(0, 0));
+  if (rows == getPageRows() && cols == getPageCols())
+    return;
+
+  //setPosition(CTextPos(0, 0));
+
+  CTextPos pos = getPosition();
 
   makeSizeValid();
 
-  if (rows < page_rows_) {
-    LineList &lines = getCurrentPage().lines;
+  LineList &lines = getCurrentPage().lines;
 
-    uint num_extra = page_rows_ - rows;
+  if      (rows < getPageRows()) {
+    uint num_extra = getPageRows() - rows;
 
     for (uint i = 0; i < num_extra; ++i) {
       CPageTextLine *old_line = lines[0];
@@ -469,12 +560,39 @@ setPageSize(uint rows, uint cols)
         delete old_line;
     }
   }
+  else if (rows > getPageRows()) {
+    if (! isAlt()) {
+      uint num_extra = rows - getPageRows();
+
+      while (num_extra > 0 && ! old_lines_.empty()) {
+        CPageTextLine *old_line = old_lines_.back();
+
+        old_lines_.pop_back();
+
+        uint num_lines = lines.size();
+
+        lines.push_back(nullptr);
+
+        for (int j = num_lines - 1; j >= 0; --j)
+          lines[j + 1] = lines[j];
+
+        lines[0] = old_line;
+
+        --num_extra;
+      }
+    }
+  }
 
   page_rows_ = rows;
   page_cols_ = cols;
 
-  COSEnv::setenv("LINES"  , rows);
-  COSEnv::setenv("COLUMNS", cols);
+  CEnvInst.set("LINES"  , rows);
+  CEnvInst.set("COLUMNS", cols);
+
+  pos.setRow(std::min(std::max(pos.getRow(), 0), int(getPageRows()) - 1));
+  pos.setCol(std::min(std::max(pos.getCol(), 0), int(getPageCols()) - 1));
+
+  setPosition(pos);
 
   notifyPageSize(rows, cols);
 }
@@ -557,7 +675,7 @@ getOldLine(uint i) const
   if (! isAlt())
     return old_lines_[i];
   else
-    return NULL;
+    return nullptr;
 }
 
 bool
@@ -589,66 +707,6 @@ getLinesHeight() const
   return lines.size()*getCharHeight();
 }
 
-CRGBA
-CPageText::
-getBg(const CCellStyle &style)
-{
-  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
-
-  if (! notifier->getInverseVideo()) {
-    if (! style.isBgRGB())
-      return notifier->getColor(style.getBg());
-    else {
-      CRGB rgb;
-
-      style.getBg(rgb);
-
-      return rgb;
-    }
-  }
-  else {
-    if (! style.isBgRGB())
-      return notifier->getColor(style.getBg()).inverse();
-    else {
-      CRGB rgb;
-
-      style.getBg(rgb);
-
-      return rgb.inverse();
-    }
-  }
-}
-
-CRGBA
-CPageText::
-getFg(const CCellStyle &style)
-{
-  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
-
-  if (! notifier->getInverseVideo()) {
-    if (! style.isFgRGB())
-      return notifier->getColor(style.getFg());
-    else {
-      CRGB rgb;
-
-      style.getFg(rgb);
-
-      return rgb;
-    }
-  }
-  else {
-    if (! style.isFgRGB())
-      return notifier->getColor(style.getFg()).inverse();
-    else {
-      CRGB rgb;
-
-      style.getFg(rgb);
-
-      return rgb.inverse();
-    }
-  }
-}
-
 CFontPtr
 CPageText::
 getFont(const CCellStyle &style)
@@ -664,7 +722,7 @@ getCell(const CTextPos &pos)
 {
   makePosValid(pos);
 
-  return getCurrentLine()->getCell(pos.getCol());
+  return getLine(pos.getRow())->getCell(pos.getCol());
 }
 
 CPageText::LineList::const_iterator
@@ -684,86 +742,125 @@ endOldLine() const
   return old_lines_.end();
 }
 
+const CPageText::LineList &
+CPageText::
+lines() const
+{
+  return getCurrentPage().lines;
+}
+
+CPageText::LineList &
+CPageText::
+lines()
+{
+  return getCurrentPage().lines;
+}
+
 CPageText::LineList::const_iterator
 CPageText::
 beginLine() const
 {
-  return getCurrentPage().lines.begin();
+  return lines().begin();
 }
 
 CPageText::LineList::const_iterator
 CPageText::
 endLine() const
 {
-  return getCurrentPage().lines.end();
+  return lines().end();
 }
 
-CPageText::PixelList::const_iterator
+CPageText::PixelPoints::const_iterator
 CPageText::
-beginPixels() const
+beginPixelPoints() const
 {
-  return pixels_.begin();
+  return pixelPoints_.begin();
 }
 
-CPageText::PixelList::const_iterator
+CPageText::PixelPoints::const_iterator
 CPageText::
-endPixels() const
+endPixelPoints() const
 {
-  return pixels_.end();
+  return pixelPoints_.end();
+}
+
+CPageText::PixelLines::const_iterator
+CPageText::
+beginPixelLines() const
+{
+  return pixelLines_.begin();
+}
+
+CPageText::PixelLines::const_iterator
+CPageText::
+endPixelLines() const
+{
+  return pixelLines_.end();
 }
 
 CPageTextLine *
 CPageText::
 getCurrentLine()
 {
-  makePosValid();
+  return getLine(getRow());
+}
 
-  return getCurrentPage().lines[getRow()];
+CPageTextLine *
+CPageText::
+getLine(uint row)
+{
+  makePosValid(CTextPos(row, getPageCols() - 1));
+
+  assert(row < lines().size());
+
+  return lines()[row];
 }
 
 void
 CPageText::
 clear()
 {
-  LineList &lines = getCurrentPage().lines;
+  for (auto &line : lines())
+    line->erase();
 
-  uint num_lines = lines.size();
+  pixelPoints_.clear();
+  pixelLines_ .clear();
 
-  for (uint i = 0; i < num_lines; ++i)
-    lines[i]->erase();
-
-  pixels_.clear();
+  update();
 }
 
 void
 CPageText::
 clearAbove()
 {
-  LineList &lines = getCurrentPage().lines;
-
-  uint num_lines = lines.size();
+  LineList &lines     = this->lines();
+  uint      num_lines = lines.size();
 
   for (uint i = 0; i < uint(getRow()) && i < num_lines; ++i)
     lines[i]->erase();
+
+  update();
 }
 
 void
 CPageText::
 clearBelow()
 {
-  LineList &lines = getCurrentPage().lines;
-
-  uint num_lines = lines.size();
+  LineList &lines     = this->lines();
+  uint      num_lines = lines.size();
 
   for (uint i = getRow() + 1; i < num_lines; ++i)
     lines[i]->erase();
+
+  update();
 }
 
 void
 CPageText::
 clearSaved()
 {
-  for_each(old_lines_.begin(), old_lines_.end(), CDeletePointer());
+  for (auto &old_line : old_lines_)
+    delete old_line;
 
   old_lines_.clear();
 
@@ -774,28 +871,22 @@ void
 CPageText::
 dumpScreen(CFile &file)
 {
-  LineList &lines = getCurrentPage().lines;
-
-  uint num_lines = lines.size();
-
-  for (uint i = 0; i < num_lines; ++i)
-    lines[i]->dumpLine(file);
+  for (auto &line : lines())
+    line->dumpLine(file);
 }
 
 void
 CPageText::
 fill(char c)
 {
+  makeSizeValid();
+
   int cols = getPageCols();
 
-  LineList &lines = getCurrentPage().lines;
+  for (auto &line : lines()) {
+    line->makeColValid(cols);
 
-  uint num_lines = lines.size();
-
-  for (uint i = 0; i < num_lines; ++i) {
-    lines[i]->makeColValid(cols);
-
-    lines[i]->fill(c);
+    line->fill(c);
   }
 }
 
@@ -817,7 +908,7 @@ insertLine(uint num)
   if (int(row) < top_line || int(row) >= bottom_line) return;
 
   // move lines below cursor position down
-  LineList &lines = getCurrentPage().lines;
+  LineList &lines = this->lines();
 
   for (uint n = 0; n < num; ++n) {
     CPageTextLine *old_line = lines[bottom_line];
@@ -851,7 +942,7 @@ deleteLine(uint num)
   if (int(row) < top_line || int(row) > bottom_line) return;
 
   // move lines at cursor position up
-  LineList &lines = getCurrentPage().lines;
+  LineList &lines = this->lines();
 
   for (uint n = 0; n < num; ++n) {
     CPageTextLine *old_line = lines[row];
@@ -878,7 +969,7 @@ scrollUp()
   int top_line    = notifier->getScrollTop   () - 1;
   int bottom_line = notifier->getScrollBottom() - 1;
 
-  LineList &lines = getCurrentPage().lines;
+  LineList &lines = this->lines();
 
   CPageTextLine *old_line = lines[top_line];
 
@@ -908,7 +999,7 @@ scrollDown()
   int top_line    = notifier->getScrollTop   () - 1;
   int bottom_line = notifier->getScrollBottom() - 1;
 
-  LineList &lines = getCurrentPage().lines;
+  LineList &lines = this->lines();
 
   CPageTextLine *old_line = lines[bottom_line];
 
@@ -954,7 +1045,7 @@ setChar(char c)
 
   CTextCell *old_cell = getCell(getPosition());
 
-  CTextCell *new_cell = old_cell->convertTo(CTextCell::CHAR_TYPE);
+  CTextCell *new_cell = old_cell->convertTo(CTextCell::Type::CHAR);
 
   CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(new_cell);
 
@@ -987,7 +1078,7 @@ addLink(const std::string &linkDest, const std::string &linkName)
 
 void
 CPageText::
-addImage(const std::string &fileName, CImagePtr image)
+addImage(const std::string &fileName, const CImagePtr &image)
 {
   makePosValid();
 
@@ -1000,8 +1091,9 @@ addImage(const std::string &fileName, CImagePtr image)
 
 void
 CPageText::
-addPixel(int x, int y, const std::string &color)
+addPixel(int x, int y, const CEscapeColor &color)
 {
+#if 0
   std::string::size_type pos = color.find(',');
 
   if (pos != std::string::npos) {
@@ -1010,7 +1102,7 @@ addPixel(int x, int y, const std::string &color)
     while (pos != std::string::npos) {
       std::string color2 = color1.substr(0, pos);
 
-      pixels_.push_back(Pixel(x, y, color2));
+      pixelPoints_.push_back(PixelPoint(x, y, color2));
 
       ++x;
 
@@ -1019,8 +1111,30 @@ addPixel(int x, int y, const std::string &color)
       pos = color1.find(',');
     }
   }
+  else {
+    pixelPoints_.push_back(PixelPoint(x, y, color));
+  }
+#else
+  pixelPoints_.push_back(PixelPoint(x, y, color));
+#endif
+}
+
+void
+CPageText::
+addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color, const CEscapeLineStyle &style)
+{
+  if (is4014())
+    add4014Line(x1, y1, x2, y2, color, style);
   else
-    pixels_.push_back(Pixel(x, y, color));
+    pixelLines_.push_back(PixelLine(x1, y1, x2, y2, color, style));
+}
+
+void
+CPageText::
+add4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+            const CEscapeLineStyle &style)
+{
+  pixel4014Lines_.push_back(PixelLine(x1, y1, x2, y2, color, style));
 }
 
 void
@@ -1052,9 +1166,8 @@ void
 CPageText::
 makePosValid(const CTextPos &pos)
 {
-  LineList &lines = getCurrentPage().lines;
-
-  uint num_lines = lines.size();
+  LineList &lines     = this->lines();
+  uint      num_lines = lines.size();
 
   uint row = pos.getRow();
 
@@ -1078,95 +1191,151 @@ loadCmd(const std::string &fileName)
   std::string line;
 
   while (file.readLine(line)) {
-    CStrParse parse(line);
+    loadCmdLine(line);
+  }
+
+  return true;
+}
+
+bool
+CPageText::
+loadCmdLine(const std::string &line)
+{
+  CStrParse parse(line);
+
+  parse.skipSpace();
+
+  std::string cmd;
+
+  if (! parse.readIdentifier(cmd))
+    return false;
+
+  parse.skipSpace();
+
+  if      (cmd == "move") {
+    int row;
+
+    if (! parse.readInteger(&row))
+      return false;
 
     parse.skipSpace();
 
-    std::string cmd;
+    int col;
 
-    if (! parse.readIdentifier(cmd))
-      continue;
+    if (! parse.readInteger(&col))
+      return false;
+
+    setPosition(CTextPos(row, col));
+  }
+  else if (cmd == "text") {
+    std::string str;
+
+    if (! parse.readString(str, true))
+      return false;
+
+    insertText(str);
+  }
+  else if (cmd == "bg") {
+    std::string color;
+
+    if (! parse.readNonSpace(color))
+      return false;
+
+    CRGBA bg = CRGBName::toRGBA(color);
+
+    setBg(bg);
+  }
+  else if (cmd == "cell_bg" || cmd == "cell_fg") {
+    std::string color;
+
+    if (! parse.readNonSpace(color))
+      return false;
+
+    CRGBA fg = CRGBName::toRGBA(color);
+
+    const CTextPos &pos = getPosition();
+
+    CTextCell *cell = getCell(pos);
+
+    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
+
+    if (char_cell) {
+      CCellStyle style = char_cell->getStyle();
+
+      if (cmd == "cell_bg")
+        style.setBg(fg.getRGB());
+      else
+        style.setFg(fg.getRGB());
+
+      char_cell->setStyle(style);
+    }
+
+    notifyStyle(pos);
+  }
+  else if (cmd == "dim"  || cmd == "invert"     || cmd == "hidden" ||
+           cmd == "bold" || cmd == "underscore" || cmd == "blink") {
+    const CTextPos &pos = getPosition();
+
+    CTextCell *cell = getCell(pos);
+
+    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
+
+    if (char_cell) {
+      CCellStyle style = char_cell->getStyle();
+
+      if      (cmd == "dim")
+        style.setDim(! style.isDim());
+      else if (cmd == "invert")
+        style.setInvert(! style.isInvert());
+      else if (cmd == "hidden")
+        style.setHidden(! style.isHidden());
+      else if (cmd == "bold")
+        style.setBold(! style.isBold());
+      else if (cmd == "underscore")
+        style.setUnderscore(! style.isUnderscore());
+      else if (cmd == "blink")
+        style.setBlink(! style.isBlink());
+
+      char_cell->setStyle(style);
+    }
+
+    notifyStyle(pos);
+  }
+  else if (cmd == "image") {
+    std::string imageName;
+
+    if (! parse.readString(imageName, true))
+      return false;
+
+    CImagePtr image = CImageMgrInst->lookupImage(imageName);
+
+    addImage(imageName, image);
+  }
+  else if (cmd == "link") {
+    std::string linkDest;
+
+    if (! parse.readString(linkDest, true))
+      return false;
 
     parse.skipSpace();
 
-    if      (cmd == "move") {
-      int row;
+    std::string linkName;
 
-      if (! parse.readInteger(&row)) continue;
+    if (! parse.readString(linkName, true))
+      return false;
 
-      parse.skipSpace();
+    addLink(linkDest, linkName);
+  }
+  else {
+    std::string str = CEscape::stringToEscape(line);
 
-      int col;
+    if (str != "") {
+      CPageTextEscapeNotifier *notifier = getEscapeNotifier();
 
-      if (! parse.readInteger(&col)) continue;
-
-      setPosition(CTextPos(row, col));
+      notifier->addOutputChars(str.c_str(), str.size());
     }
-    else if (cmd == "text") {
-      std::string str;
-
-      if (! parse.readString(str, true)) continue;
-
-      insertText(str);
-    }
-    else if (cmd == "bg") {
-      std::string color;
-
-      if (! parse.readNonSpace(color))
-        continue;
-
-      //CRGBA bg = CRGBA(color);
-
-      //setBg(bg);
-    }
-    else if (cmd == "fg") {
-      std::string color;
-
-      if (! parse.readNonSpace(color))
-        continue;
-
-      //CRGBA fg = CRGBA(color);
-
-      //setFg(fg);
-    }
-    else if (cmd == "font") {
-      std::string fontName;
-
-      if (! parse.readNonSpace(fontName))
-        continue;
-
-      //CFontPtr font = CFontMgrInst->lookupFont(fontName);
-
-      //setFont(font);
-    }
-    else if (cmd == "image") {
-      std::string imageName;
-
-      if (! parse.readString(imageName, true))
-        continue;
-
-      CImagePtr image = CImageMgrInst->lookupImage(imageName);
-
-      addImage(imageName, image);
-    }
-    else if (cmd == "link") {
-      std::string linkDest;
-
-      if (! parse.readString(linkDest, true))
-        continue;
-
-      parse.skipSpace();
-
-      std::string linkName;
-
-      if (! parse.readString(linkName, true))
-        continue;
-
-      addLink(linkDest, linkName);
-    }
-    else {
+    else
       std::cerr << "Invalid command name \"" << cmd << "\"" << std::endl;
-    }
   }
 
   return true;
@@ -1199,8 +1368,24 @@ loadEsc(const std::string &fileName)
 
       buffer.clear();
     }
-    else
+    else {
+#if 0
       notifier->addOutputChar(char(c));
+#else
+      buffer += c;
+
+      while ((c = file.getC()) != EOF) {
+        buffer += c;
+
+        if (buffer.size() > 512)
+          break;
+      }
+
+      notifier->addOutputChars(buffer.c_str(), buffer.size());
+
+      buffer.clear();
+    }
+#endif
   }
 
   return true;
@@ -1265,6 +1450,11 @@ processString(const char *str)
 
   if (tty)
     tty->write(str);
+  else {
+    CPageTextEscapeNotifier *notifier = getEscapeNotifier();
+
+    notifier->addOutputChars(str, strlen(str));
+  }
 
   flush();
 }
@@ -1336,12 +1526,8 @@ void
 CPageText::
 checkLines()
 {
-  LineList &lines = getCurrentPage().lines;
-
-  uint num_lines = lines.size();
-
-  for (uint i = 0; i < num_lines; ++i)
-    assert(lines[i]);
+  for (const auto &line : lines())
+    assert(line);
 }
 
 //---------
@@ -1355,8 +1541,14 @@ CPageTextLine(CPageText *area) :
 CPageTextLine::
 ~CPageTextLine()
 {
-  for_each(cells_.begin(), cells_.end(), CDeletePointer());
-  for_each(links_.begin(), links_.end(), CDeletePointer());
+  for (auto &cell : cells_)
+    delete cell;
+
+  for (auto &link : links_)
+    delete link.second;
+
+  for (auto &image : images_)
+    delete image.second;
 }
 
 CTextCell *
@@ -1477,7 +1669,7 @@ shiftLeft(uint col)
 
     CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
 
-    if (char_cell == NULL || char_cell->getChar() == '\0')
+    if (! char_cell || char_cell->getChar() == '\0')
       break;
   }
 
@@ -1507,7 +1699,7 @@ shiftRight(uint col)
 
     CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
 
-    if (char_cell == NULL || char_cell->getChar() == '\0')
+    if (! char_cell || char_cell->getChar() == '\0')
       break;
   }
 
@@ -1545,7 +1737,7 @@ clearCell(uint col, char c)
 
   CTextCell *old_cell = cells_[col];
 
-  CTextCell *new_cell = old_cell->convertTo(CTextCell::CHAR_TYPE);
+  CTextCell *new_cell = old_cell->convertTo(CTextCell::Type::CHAR);
 
   CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(new_cell);
 
@@ -1559,12 +1751,20 @@ clearCell(uint col, char c)
     delete old_cell;
   }
 
-  ImageList::iterator p = images_.find(col);
+  ImageList::iterator pi = images_.find(col);
 
-  if (p != images_.end()) {
-    delete (*p).second;
+  if (pi != images_.end()) {
+    delete (*pi).second;
 
-    images_.erase(p);
+    images_.erase(pi);
+  }
+
+  LinkList::iterator pl = links_.find(col);
+
+  if (pl != links_.end()) {
+    delete (*pl).second;
+
+    links_.erase(pl);
   }
 }
 
@@ -1590,7 +1790,8 @@ replaceCell(CTextCell *old_cell, CTextCell *new_cell)
   uint num_cells = cells_.size();
 
   for (uint i = 0; i < num_cells; ++i) {
-    if (cells_[i] != old_cell) continue;
+    if (cells_[i] != old_cell)
+      continue;
 
     cells_[i] = new_cell;
 
@@ -1604,7 +1805,14 @@ void
 CPageTextLine::
 addLink(CTextLinkCell *link_cell)
 {
-  links_.push_back(link_cell);
+  int col = link_cell->getCol();
+
+  LinkList::iterator pl = links_.find(col);
+
+  if (pl != links_.end())
+    delete (*pl).second;
+
+  links_[col] = link_cell;
 }
 
 void
@@ -1613,10 +1821,10 @@ addImage(CTextImageCell *image_cell)
 {
   int col = image_cell->getCol();
 
-  ImageList::const_iterator p = images_.find(col);
+  ImageList::const_iterator pi = images_.find(col);
 
-  if (p != images_.end())
-    delete (*p).second;
+  if (pi != images_.end())
+    delete (*pi).second;
 
   images_[col] = image_cell;
 }
@@ -1632,8 +1840,7 @@ getWordBounds(int col, uint &col1, uint &col2)
   CTextCell *cell = cells_[col];
 
   CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-
-  if (char_cell == NULL) return false;
+  if (! char_cell) return false;
 
   char c = char_cell->getChar();
 
@@ -1646,8 +1853,7 @@ getWordBounds(int col, uint &col1, uint &col2)
     CTextCell *cell = cells_[col1 - 1];
 
     CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-
-    if (char_cell == NULL) break;
+    if (! char_cell) break;
 
     char c = char_cell->getChar();
 
@@ -1660,8 +1866,7 @@ getWordBounds(int col, uint &col1, uint &col2)
     CTextCell *cell = cells_[col2 + 1];
 
     CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-
-    if (char_cell == NULL) break;
+    if (! char_cell) break;
 
     char c = char_cell->getChar();
 
@@ -1688,10 +1893,10 @@ convertTo(Type type)
   if (type_ == type)
     return this;
 
-  CTextCell *cell1 = NULL;
+  CTextCell *cell1 = nullptr;
 
   switch (type) {
-    case CHAR_TYPE:
+    case Type::CHAR:
       cell1 = new CTextCharCell(line_);
       break;
     default:
@@ -1699,6 +1904,32 @@ convertTo(Type type)
   }
 
   return cell1;
+}
+
+CIBBox2D
+CTextCell::
+getBBox(int x, int y, int cw, int ch, bool doubleHeight) const
+{
+  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(cw - 1, ch - 1));
+
+  if (getLine()->widthStyle() == CCellLineWidthStyle::DOUBLE)
+    bbox.setWidth(bbox.getWidth()*2);
+
+  if (doubleHeight) {
+    if (getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM ||
+        getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_TOP) {
+      int h = bbox.getHeight();
+
+      if (getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM) {
+        bbox.setYMin(bbox.getYMin() - h);
+        bbox.setYMax(bbox.getYMax() - h);
+      }
+
+      bbox.setHeight(h*2);
+    }
+  }
+
+  return bbox;
 }
 
 //---------

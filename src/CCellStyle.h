@@ -5,32 +5,27 @@
 #include <CRGB.h>
 #include <CFontStyle.h>
 
+enum class CCellLineWidthStyle {
+  SINGLE,
+  DOUBLE
+};
+
+enum class CCellLineHeightStyle {
+  SINGLE,
+  DOUBLE_TOP,
+  DOUBLE_BOTTOM
+};
+
 // Individual Char Cell Style
 class CCellStyle {
- private:
-  // Color
-  uint bg_;
-  uint fg_;
-  bool bg_is_rgb_;
-  bool fg_is_rgb_;
-  bool dim_;
-  bool invert_;
-  bool hidden_;
-
-  // Font
-  bool bold_;
-  bool underscore_;
-
-  bool blink_;
-
  public:
   CCellStyle() {
     reset();
   }
 
   void reset() {
-    bg_ = CESCAPE_COLOR_BG;
-    fg_ = CESCAPE_COLOR_FG;
+    bg_ = uint(CEscapeColor::BG);
+    fg_ = uint(CEscapeColor::FG);
 
     bg_is_rgb_ = false;
     fg_is_rgb_ = false;
@@ -40,41 +35,58 @@ class CCellStyle {
     hidden_ = false;
 
     bold_       = false;
+    italic_     = false;
     underscore_ = false;
+    strikeout_  = false;
 
     blink_  = false;
   }
 
   void setFg(CEscapeColor color) {
-    fg_        = color;
+    fg_        = uint(color);
     fg_is_rgb_ = false;
   }
 
   void setBg(CEscapeColor color) {
-    bg_        = color;
+    bg_        = uint(color);
     bg_is_rgb_ = false;
   }
 
   void setFg(const CRGB &rgb) {
-    fg_        = (CEscapeColor) rgb.encodeRGB();
+    fg_        = rgb.encodeRGB();
     fg_is_rgb_ = true;
   }
 
   void setBg(const CRGB &rgb) {
-    bg_        = (CEscapeColor) rgb.encodeRGB();
+    bg_        = rgb.encodeRGB();
     bg_is_rgb_ = true;
   }
 
   bool isBgRGB() const { return bg_is_rgb_; }
   bool isFgRGB() const { return fg_is_rgb_; }
 
-  void setDim   (bool flag) { dim_    = flag; }
+  bool isDim() const { return dim_; }
+  void setDim(bool flag) { dim_ = flag; }
+
+  bool isInvert() const { return invert_; }
   void setInvert(bool flag) { invert_ = flag; }
+
+  bool isHidden() const { return hidden_; }
   void setHidden(bool flag) { hidden_ = flag; }
 
-  void setBold      (bool flag) { bold_       = flag; }
+  bool isBold() const { return bold_; }
+  void setBold(bool flag) { bold_ = flag; }
+
+  bool isItalic() const { return italic_; }
+  void setItalic(bool flag) { italic_ = flag; }
+
+  bool isUnderscore() const { return underscore_; }
   void setUnderscore(bool flag) { underscore_ = flag; }
 
+  bool isStrikeout() const { return strikeout_; }
+  void setStrikeout(bool flag) { strikeout_ = flag; }
+
+  bool isBlink() const { return blink_; }
   void setBlink(bool flag) { blink_ = flag; }
 
   CEscapeColor getBg() const {
@@ -96,7 +108,7 @@ class CCellStyle {
         color = getFgColor();
 
       if (dim_)
-        color = CEscapeColor(int(color) | CESCAPE_COLOR_DIM);
+        color = CEscapeColor(uint(color) | uint(CEscapeColor::DIM));
     }
 
     return color;
@@ -110,8 +122,9 @@ class CCellStyle {
   }
 
   void getFg(CRGB &rgb) const {
-    if (hidden_)
+    if (hidden_) {
       rgb = getBgRGB();
+    }
     else {
       if (invert_)
         rgb = getBgRGB();
@@ -124,18 +137,26 @@ class CCellStyle {
   }
 
   CFontStyle getFontStyle() const {
-    if (bold_) {
-      if (underscore_)
-        return CFONT_STYLE_BOLD_ITALIC;
-      else
-        return CFONT_STYLE_BOLD;
-    }
-    else {
-      if (underscore_)
-        return CFONT_STYLE_ITALIC;
-      else
-        return CFONT_STYLE_NORMAL;
-    }
+    CFontStyle style = CFONT_STYLE_NORMAL;
+
+    if      (bold_ && italic_)
+      style = CFONT_STYLE_BOLD_ITALIC;
+    else if (bold_)
+      style = CFONT_STYLE_BOLD;
+    else if (italic_)
+      style = CFONT_STYLE_ITALIC;
+    else
+      style = CFONT_STYLE_NORMAL;
+
+    //---
+
+    if (underscore_)
+      style = CFontStyle(uint(style) | uint(CFONT_STYLE_STRIKEOUT));
+
+    if (strikeout_)
+      style = CFontStyle(uint(style) | uint(CFONT_STYLE_STRIKEOUT));
+
+    return style;
   }
 
   bool getBlink() const { return blink_; }
@@ -145,14 +166,14 @@ class CCellStyle {
     if (! fg_is_rgb_)
       return (CEscapeColor) fg_;
     else
-      return CESCAPE_COLOR_FG;
+      return CEscapeColor::FG;
   }
 
   CEscapeColor getBgColor() const {
     if (! bg_is_rgb_)
       return (CEscapeColor) bg_;
     else
-      return CESCAPE_COLOR_BG;
+      return CEscapeColor::BG;
   }
 
   CRGB getFgRGB() const {
@@ -168,6 +189,27 @@ class CCellStyle {
     else
       return CRGB(0,0,0);
   }
+
+ private:
+  // Color
+  uint bg_ { 0 };
+  uint fg_ { 0 };
+
+  bool bg_is_rgb_ { false };
+  bool fg_is_rgb_ { false };
+
+  bool dim_    { false };
+  bool invert_ { false };
+  bool hidden_ { false };
+
+  // Font
+  bool bold_       { false };
+  bool italic_     { false };
+  bool underscore_ { false };
+  bool strikeout_  { false };
+
+  // Misc
+  bool blink_ { false };
 };
 
 #endif

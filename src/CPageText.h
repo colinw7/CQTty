@@ -7,7 +7,7 @@
 #include <CCellStyle.h>
 #include <CTextPos.h>
 #include <CLogFile.h>
-#include <CImageLib.h>
+#include <CImagePtr.h>
 
 class CWindow;
 class CPageTextLine;
@@ -18,19 +18,35 @@ class CTty;
 class CKeyEvent;
 class CPageTextEscapeNotifier;
 
+//------
+
 class CPageText {
  public:
-  struct Pixel {
-    int   x, y;
-    CRGBA color;
+  struct PixelPoint {
+    int          x { 0 }, y { 0 };
+    CEscapeColor color;
 
-    Pixel(int x1=0, int y1=0, const std::string &name="white") :
-     x(x1), y(y1), color(CRGBName::toRGBA(name)) {
+    PixelPoint(int x=0, int y=0, const CEscapeColor &color=CEscapeColor::WHITE) :
+     x(x), y(y), color(color) {
+    }
+  };
+
+  struct PixelLine {
+    int              x1 { 0 }, y1 { 0 };
+    int              x2 { 0 }, y2 { 0 };
+    CEscapeColor     color;
+    CEscapeLineStyle lineStyle;
+
+    PixelLine(int x1=0, int y1=0, int x2=0, int y2=0,
+              const CEscapeColor &color=CEscapeColor::WHITE,
+              const CEscapeLineStyle &lineStyle=CEscapeLineStyle::SOLID) :
+     x1(x1), y1(y1), x2(x2), y2(y2), color(color), lineStyle(lineStyle) {
     }
   };
 
   typedef std::vector<CPageTextLine *> LineList;
-  typedef std::vector<Pixel>           PixelList;
+  typedef std::vector<PixelPoint>      PixelPoints;
+  typedef std::vector<PixelLine>       PixelLines;
 
  protected:
   struct Page {
@@ -38,11 +54,11 @@ class CPageText {
   };
 
   struct Selection {
-    bool     set;
+    bool     set { false };
     CTextPos start;
     CTextPos end;
 
-    Selection() : set(false) { }
+    Selection() { }
   };
 
  public:
@@ -54,35 +70,47 @@ class CPageText {
 
   virtual CPageTextEscapeNotifier *getEscapeNotifier() const;
 
-  virtual void setDebug(bool debug);
-  virtual void setTrace(bool trace);
+  //---
 
   virtual bool getDebug() { return debug_; }
+  virtual void setDebug(bool debug);
+
   virtual bool getTrace() { return trace_; }
+  virtual void setTrace(bool trace);
+
+  //---
 
   virtual void log(char c);
   virtual void log(const std::string &str);
+
+  //---
+
+  virtual void set4014(bool b) { is4014_ = b; }
+  virtual bool is4014() const { return is4014_; }
+
+  //---
 
   virtual void setWindow(CWindow *window);
 
   virtual void beep();
 
-  virtual void setFontSet(const std::string &family, uint size);
-
   virtual void getFontSet(std::string &family, uint &size);
+  virtual void setFontSet(const std::string &family, uint size);
 
   virtual void resetAll();
 
   virtual CRGBA getBg() const;
-
+  virtual CRGBA getBg(const CCellStyle &style);
   virtual void setBg(const CRGBA &bg);
+
+  virtual CRGBA getFg() const;
+  virtual CRGBA getFg(const CCellStyle &style);
 
   virtual const Page &getCurrentPage() const;
 
   virtual Page &getCurrentPage();
 
   virtual bool isAlt() const { return is_alt_; }
-
   virtual void setIsAlt(bool alt);
 
   virtual bool hasSelection() const { return selection_.set; }
@@ -103,22 +131,25 @@ class CPageText {
   virtual char getCharSet(int id) const;
 
   virtual const CCellStyle &getStyle() const;
-
   virtual void setStyle(const CCellStyle &style);
 
   virtual const CTextPos &getPosition() const;
 
   virtual uint getRow() const;
+  virtual void setRow(uint row);
+
   virtual uint getCol() const;
+  virtual void setCol(uint col);
 
   virtual void setPosition(const CTextPos &pos);
 
-  virtual void setRow(uint row);
-  virtual void setCol(uint col);
-
   virtual uint getPageRows() const;
-  virtual uint getPageCols() const;
+  virtual void setPageRows(uint n);
 
+  virtual uint getPageCols() const;
+  virtual void setPageCols(uint n);
+
+  virtual void getPageSize(uint *rows, uint *cols);
   virtual void setPageSize(uint rows, uint cols);
 
   virtual uint getCharWidth () const;
@@ -135,15 +166,11 @@ class CPageText {
   virtual uint getNumOldLines() const;
 
   virtual CPageTextLine *getOldLine(uint pos) const;
-
   virtual bool addOldLine(CPageTextLine *line);
 
   virtual uint getOldLinesHeight() const;
 
   virtual uint getLinesHeight() const;
-
-  virtual CRGBA getBg(const CCellStyle &style);
-  virtual CRGBA getFg(const CCellStyle &style);
 
   virtual CFontPtr getFont(const CCellStyle &style);
 
@@ -152,13 +179,25 @@ class CPageText {
   virtual LineList::const_iterator beginOldLine() const;
   virtual LineList::const_iterator endOldLine  () const;
 
+  virtual const CPageText::LineList &lines() const;
+  virtual CPageText::LineList &lines();
+
   virtual LineList::const_iterator beginLine() const;
   virtual LineList::const_iterator endLine  () const;
 
+  virtual CPageTextLine *getLine(uint row);
+
   virtual CPageTextLine *getCurrentLine();
 
-  virtual PixelList::const_iterator beginPixels() const;
-  virtual PixelList::const_iterator endPixels  () const;
+  virtual const PixelPoints &pixelPoints() const { return pixelPoints_; }
+
+  virtual PixelPoints::const_iterator beginPixelPoints() const;
+  virtual PixelPoints::const_iterator endPixelPoints  () const;
+
+  virtual const PixelLines &pixelLines() const { return pixelLines_; }
+
+  virtual PixelLines::const_iterator beginPixelLines() const;
+  virtual PixelLines::const_iterator endPixelLines  () const;
 
   virtual void clear();
   virtual void clearAbove();
@@ -183,15 +222,22 @@ class CPageText {
 
   virtual void addLink(const std::string &linkDest, const std::string &linkName);
 
-  virtual void addImage(const std::string &fileName, CImagePtr image);
+  virtual void addImage(const std::string &fileName, const CImagePtr &image);
 
-  virtual void addPixel(int x, int y, const std::string &color);
+  virtual void addPixel(int x, int y, const CEscapeColor &color);
+
+  virtual void addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+                       const CEscapeLineStyle &style);
+
+  virtual void add4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+                           const CEscapeLineStyle &style);
 
   virtual void setDirName(const std::string &dirName);
 
   const std::string &getDirName() const { return dirName_; }
 
   virtual bool loadCmd(const std::string &fileName);
+  virtual bool loadCmdLine(const std::string &line);
 
   virtual bool loadEsc(const std::string &fileName);
 
@@ -208,17 +254,22 @@ class CPageText {
 
   virtual void paste(const std::string &str);
 
-  virtual void setShowToolBar  (bool show);
+  virtual bool getShowToolBar() const { return showToolBar_; }
+  virtual void setShowToolBar(bool show);
+
+  virtual bool getShowScrollBar() const { return showScrollBar_; }
   virtual void setShowScrollBar(bool show);
+
+  virtual bool getShowStatusBar() const { return showStatusBar_; }
   virtual void setShowStatusBar(bool show);
 
-  virtual bool getShowToolBar  () const { return showToolBar_; }
-  virtual bool getShowScrollBar() const { return showScrollBar_; }
-  virtual bool getShowStatusBar() const { return showStatusBar_; }
-
   virtual void notifyPageSize(int, int) { }
+  virtual void notifyPosition(const CTextPos &) { }
+  virtual void notifyCharSize(int, int) { }
 
-  virtual CTty *getTty() const { return NULL; }
+  virtual void notifyStyle(const CTextPos &) { }
+
+  virtual CTty *getTty() const { return nullptr; }
 
   //---------
 
@@ -245,30 +296,35 @@ class CPageText {
  protected:
   CFontSet                 fonts_;
   CCellStyle               style_;
-  CTextPos                 pos_;
-  uint                     page_rows_;
-  uint                     page_cols_;
+  CTextPos                 pos_ { 0, 0 };
+  uint                     page_rows_ { 0 };
+  uint                     page_cols_ { 0 };
   Page                     cur_page_;  // current page
   Page                     alt_page_;  // alternative page
   LineList                 old_lines_; // lines scrolled off-screen
-  bool                     is_alt_;
+  bool                     is_alt_ { false };
+  bool                     is4014_ { false };
   Selection                selection_;
-  PixelList                pixels_;
-  CWindow                 *window_;
-  CPageTextEscapeNotifier *notifier_;
-  bool                     showScrollBar_;
-  bool                     showToolBar_;
-  bool                     showStatusBar_;
-  bool                     debug_;
-  bool                     trace_;
+  PixelPoints              pixelPoints_;
+  PixelLines               pixelLines_;
+  PixelLines               pixel4014Lines_;
+  CWindow                 *window_ { nullptr };
+  CPageTextEscapeNotifier *notifier_ { nullptr };
+  bool                     showScrollBar_ { true };
+  bool                     showToolBar_ { false };
+  bool                     showStatusBar_ { false };
+  bool                     debug_ { false };
+  bool                     trace_ { false };
   std::string              dirName_;
   CLogFile                 log_;
 };
 
+//------
+
 class CPageTextLine {
  public:
   typedef std::vector<CTextCell *>       CellList;
-  typedef std::vector<CTextLinkCell *>   LinkList;
+  typedef std::map<int,CTextLinkCell *>  LinkList;
   typedef std::map<int,CTextImageCell *> ImageList;
 
  public:
@@ -282,18 +338,41 @@ class CPageTextLine {
 
   CTextCell *getCell(uint col);
 
+  //---
+  const CellList &cells() const { return cells_; }
+
   CellList::const_iterator beginCell() const;
   CellList::const_iterator endCell  () const;
+
+  //---
+
+  const LinkList links() const { return links_; }
 
   LinkList::const_iterator beginLink() const;
   LinkList::const_iterator endLink  () const;
 
+  //---
+
+  const ImageList &images() const { return images_; }
+
   ImageList::const_iterator beginImage() const;
   ImageList::const_iterator endImage  () const;
+
+  //---
+
+  const CCellLineWidthStyle &widthStyle() const { return widthStyle_; }
+  void setWidthStyle(const CCellLineWidthStyle &v) { widthStyle_ = v; }
+
+  const CCellLineHeightStyle &heightStyle() const { return heightStyle_; }
+  void setHeightStyle(const CCellLineHeightStyle &v) { heightStyle_ = v; }
+
+  //---
 
   void eraseLeft(uint col);
   void eraseRight(uint col);
   void erase();
+
+  //---
 
   void dumpLine(CFile &file);
 
@@ -316,24 +395,28 @@ class CPageTextLine {
   bool getWordBounds(int col, uint &col1, uint &col2);
 
  protected:
-  CPageText *area_;
-  CellList   cells_;
-  LinkList   links_;
-  ImageList  images_;
+  CPageText*           area_ { nullptr };
+  CellList             cells_;
+  LinkList             links_;
+  ImageList            images_;
+  CCellLineWidthStyle  widthStyle_  { CCellLineWidthStyle::SINGLE };
+  CCellLineHeightStyle heightStyle_ { CCellLineHeightStyle::SINGLE };
 };
+
+//------
 
 // row span, col span
 class CTextCell {
  public:
-  enum Type {
-    NO_TYPE,
-    CHAR_TYPE,
-    IMAGE_TYPE,
-    LINK_TYPE
+  enum class Type {
+    NONE,
+    CHAR,
+    IMAGE,
+    LINK
   };
 
  public:
-  CTextCell(CPageTextLine *line, Type type=NO_TYPE);
+  CTextCell(CPageTextLine *line, Type type=Type::NONE);
 
   virtual ~CTextCell() { }
 
@@ -345,15 +428,19 @@ class CTextCell {
 
   CTextCell *convertTo(Type type);
 
+  CIBBox2D getBBox(int x, int y, int w, int h, bool doubleHeight) const;
+
  protected:
-  CPageTextLine *line_;
-  Type           type_;
+  CPageTextLine *line_ { nullptr };
+  Type           type_ { Type::NONE };
 };
+
+//------
 
 class CTextCharCell : public CTextCell {
  public:
   CTextCharCell(CPageTextLine *line, char c='\0') :
-   CTextCell(line, CHAR_TYPE), c_(c) {
+   CTextCell(line, Type::CHAR), c_(c) {
   }
 
   char getChar() const;
@@ -361,21 +448,22 @@ class CTextCharCell : public CTextCell {
   void setChar(char c);
 
   const CCellStyle &getStyle() const { return style_; }
-
   void setStyle(const CCellStyle &style);
 
   void resetStyle();
 
  protected:
-  char       c_;
+  char       c_ { '\0' };
   CCellStyle style_;
 };
+
+//------
 
 class CTextImageCell : public CTextCell {
  public:
   CTextImageCell(CPageTextLine *line, uint col=0, const std::string &fileName="",
-                 CImagePtr image=CImagePtr()) :
-   CTextCell(line, IMAGE_TYPE), col_(col), fileName_(fileName), image_(image) {
+                 const CImagePtr &image=CImagePtr()) :
+   CTextCell(line, Type::IMAGE), col_(col), fileName_(fileName), image_(image) {
   }
 
   uint getCol() const { return col_; }
@@ -391,19 +479,20 @@ class CTextImageCell : public CTextCell {
   void setImage(CImagePtr image);
 
  protected:
-  uint        col_;
+  uint        col_ { 0 };
   std::string fileName_;
   CImagePtr   image_;
 };
 
+//------
+
 class CTextLinkCell : public CTextCell {
  public:
   CTextLinkCell(CPageTextLine *line, uint col=0) :
-   CTextCell(line, LINK_TYPE), col_(col) {
+   CTextCell(line, Type::LINK), col_(col) {
   }
 
   uint getCol() const { return col_; }
-
   void setCol(uint col) { col_ = col; }
 
   const std::string &getLinkDest() const { return linkDest_; }
@@ -413,7 +502,7 @@ class CTextLinkCell : public CTextCell {
   void setLinkName(const std::string &linkName);
 
  protected:
-  uint        col_;
+  uint        col_ { 0 };
   std::string linkDest_;
   std::string linkName_;
 };

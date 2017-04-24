@@ -2,50 +2,78 @@
 #include <CQPageTextState.h>
 #include <CPageTextEscapeNotifier.h>
 #include <CPageText.h>
+#include <CEscapeColors.h>
+#include <CEscape.h>
 
 #include <CQUtil.h>
 #include <CQWindow.h>
 #include <CFileUtil.h>
 
 #include <QMenu>
-#include <QGridLayout>
 #include <QScrollBar>
+#include <QToolButton>
+#include <QLineEdit>
+#include <QLabel>
+#include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QToolTip>
 #include <QTimer>
 #include <QPainter>
 #include <QContextMenuEvent>
 
-using std::string;
-
 CQPageTextWidget::
 CQPageTextWidget(QWidget *parent) :
  QWidget(parent)
 {
-  area_ = new CQPageText(this);
+  setObjectName("widget");
 
-  QGridLayout *grid = new QGridLayout(this);
-  grid->setMargin(2); grid->setSpacing(2);
+  //---
+
+  area_ = new CQPageText(this);
 
   text_ = new CQPageTextCanvas(this);
 
-  hscroll_ = new QScrollBar(Qt::Horizontal);
-  vscroll_ = new QScrollBar(Qt::Vertical  );
+  hscroll_ = new QScrollBar(Qt::Horizontal, this);
+  vscroll_ = new QScrollBar(Qt::Vertical  , this);
 
-  QObject::connect(hscroll_, SIGNAL(valueChanged(int)), this, SLOT(hscrollSlot()));
-  QObject::connect(vscroll_, SIGNAL(valueChanged(int)), this, SLOT(vscrollSlot()));
-
-  grid->addWidget(text_   , 0, 0);
-  grid->addWidget(hscroll_, 1, 0);
-  grid->addWidget(vscroll_, 0, 1);
+  connect(hscroll_, SIGNAL(valueChanged(int)), this, SLOT(hscrollSlot()));
+  connect(vscroll_, SIGNAL(valueChanged(int)), this, SLOT(vscrollSlot()));
 
   area_->setWindow(text_);
+
+  //---
 
   blinkTimer_ = new QTimer;
 
   connect(blinkTimer_, SIGNAL(timeout()), this, SLOT(blinkTimeout()));
 
   blinkTimer_->start(750);
+
+  //---
+
+  updatePlacement();
+}
+
+CQPageTextToolBar *
+CQPageTextWidget::
+createToolBar()
+{
+  toolBar_ = new CQPageTextToolBar(this);
+
+  toolBar_->setVisible(false);
+
+  return toolBar_;
+}
+
+CQPageTextStatus *
+CQPageTextWidget::
+createStatusBar()
+{
+  statusBar_ = new CQPageTextStatus(this);
+
+  statusBar_->setVisible(false);
+
+  return statusBar_;
 }
 
 void
@@ -64,14 +92,14 @@ setTrace(bool trace)
 
 void
 CQPageTextWidget::
-loadCmd(const string &fileName)
+loadCmd(const std::string &fileName)
 {
   area_->loadCmd(fileName);
 }
 
 void
 CQPageTextWidget::
-loadEsc(const string &fileName)
+loadEsc(const std::string &fileName)
 {
   area_->loadEsc(fileName);
 }
@@ -99,14 +127,14 @@ vscrollSlot()
 
 void
 CQPageTextWidget::
-emitDisplayImage(const string &path)
+emitDisplayImage(const std::string &path)
 {
   emit displayImage(QString(path.c_str()));
 }
 
 void
 CQPageTextWidget::
-emitDisplayFile(const string &path)
+emitDisplayFile(const std::string &path)
 {
   emit displayFile(QString(path.c_str()));
 }
@@ -124,27 +152,35 @@ scrollBottom()
 {
   text_->updateScrollBars();
 
-  vscroll_->setValue(vscroll_->maximum());
+  getVScroll()->setValue(getVScroll()->maximum());
 }
 
 void
 CQPageTextWidget::
 showScrollBar(bool show)
 {
-  hscroll_->setVisible(show);
-  vscroll_->setVisible(show);
+  getHScroll()->setVisible(show);
+  getVScroll()->setVisible(show);
+
+  updatePlacement();
 }
 
 void
 CQPageTextWidget::
-showToolBar(bool)
+showToolBar(bool show)
 {
+  getToolBar()->setVisible(show);
+
+  updatePlacement();
 }
 
 void
 CQPageTextWidget::
-showStatusBar(bool)
+showStatusBar(bool show)
 {
+  getStatusBar()->setVisible(show);
+
+  updatePlacement();
 }
 
 void
@@ -163,26 +199,191 @@ flush()
 
 void
 CQPageTextWidget::
-notifyPageSize(int rows, int cols)
+notifyPageSize(int, int)
 {
-  emit pageSizeSignal(rows, cols);
+  updatePlacement();
 }
 
 void
 CQPageTextWidget::
-notifyDirChanged(const string &dirName)
+notifyPosition(const CTextPos &)
+{
+  getStatusBar()->updateLabels();
+
+  text_->update();
+}
+
+void
+CQPageTextWidget::
+notifyCharSize(int, int)
+{
+  updatePlacement();
+}
+
+void
+CQPageTextWidget::
+notifyStyle(const CTextPos &)
+{
+  text_->update();
+}
+
+void
+CQPageTextWidget::
+notifyDirChanged(const std::string &dirName)
 {
   QString dirName1(dirName.c_str());
 
   emit dirChangeSignal(dirName1);
 }
 
+void
+CQPageTextWidget::
+resizeEvent(QResizeEvent *)
+{
+  //updatePlacement();
+}
+
+void
+CQPageTextWidget::
+showEvent(QShowEvent *)
+{
+  updatePlacement();
+}
+
+void
+CQPageTextWidget::
+updatePlacement()
+{
+  uint rows, cols;
+
+  area_->getPageSize(&rows, &cols);
+
+  int textw = cols*area_->getCharWidth ();
+  int texth = rows*area_->getCharHeight();
+
+  //---
+
+  int th = (area_->getShowToolBar  () ? (toolBar_   ? toolBar_  ->sizeHint().height() : 0) : 0);
+  int sh = (area_->getShowStatusBar() ? (statusBar_ ? statusBar_->sizeHint().height() : 0) : 0);
+
+  int hsize = (area_->getShowScrollBar() ? getHScroll()->sizeHint().height() : 0);
+  int vsize = (area_->getShowScrollBar() ? getVScroll()->sizeHint().width () : 0);
+
+  //---
+
+  if (area_->getShowToolBar()) {
+    if (toolBar_) {
+      toolBar_->move(0, 0);
+      toolBar_->resize(textw + vsize, th);
+    }
+  }
+
+
+  if (area_->getShowStatusBar()) {
+    if (statusBar_) {
+      statusBar_->move(0, texth + th + hsize);
+      statusBar_->resize(textw + vsize, sh);
+    }
+  }
+
+  //---
+
+  if (area_->getShowScrollBar()) {
+    getHScroll()->move(0, texth + th);
+    getHScroll()->resize(textw, hsize);
+
+    getVScroll()->move(textw, th);
+    getVScroll()->resize(vsize, texth);
+  }
+
+  //---
+
+  text_->QWidget::move(0, th);
+  text_->QWidget::resize(textw, texth);
+
+  //---
+
+  ui_width_  = vsize;
+  ui_height_ = sh + th + hsize;
+
+  //---
+
+  setFixedSize(textw + ui_width_, texth + ui_height_);
+
+  //---
+
+  updateHints();
+
+  //---
+
+  if (getStatusBar())
+    getStatusBar()->updateLabels();
+
+  //---
+
+  emit pageSizeSignal(rows, cols);
+}
+
+void
+CQPageTextWidget::
+updateHints()
+{
+  int min_rows = 2;
+  int min_cols = 4;
+
+  text_->setMinSize(uiWidth () + min_cols*area_->getCharWidth (),
+                    uiHeight() + min_rows*area_->getCharHeight());
+
+  text_->setBaseSize(uiWidth(), uiHeight());
+
+  text_->setResizeInc(area_->getCharWidth(), area_->getCharHeight());
+}
+
+void
+CQPageTextWidget::
+sizeToRowCols(int w, int h, int *rows, int *cols) const
+{
+  int th = (area_->getShowToolBar  () ? (toolBar_   ? toolBar_  ->sizeHint().height() : 0) : 0);
+  int sh = (area_->getShowStatusBar() ? (statusBar_ ? statusBar_->sizeHint().height() : 0) : 0);
+
+  int hsize = (area_->getShowScrollBar() ? getHScroll()->sizeHint().height() : 0);
+  int vsize = (area_->getShowScrollBar() ? getVScroll()->sizeHint().width () : 0);
+
+  //---
+
+  int textw = w - vsize;
+  int texth = h - th - sh - hsize;
+
+  //---
+
+  *rows = texth/area_->getCharHeight();
+  *cols = textw/area_->getCharWidth ();
+}
+
+void
+CQPageTextWidget::
+rowColsToSize(int rows, int cols, int *w, int *h) const
+{
+  int th = (area_->getShowToolBar  () ? (toolBar_   ? toolBar_  ->sizeHint().height() : 0) : 0);
+  int sh = (area_->getShowStatusBar() ? (statusBar_ ? statusBar_->sizeHint().height() : 0) : 0);
+
+  int hsize = (area_->getShowScrollBar() ? getHScroll()->sizeHint().height() : 0);
+  int vsize = (area_->getShowScrollBar() ? getVScroll()->sizeHint().width () : 0);
+
+  //---
+
+  *w = cols*area_->getCharWidth () + vsize;
+  *h = rows*area_->getCharHeight() + th + sh + hsize;
+}
+
 //----------
 
 CQPageTextCanvas::
 CQPageTextCanvas(CQPageTextWidget *area) :
- area_(area), pressed_(false), selecting_(false), focus_(false), stateDialog_(NULL)
+ CQWindow(area), area_(area)
 {
+  setObjectName("canvas");
+
   setFocusPolicy(Qt::StrongFocus);
 
   setMouseTracking(true);
@@ -198,7 +399,9 @@ doBlink()
   if (focus_) {
     CQPageText *area = area_->getArea();
 
-    if (area->getEscapeNotifier() && area->getEscapeNotifier()->getCursorBlink()) {
+    CPageTextEscapeNotifier *notifier = area->getEscapeNotifier();
+
+    if (notifier && notifier->getCursorBlink()) {
       do_blink_ = true;
 
       update();
@@ -235,19 +438,8 @@ paintEvent(QPaintEvent *)
 
   //------
 
-  char_width_  = area->getCharWidth ();
-  char_height_ = area->getCharHeight();
-
-  if (! do_blink_) {
-    int min_rows = 2;
-    int min_cols = 4;
-
-    setMinSize(ui_width_ + min_cols*char_width_, ui_height_ + min_rows*char_height_);
-
-    setBaseSize(ui_width_, ui_height_);
-
-    setResizeInc(char_width_, char_height_);
-  }
+  charWidth_  = area->getCharWidth ();
+  charHeight_ = area->getCharHeight();
 
   //------
 
@@ -260,7 +452,9 @@ paintEvent(QPaintEvent *)
 
   //------
 
-  if (area->getEscapeNotifier() && area->getEscapeNotifier()->getCursorVisible())
+  CPageTextEscapeNotifier *notifier = area->getEscapeNotifier();
+
+  if (notifier && notifier->getCursorVisible())
     drawCursor(&ipainter);
 
   //------
@@ -278,21 +472,44 @@ paintEvent(QPaintEvent *)
 
 void
 CQPageTextCanvas::
+resize(uint width, uint height)
+{
+  CQPageText *area = area_->getArea();
+
+  if (area_->getToolBar()->isVisible())
+    height += area_->getToolBar()->height();
+
+  if (area_->getStatusBar()->isVisible())
+    height += area_->getStatusBar()->height();
+
+  if (area->getShowScrollBar()) {
+    height += area_->getHScroll()->height();
+    width  += area_->getVScroll()->width();
+  }
+
+  area_->resize(width, height);
+
+  area_->scrollBottom();
+}
+
+void
+CQPageTextCanvas::
 resizeEvent(QResizeEvent *)
 {
   qimage_ = QImage(QSize(width(), height()), QImage::Format_ARGB32);
 
   CQPageText *area = area_->getArea();
 
-  char_width_  = area->getCharWidth ();
-  char_height_ = area->getCharHeight();
+  charWidth_  = area->getCharWidth ();
+  charHeight_ = area->getCharHeight();
 
-  int rows = std::max(height()/char_height_, 1U);
-  int cols = std::max(width ()/char_width_ , 1U);
+  int w = width ();
+  int h = height();
+
+  int rows = std::max(h/charHeight(), 1U);
+  int cols = std::max(w/charWidth (), 1U);
 
   area->setPageSize(rows, cols);
-
-  area_->notifyPageSize(rows, cols);
 }
 
 void
@@ -323,11 +540,6 @@ updateScrollBars()
 
   x_offset_ = hscroll->value();
   y_offset_ = vscroll->value();
-
-  QWidget *parent = CQUtil::getToplevelWidget(this);
-
-  ui_width_  = parent->width () - width ();
-  ui_height_ = parent->height() - height();
 }
 
 void
@@ -336,12 +548,10 @@ drawGraphics(QPainter *painter)
 {
   CQPageText *area = area_->getArea();
 
-  CQPageText::PixelList::const_iterator p1, p2;
+  for (const auto &pixel : area->pixelPoints()) {
+    CRGBA c = CEscapeColorsInst->decode(pixel.color);
 
-  for (p1 = area->beginPixels(), p2 = area->endPixels(); p1 != p2; ++p1) {
-    const CQPageText::Pixel &pixel = *p1;
-
-    painter->setPen(CQUtil::rgbaToColor(pixel.color));
+    painter->setPen(CQUtil::rgbaToColor(c));
 
     painter->drawPoint(QPoint(pixel.x, pixel.y));
   }
@@ -362,8 +572,8 @@ drawCells(QPainter *painter)
 
   CQPageText *area = area_->getArea();
 
-  int min_y = -char_height_;
-  int max_y = height() + char_height_ - 1;
+  int min_y = -charHeight();
+  int max_y = height() + charHeight() - 1;
 
   int y = -y_offset_;
 
@@ -375,16 +585,14 @@ drawCells(QPainter *painter)
     if (y >= min_y && y <= max_y)
       drawLine(painter, y, line);
 
-    y += char_height_;
+    y += charHeight();
   }
 
-  for (pl1 = area->beginLine(), pl2 = area->endLine(); pl1 != pl2; ++pl1) {
-    const CPageTextLine *line = *pl1;
-
+  for (const auto &line : area->lines()) {
     if (y >= min_y && y <= max_y)
       drawLine(painter, y, line);
 
-    y += char_height_;
+    y += charHeight();
   }
 
   //------
@@ -395,7 +603,7 @@ drawCells(QPainter *painter)
     for (uint i = 0; i < num_image_cells; ++i) {
       const ImageCell &image_cell = image_cells_[i];
 
-      drawCell(painter, image_cell.x, image_cell.y, image_cell.cell);
+      drawImageCell(painter, image_cell.x, image_cell.y, image_cell.cell);
     }
 
     uint num_link_cells = link_cells_.size();
@@ -403,7 +611,7 @@ drawCells(QPainter *painter)
     for (uint i = 0; i < num_link_cells; ++i) {
       const LinkCell &link_cell = link_cells_[i];
 
-      drawCell(painter, link_cell.x, link_cell.y, link_cell.cell);
+      drawLinkCell(painter, link_cell.x, link_cell.y, link_cell.cell);
     }
   }
 }
@@ -414,37 +622,43 @@ drawLine(QPainter *painter, int y, const CPageTextLine *line)
 {
   int x = -x_offset_;
 
-  CPageTextLine::CellList::const_iterator pc1, pc2;
-
-  for (pc1 = line->beginCell(), pc2 = line->endCell(); pc1 != pc2; ++pc1) {
-    const CTextCell *cell = *pc1;
-
-    if      (cell->getType() == CTextCell::CHAR_TYPE) {
+  for (const auto &cell : line->cells()) {
+    if      (cell->getType() == CTextCell::Type::CHAR) {
       const CTextCharCell *char_cell = dynamic_cast<const CTextCharCell *>(cell);
 
-      drawCell(painter, x, y, char_cell);
+      drawCharCell(painter, x, y, char_cell);
+    }
+    else if (cell->getType() == CTextCell::Type::NONE) {
+      drawEmptyCell(painter, x, y, cell);
     }
 
-    x += char_width_;
+    if (line->widthStyle() == CCellLineWidthStyle::DOUBLE)
+      x += 2*charWidth();
+    else
+      x += charWidth();
   }
 
   if (! do_blink_) {
-    CPageTextLine::LinkList::const_iterator pl1, pl2;
+    for (const auto &idCell : line->links()) {
+      const CTextLinkCell *link_cell = idCell.second;
 
-    for (pl1 = line->beginLink(), pl2 = line->endLink(); pl1 != pl2; ++pl1) {
-      const CTextLinkCell *link_cell = *pl1;
+      int x = link_cell->getCol()*charWidth();
 
-      int x = link_cell->getCol()*char_width_;
+      if (link_cell->getLine()->widthStyle() == CCellLineWidthStyle::DOUBLE)
+        x *= 2;
 
       link_cells_.push_back(LinkCell(x, y, link_cell));
     }
 
     CPageTextLine::ImageList::const_iterator pi1, pi2;
 
-    for (pi1 = line->beginImage(), pi2 = line->endImage(); pi1 != pi2; ++pi1) {
-      const CTextImageCell *image_cell = (*pi1).second;
+    for (const auto &idImage : line->images()) {
+      const CTextImageCell *image_cell = idImage.second;
 
-      int x = image_cell->getCol()*char_width_;
+      int x = image_cell->getCol()*charWidth();
+
+      if (image_cell->getLine()->widthStyle() == CCellLineWidthStyle::DOUBLE)
+        x *= 2;
 
       image_cells_.push_back(ImageCell(x, y, image_cell));
     }
@@ -453,7 +667,7 @@ drawLine(QPainter *painter, int y, const CPageTextLine *line)
 
 void
 CQPageTextCanvas::
-drawCell(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
+drawCharCell(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
 {
   const CCellStyle &style = char_cell->getStyle();
 
@@ -477,7 +691,7 @@ drawCell(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
 
   CRGBA bg = (! invert ? area->getBg(style) : area->getFg(style));
 
-  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(char_width_, char_height_));
+  CIBBox2D bbox = char_cell->getBBox(x, y, charWidth(), charHeight(), false);
 
   painter->fillRect(CQUtil::toQRect(bbox), CQUtil::rgbaToColor(bg));
 
@@ -489,18 +703,84 @@ drawCell(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
 
   painter->setFont(font);
 
-  QFontMetrics fm(font);
+  drawCharCellChar(painter, x, y, char_cell);
+}
+
+void
+CQPageTextCanvas::
+drawCharCellChar(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
+{
+  QFontMetrics fm(painter->font());
 
   char c = char_cell->getChar();
 
   if (c == '\0') c = ' ';
 
-  painter->drawText(QPoint(x, y + fm.ascent()), QString(c));
+  QString text(c);
+
+  CPageTextLine *line = char_cell->getLine();
+
+  if (line->widthStyle () != CCellLineWidthStyle ::SINGLE ||
+      line->heightStyle() != CCellLineHeightStyle::SINGLE) {
+    int tw = fm.width(text);
+    int th = fm.height();
+
+    QImage qimage(QSize(tw, th), QImage::Format_ARGB32);
+
+    qimage.fill(0);
+
+    QPainter ipainter(&qimage);
+
+    ipainter.setPen(painter->pen());
+    ipainter.setFont(painter->font());
+
+    ipainter.drawText(QPoint(0, fm.ascent()), text);
+
+    if (line->heightStyle() != CCellLineHeightStyle::SINGLE) {
+      int y1 = 0;
+      int y2 = th/2;
+
+      if (line->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM) {
+        y1 = th/2;
+        y2 = th - 1;
+      }
+
+      for (int py = y1; py <= y2; ++py) {
+        int py1 = 2*(py - y1);
+
+        for (int px = 0; px < tw; ++px) {
+          QRgb rgb = qimage.pixel(px, py);
+          if (! rgb) continue;
+
+          painter->setPen(rgb);
+
+          painter->drawPoint(x + px, y + py1 + 0);
+          painter->drawPoint(x + px, y + py1 + 1);
+        }
+      }
+    }
+    else {
+      for (int py = 0; py < th; ++py) {
+        for (int px = 0; px < tw; ++px) {
+          QRgb rgb = qimage.pixel(px, py);
+          if (! rgb) continue;
+
+          painter->setPen(rgb);
+
+          painter->drawPoint(x + 2*px + 0, y + py);
+          painter->drawPoint(x + 2*px + 1, y + py);
+        }
+      }
+    }
+  }
+  else {
+    painter->drawText(QPoint(x, y + fm.ascent()), text);
+  }
 }
 
 void
 CQPageTextCanvas::
-drawCell(QPainter *painter, int x, int y, const CTextImageCell *image_cell)
+drawImageCell(QPainter *painter, int x, int y, const CTextImageCell *image_cell)
 {
   if (do_blink_) return;
 
@@ -509,32 +789,54 @@ drawCell(QPainter *painter, int x, int y, const CTextImageCell *image_cell)
   uint w = image->getWidth ();
   uint h = image->getHeight();
 
-  uint cols = (w + char_width_  - 1)/char_width_;
-  uint rows = (h + char_height_ - 1)/char_height_;
+  uint cols = (w + charWidth () - 1)/charWidth ();
+  uint rows = (h + charHeight() - 1)/charHeight();
 
-  int dx = (cols*char_width_  - w)/2;
-  int dy = (rows*char_height_ - h)/2;
+  int dx = (cols*charWidth () - w)/2;
+  int dy = (rows*charHeight() - h)/2;
 
   painter->drawImage(QPoint(x + dx, y + dy), CQUtil::toQImage(image));
 
-  const string &str = image_cell->getFileName();
+  const std::string &str = image_cell->getFileName();
 
-  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(cols*char_width_, rows*char_height_));
+  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(cols*charWidth(), rows*charHeight()));
 
   addRegion(Region(bbox, str, image_cell));
 }
 
 void
 CQPageTextCanvas::
-drawCell(QPainter *, int x, int y, const CTextLinkCell *link_cell)
+drawLinkCell(QPainter *, int x, int y, const CTextLinkCell *link_cell)
 {
   if (do_blink_) return;
 
-  const string &str = link_cell->getLinkName();
+  const std::string &str = link_cell->getLinkName();
 
-  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(str.size()*char_width_, char_height_));
+  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(str.size()*charWidth(), charHeight()));
 
   addRegion(Region(bbox, str, link_cell));
+}
+
+void
+CQPageTextCanvas::
+drawEmptyCell(QPainter *painter, int x, int y, const CTextCell *cell)
+{
+  CQPageText *area = area_->getArea();
+
+  int row, col;
+
+  area->pixelToPos(x + x_offset_, y + y_offset_, &row, &col);
+
+  bool invert = false;
+
+  if (area->isSelected(row, col))
+    invert = ! invert;
+
+  CRGBA bg = (! invert ? area->getBg() : area->getFg());
+
+  CIBBox2D bbox = cell->getBBox(x, y, charWidth(), charHeight(), false);
+
+  painter->fillRect(CQUtil::toQRect(bbox), CQUtil::rgbaToColor(bg));
 }
 
 void
@@ -545,20 +847,32 @@ drawCursor(QPainter *painter)
 
   const CTextPos &pos = area->getPosition();
 
-  const CTextCharCell *char_cell = dynamic_cast<const CTextCharCell *>(area->getCell(pos));
+  const CTextCell *cell = area->getCell(pos);
 
-  int x =                             pos.getCol()*char_width_  - x_offset_;
-  int y = area->getOldLinesHeight() + pos.getRow()*char_height_ - y_offset_;
+  const CTextCharCell *char_cell = dynamic_cast<const CTextCharCell *>(cell);
 
-  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(char_width_ - 1, char_height_ - 1));
+  int xf = (cell->getLine()->widthStyle() == CCellLineWidthStyle::DOUBLE ? 2 : 1);
 
-  CRGBA fg = area->getEscapeNotifier()->getCursorColor();
+  int x = xf*pos.getCol()*charWidth() - x_offset_;
+  int y = area->getOldLinesHeight() + pos.getRow()*charHeight() - y_offset_;
+
+  //---
+
+  CIBBox2D bbox = cell->getBBox(x, y, charWidth(), charHeight(), true);
+
+  //---
+
+  CPageTextEscapeNotifier *notifier = area->getEscapeNotifier();
+
+  CRGBA fg = (notifier ? notifier->getCursorColor() : CRGBA(1,1,1));
   CRGBA bg = area->getBg();
 
   if (! do_blink_ || blink_num_ == 0)
     painter->fillRect(CQUtil::toQRect(bbox), QBrush(CQUtil::rgbaToColor(fg)));
   else
     painter->fillRect(CQUtil::toQRect(bbox), QBrush(CQUtil::rgbaToColor(bg)));
+
+  //---
 
   if (char_cell) {
     const CCellStyle &style = char_cell->getStyle();
@@ -574,13 +888,30 @@ drawCursor(QPainter *painter)
 
     painter->setFont(font);
 
-    QFontMetrics fm(font);
+    drawCharCellChar(painter, x, y, char_cell);
 
-    char c = char_cell->getChar();
+    if      (char_cell->getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_TOP) {
+      CTextPos pos1(pos.getRow() + 1, pos.getCol());
 
-    if (c == '\0') c = ' ';
+      const CTextCell *cell1 = area->getCell(pos1);
 
-    painter->drawText(QPoint(x, y + fm.ascent()), QString(c));
+      const CTextCharCell *char_cell1 = dynamic_cast<const CTextCharCell *>(cell1);
+
+      if (char_cell1)
+        drawCharCellChar(painter, x, y + charHeight(), char_cell1);
+    }
+    else if (char_cell->getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM) {
+      if (pos.getRow() > 0) {
+        CTextPos pos1(pos.getRow() - 1, pos.getCol());
+
+        const CTextCell *cell1 = area->getCell(pos1);
+
+        const CTextCharCell *char_cell1 = dynamic_cast<const CTextCharCell *>(cell1);
+
+        if (char_cell1)
+          drawCharCellChar(painter, x, y - charHeight(), char_cell1);
+      }
+    }
   }
 }
 
@@ -595,14 +926,16 @@ mousePressEvent(QMouseEvent *e)
   int x = e->x() + x_offset_;
   int y = e->y() + y_offset_;
 
-  if (area->getEscapeNotifier() && area->getEscapeNotifier()->getSendMousePress()) {
+  CPageTextEscapeNotifier *notifier = area->getEscapeNotifier();
+
+  if (notifier && notifier->getSendMousePress()) {
     int button = e->button() - 1;
 
     int row, col;
 
     area->pixelToPos(x, y, &row, &col);
 
-    area->getEscapeNotifier()->sendMousePress(button, col + 1, row + 1);
+    notifier->sendMousePress(button, col + 1, row + 1);
   }
 
   if      (e->button() == Qt::LeftButton) {
@@ -615,11 +948,17 @@ mousePressEvent(QMouseEvent *e)
     update();
 
     selecting_ = true;
+
+    if (area->isMoveOnClick()) {
+      std::string str = CEscape::CUP(row + 1, col + 1);
+
+      area_->processString(str.c_str());
+    }
   }
   else if (e->button() == Qt::MidButton) {
     CQPageText *area = area_->getArea();
 
-    string str = area->getSelectionText();
+    std::string str = area->getSelectionText();
 
     area_->processString(str.c_str());
   }
@@ -636,14 +975,16 @@ mouseReleaseEvent(QMouseEvent *e)
   int x = e->x() + x_offset_;
   int y = e->y() + y_offset_;
 
-  if (area->getEscapeNotifier() && area->getEscapeNotifier()->getSendMousePress()) {
+  CPageTextEscapeNotifier *notifier = area->getEscapeNotifier();
+
+  if (notifier && notifier->getSendMousePress()) {
     int button = e->button() - 1;
 
     int row, col;
 
     area->pixelToPos(x, y, &row, &col);
 
-    area->getEscapeNotifier()->sendMouseRelease(button, col + 1, row + 1);
+    notifier->sendMouseRelease(button, col + 1, row + 1);
   }
 
   if (selecting_) {
@@ -707,10 +1048,10 @@ mouseDoubleClickEvent(QMouseEvent *e)
     if (region) {
       const CTextCell *cell = region->cell;
 
-      const CTextLinkCell  *link_cell  = NULL;
-      const CTextImageCell *image_cell = NULL;
+      const CTextLinkCell  *link_cell  = nullptr;
+      const CTextImageCell *image_cell = nullptr;
 
-      if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != NULL) {
+      if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != nullptr) {
         CFileType type = CFileUtil::getType(link_cell->getLinkDest());
 
         if      (type & CFILE_TYPE_IMAGE) {
@@ -719,7 +1060,7 @@ mouseDoubleClickEvent(QMouseEvent *e)
           return;
         }
         else if (type & CFILE_TYPE_INODE_DIR) {
-          string cmd = "cd " + link_cell->getLinkDest() + "\n";
+          std::string cmd = "cd " + link_cell->getLinkDest() + "\n";
 
           area_->processString(cmd.c_str());
 
@@ -731,7 +1072,7 @@ mouseDoubleClickEvent(QMouseEvent *e)
           return;
         }
       }
-      else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != NULL) {
+      else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != nullptr) {
         area_->emitDisplayImage(image_cell->getFileName());
 
         return;
@@ -759,7 +1100,7 @@ keyPressEvent(QKeyEvent *e)
 
   // handle special pasted key sequence
   if (ke->getType() == CKEY_TYPE_Insert && ke->isShiftKey()) {
-    string str = "_<paste/>\\";
+    std::string str = "_<paste/>\\";
 
     area->addEscapeChars(str.c_str(), str.size());
 
@@ -780,7 +1121,7 @@ keyPressEvent(QKeyEvent *e)
     }
   }
 
-  const string &str = area->getEventText(ke);
+  const std::string &str = area->getEventText(ke);
 
   if (! str.empty())
     area_->processString(str.c_str());
@@ -797,15 +1138,15 @@ contextMenuEvent(QContextMenuEvent *e)
 
   QMenu *menu = new QMenu;
 
-  const CTextCell *cell = NULL;
+  const CTextCell *cell = nullptr;
 
   if (region)
     cell = region->cell;
 
-  const CTextLinkCell  *link_cell  = NULL;
-  const CTextImageCell *image_cell = NULL;
+  const CTextLinkCell  *link_cell  = nullptr;
+  const CTextImageCell *image_cell = nullptr;
 
-  if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != NULL) {
+  if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != nullptr) {
     CFileType type = CFileUtil::getType(link_cell->getLinkDest());
 
     if      (type & CFILE_TYPE_IMAGE) {
@@ -834,7 +1175,7 @@ contextMenuEvent(QContextMenuEvent *e)
       menu->addAction(editAction);
     }
   }
-  else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != NULL) {
+  else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != nullptr) {
     QAction *viewAction = new QAction("View", this);
 
     menu->addAction(viewAction);
@@ -844,10 +1185,20 @@ contextMenuEvent(QContextMenuEvent *e)
     menu->addAction(editAction);
   }
   else {
+    CQPageText *area = area_->getArea();
+
     QAction *toolBarAction   = new QAction("Show ToolBar", this);
     QAction *statusBarAction = new QAction("Show Status Bar", this);
     QAction *scrollBarAction = new QAction("Show Scroll Bar", this);
     QAction *statusAction    = new QAction("Status", this);
+
+    toolBarAction  ->setCheckable(true);
+    statusBarAction->setCheckable(true);
+    scrollBarAction->setCheckable(true);
+
+    toolBarAction  ->setChecked(area_->getToolBar  ()->isVisible());
+    statusBarAction->setChecked(area_->getStatusBar()->isVisible());
+    scrollBarAction->setChecked(area->getShowScrollBar());
 
     menu->addAction(toolBarAction);
     menu->addAction(statusBarAction);
@@ -881,29 +1232,37 @@ void
 CQPageTextCanvas::
 toggleToolBar()
 {
-  area_->getArea()->setShowToolBar(! area_->getArea()->getShowToolBar());
+  CQPageText *area = area_->getArea();
+
+  area->setShowToolBar(! area->getShowToolBar());
 }
 
 void
 CQPageTextCanvas::
 toggleStatusBar()
 {
-  area_->getArea()->setShowStatusBar(! area_->getArea()->getShowStatusBar());
+  CQPageText *area = area_->getArea();
+
+  area->setShowStatusBar(! area->getShowStatusBar());
 }
 
 void
 CQPageTextCanvas::
 toggleScrollBar()
 {
-  area_->getArea()->setShowScrollBar(! area_->getArea()->getShowScrollBar());
+  CQPageText *area = area_->getArea();
+
+  area->setShowScrollBar(! area->getShowScrollBar());
 }
 
 void
 CQPageTextCanvas::
 displayStatus()
 {
+  CQPageText *area = area_->getArea();
+
   if (! stateDialog_)
-    stateDialog_ = new CQPageTextState(area_->getArea());
+    stateDialog_ = new CQPageTextState(area);
 
   stateDialog_->updateState();
 
@@ -914,25 +1273,48 @@ CQPageTextCanvas::Region *
 CQPageTextCanvas::
 getRegionAtPoint(int x, int y)
 {
-  RegionList::iterator p1, p2;
-
-  for (p1 = regions_.begin(), p2 = regions_.end(); p1 != p2; ++p1) {
-    Region &region = *p1;
-
-    if (! region.bbox.inside(CIPoint2D(x, y))) continue;
+  for (auto &region : regions_) {
+    if (! region.bbox.inside(CIPoint2D(x, y)))
+      continue;
 
     return &region;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 //------
 
 CQPageText::
 CQPageText(CQPageTextWidget *widget) :
- CPageText(), widget_(widget)
+ QObject(widget), CPageText(), widget_(widget)
 {
+  setObjectName("text");
+}
+
+void
+CQPageText::
+set4014(bool b)
+{
+  if (b) {
+    if (! text4014_)
+      text4014_ = new CQPageText4014(this);
+
+    text4014_->show();
+  }
+
+  CPageText::set4014(b);
+}
+
+void
+CQPageText::
+add4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+            const CEscapeLineStyle &style)
+{
+  if (text4014_)
+    text4014_->addLine(x1, y1, x2, y2, color, style);
+
+  CPageText::add4014Line(x1, y1, x2, y2, color, style);
 }
 
 void
@@ -978,7 +1360,28 @@ notifyPageSize(int rows, int cols)
 
 void
 CQPageText::
-notifyDirChanged(const string &dirName)
+notifyPosition(const CTextPos &pos)
+{
+  widget_->notifyPosition(pos);
+}
+
+void
+CQPageText::
+notifyCharSize(int width, int height)
+{
+  widget_->notifyCharSize(width, height);
+}
+
+void
+CQPageText::
+notifyStyle(const CTextPos &pos)
+{
+  widget_->notifyStyle(pos);
+}
+
+void
+CQPageText::
+notifyDirChanged(const std::string &dirName)
 {
   widget_->notifyDirChanged(dirName);
 }
@@ -995,4 +1398,204 @@ CQPageText::
 getTty() const
 {
   return widget_->getTty();
+}
+
+//------
+
+CQPageTextToolBar::
+CQPageTextToolBar(CQPageTextWidget *widget) :
+ QWidget(widget), widget_(widget)
+{
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+  QHBoxLayout *layout = new QHBoxLayout(this);
+  layout->setMargin(0); layout->setSpacing(2);
+}
+
+void
+CQPageTextToolBar::
+addButton()
+{
+  QHBoxLayout *layout = qobject_cast<QHBoxLayout *>(this->layout());
+
+  QToolButton *button = new QToolButton;
+
+  layout->addWidget(button);
+}
+
+void
+CQPageTextToolBar::
+addStretch()
+{
+  QHBoxLayout *layout = qobject_cast<QHBoxLayout *>(this->layout());
+
+  layout->addStretch(1);
+}
+
+//------
+
+CQPageTextStatus::
+CQPageTextStatus(CQPageTextWidget *widget) :
+ QWidget(widget), widget_(widget)
+{
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+  QHBoxLayout *layout = new QHBoxLayout(this);
+  layout->setMargin(0); layout->setSpacing(2);
+}
+
+void
+CQPageTextStatus::
+addStretch()
+{
+  QHBoxLayout *layout = qobject_cast<QHBoxLayout *>(this->layout());
+
+  layout->addStretch(1);
+}
+
+void
+CQPageTextStatus::
+addMsgLabel()
+{
+  QHBoxLayout *layout = qobject_cast<QHBoxLayout *>(this->layout());
+
+  msgLabel_ = new QLabel;
+
+  layout->addWidget(msgLabel_);
+}
+
+void
+CQPageTextStatus::
+setMsg(const QString &str)
+{
+  msgLabel_->setText(str);
+}
+
+void
+CQPageTextStatus::
+addCmdEdit()
+{
+  QHBoxLayout *layout = qobject_cast<QHBoxLayout *>(this->layout());
+
+  cmdEdit_ = new QLineEdit;
+
+  connect(cmdEdit_, SIGNAL(returnPressed()), this, SLOT(cmdSlot()));
+
+  layout->addWidget(cmdEdit_);
+}
+
+void
+CQPageTextStatus::
+addPosLabel()
+{
+  QHBoxLayout *layout = qobject_cast<QHBoxLayout *>(this->layout());
+
+  posLabel_ = new QLabel;
+
+  layout->addWidget(posLabel_);
+}
+
+void
+CQPageTextStatus::
+addSizeLabel()
+{
+  QHBoxLayout *layout = qobject_cast<QHBoxLayout *>(this->layout());
+
+  sizeLabel_ = new QLabel;
+
+  layout->addWidget(sizeLabel_);
+}
+
+void
+CQPageTextStatus::
+cmdSlot()
+{
+  QString cmd = cmdEdit_->text();
+
+  CQPageText *text = widget_->getArea();
+
+  text->loadCmdLine(cmd.toStdString());
+}
+
+void
+CQPageTextStatus::
+updateLabels()
+{
+  CQPageText *text = widget_->getArea();
+
+  int rows = text->getPageRows();
+  int cols = text->getPageCols();
+
+  if (sizeLabel_)
+    sizeLabel_->setText(QString("%1x%2").arg(rows).arg(cols));
+
+  ///
+
+  CQPageText *area = widget_->getArea();
+
+  const CTextPos &pos = area->getPosition();
+
+  int x = pos.getCol();
+  int y = pos.getRow();
+
+  if (posLabel_)
+    posLabel_->setText(QString("%1x%2").arg(x).arg(y));
+}
+
+//------
+
+// In Alpha mode, the 4010 displays 35 lines of 74 characters
+// Graphics is 1024, 780
+CQPageText4014::
+CQPageText4014(CQPageText *area) :
+ area_(area)
+{
+  setFixedSize(1024, 780);
+}
+
+void
+CQPageText4014::
+addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+        const CEscapeLineStyle &style)
+{
+  pixelLines_.push_back(CQPageText::PixelLine(x1, y1, x2, y2, color, style));
+}
+
+void
+CQPageText4014::
+paintEvent(QPaintEvent *)
+{
+  QPainter painter(this);
+
+  painter.fillRect(rect(), Qt::black);
+
+  for (const auto &line : pixelLines_) {
+    CRGBA c = CEscapeColorsInst->decode(line.color);
+
+    QPen pen;
+
+    pen.setColor(CQUtil::rgbaToColor(c));
+
+    if      (line.lineStyle == CEscapeLineStyle::DOTTED)
+      pen.setStyle(Qt::DotLine);
+    else if (line.lineStyle == CEscapeLineStyle::DOT_DASH)
+      pen.setStyle(Qt::DashDotLine);
+    else if (line.lineStyle == CEscapeLineStyle::SHORT_DASH)
+      pen.setStyle(Qt::DashLine);
+    else if (line.lineStyle == CEscapeLineStyle::LONG_DASH) {
+      pen.setStyle(Qt::CustomDashLine);
+      pen.setDashPattern(QVector<qreal>() << 8 << 4);
+    }
+
+    painter.setPen(pen);
+
+    painter.drawLine(QPoint(line.x1, line.y1), QPoint(line.x2, line.y2));
+  }
+}
+
+void
+CQPageText4014::
+mousePressEvent(QMouseEvent *)
+{
+  update();
 }

@@ -33,11 +33,11 @@ class CTty {
   bool setRaw(int fd, struct termios *t);
 
  private:
-  int         master_fd_;
+  int         master_fd_ { -1 };
   int         fds_  [2];
   bool        flags_[2];
-  uint        read_wait_; // read timeout (microseconds)
-  bool        is_cterm_;
+  uint        read_wait_ { 5000 }; // read timeout (microseconds)
+  bool        is_cterm_ { true };
   std::string shell_;
 };
 

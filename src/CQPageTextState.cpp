@@ -23,6 +23,8 @@ CQPageTextState::
 CQPageTextState(CQPageText *text) :
  text_(text)
 {
+  setObjectName("state");
+
   QVBoxLayout *layout = new QVBoxLayout(this);
 
   QTabWidget *tab = new QTabWidget();
@@ -44,12 +46,15 @@ CQPageTextState(CQPageText *text) :
   inverseVideo_          = new QCheckBox("Inverse Video");
   sendMousePress_        = new QCheckBox("Send Mouse Press");
   sendMouseRelease_      = new QCheckBox("Send Mouse Release");
+  sendMouseMotion_       = new QCheckBox("Send Mouse Motion");
+  sendFocusInOut_        = new QCheckBox("Send Focus In/Out");
   scrollBottomKey_       = new QCheckBox("Scroll Bottom Key");
   scrollBottomTty_       = new QCheckBox("Scroll Bottom TTY");
   applicationCursorKeys_ = new QCheckBox("Application Cursor Keys");
   insertMode_            = new QCheckBox("Insert Mode");
   lineWrap_              = new QCheckBox("Line Wrap");
   ansiVt52Mode_          = new QCheckBox("ANSI VT52 Mode");
+  tek4014Mode_           = new QCheckBox("Tek 4014 Mode");
   keyPadMode_            = new QCheckBox("Key Pad Mode");
   lfNlMode_              = new QCheckBox("LF/NL Mode");
   ffNpMode_              = new QCheckBox("FF/NP Mode");
@@ -60,6 +65,7 @@ CQPageTextState(CQPageText *text) :
   cursorBlink_           = new QCheckBox("Cursor Blink");
   reverseWrap_           = new QCheckBox("Reverse Wrap");
   allow80132_            = new QCheckBox("Allow 80/132");
+  control8Bit_           = new QCheckBox("Control 8 bit");
   altPage_               = new QCheckBox("Alternate Page");
 
   connect(inverseVideo_ , SIGNAL(clicked()), this, SLOT(updateInverseVideo ()));
@@ -70,23 +76,27 @@ CQPageTextState(CQPageText *text) :
   grid->addWidget(inverseVideo_         ,  0, 0);
   grid->addWidget(sendMousePress_       ,  1, 0);
   grid->addWidget(sendMouseRelease_     ,  1, 1);
-  grid->addWidget(scrollBottomKey_      ,  2, 0);
-  grid->addWidget(scrollBottomTty_      ,  2, 1);
-  grid->addWidget(applicationCursorKeys_,  3, 0);
-  grid->addWidget(insertMode_           ,  4, 0);
-  grid->addWidget(lineWrap_             ,  5, 0);
-  grid->addWidget(ansiVt52Mode_         ,  6, 0);
-  grid->addWidget(keyPadMode_           ,  7, 0);
-  grid->addWidget(lfNlMode_             ,  8, 0);
-  grid->addWidget(ffNpMode_             ,  8, 1);
-  grid->addWidget(smoothScroll_         ,  9, 0);
-  grid->addWidget(originMode_           ,  9, 1);
-  grid->addWidget(autoRepeat_           , 10, 0);
-  grid->addWidget(cursorVisible_        , 11, 0);
-  grid->addWidget(cursorBlink_          , 11, 1);
-  grid->addWidget(reverseWrap_          , 12, 0);
-  grid->addWidget(allow80132_           , 13, 0);
-  grid->addWidget(altPage_              , 14, 0);
+  grid->addWidget(sendMouseMotion_      ,  2, 0);
+  grid->addWidget(sendFocusInOut_       ,  2, 1);
+  grid->addWidget(scrollBottomKey_      ,  3, 0);
+  grid->addWidget(scrollBottomTty_      ,  3, 1);
+  grid->addWidget(applicationCursorKeys_,  4, 0);
+  grid->addWidget(insertMode_           ,  5, 0);
+  grid->addWidget(lineWrap_             ,  6, 0);
+  grid->addWidget(ansiVt52Mode_         ,  7, 0);
+  grid->addWidget(tek4014Mode_          ,  7, 1);
+  grid->addWidget(keyPadMode_           ,  8, 0);
+  grid->addWidget(lfNlMode_             ,  9, 0);
+  grid->addWidget(ffNpMode_             ,  9, 1);
+  grid->addWidget(smoothScroll_         , 10, 0);
+  grid->addWidget(originMode_           , 10, 1);
+  grid->addWidget(autoRepeat_           , 11, 0);
+  grid->addWidget(cursorVisible_        , 12, 0);
+  grid->addWidget(cursorBlink_          , 12, 1);
+  grid->addWidget(reverseWrap_          , 13, 0);
+  grid->addWidget(allow80132_           , 14, 0);
+  grid->addWidget(control8Bit_          , 14, 1);
+  grid->addWidget(altPage_              , 15, 0);
 
   layout1->addWidget(stateGroup);
 
@@ -113,17 +123,25 @@ CQPageTextState(CQPageText *text) :
 
   QGridLayout *grid2 = new QGridLayout;
 
-  bgColor_     = addColor("Bg"     ,  0, grid2);
-  fgColor_     = addColor("Fg"     ,  1, grid2);
-  cursorColor_ = addColor("Cursor" ,  2, grid2);
-  color1_      = addColor("Black"  ,  3, grid2);
-  color2_      = addColor("Red"    ,  4, grid2);
-  color3_      = addColor("Green"  ,  5, grid2);
-  color4_      = addColor("Yellow" ,  6, grid2);
-  color5_      = addColor("Blue"   ,  7, grid2);
-  color6_      = addColor("Magenta",  8, grid2);
-  color7_      = addColor("Cyan"   ,  9, grid2);
-  color8_      = addColor("White"  , 10, grid2);
+  bgColor_     = addColor("Bg"         , 0, 0, grid2);
+  fgColor_     = addColor("Fg"         , 0, 1, grid2);
+  cursorColor_ = addColor("Cursor"     , 1, 0, grid2);
+  color1_      = addColor("Black"      , 2, 0, grid2);
+  color2_      = addColor("Red"        , 3, 0, grid2);
+  color3_      = addColor("Green"      , 4, 0, grid2);
+  color4_      = addColor("Yellow"     , 5, 0, grid2);
+  color5_      = addColor("Blue"       , 6, 0, grid2);
+  color6_      = addColor("Magenta"    , 7, 0, grid2);
+  color7_      = addColor("Cyan"       , 8, 0, grid2);
+  color8_      = addColor("White"      , 9, 0, grid2);
+  altColor1_   = addColor("Alt Black"  , 2, 1, grid2);
+  altColor2_   = addColor("Alt Red"    , 3, 1, grid2);
+  altColor3_   = addColor("Alt Green"  , 4, 1, grid2);
+  altColor4_   = addColor("Alt Yellow" , 5, 1, grid2);
+  altColor5_   = addColor("Alt Blue"   , 6, 1, grid2);
+  altColor6_   = addColor("Alt Magenta", 7, 1, grid2);
+  altColor7_   = addColor("Alt Cyan"   , 8, 1, grid2);
+  altColor8_   = addColor("Alt White"  , 9, 1, grid2);
 
   layout2->addLayout(grid2);
 
@@ -190,7 +208,7 @@ CQPageTextState(CQPageText *text) :
 
 CQColorChooser *
 CQPageTextState::
-addColor(const std::string &name, int pos, QGridLayout *layout)
+addColor(const std::string &name, int pos, int ind, QGridLayout *layout)
 {
   QLabel *label = new QLabel(name.c_str());
 
@@ -202,8 +220,14 @@ addColor(const std::string &name, int pos, QGridLayout *layout)
 
   connect(chooser, SIGNAL(colorChanged(const QColor &)), this, SLOT(colorChanged(const QColor &)));
 
-  layout->addWidget(label  , pos, 0);
-  layout->addWidget(chooser, pos, 1);
+  if (ind == 0) {
+    layout->addWidget(label  , pos, 0);
+    layout->addWidget(chooser, pos, 1);
+  }
+  else {
+    layout->addWidget(label  , pos, 2);
+    layout->addWidget(chooser, pos, 3);
+  }
 
   return chooser;
 }
@@ -233,12 +257,15 @@ updateState()
   inverseVideo_         ->setChecked(notifier->getInverseVideo());
   sendMousePress_       ->setChecked(notifier->getSendMousePress());
   sendMouseRelease_     ->setChecked(notifier->getSendMouseRelease());
+  sendMouseMotion_      ->setChecked(notifier->getSendMouseMotion());
+  sendFocusInOut_       ->setChecked(notifier->getSendFocusInOut());
   scrollBottomKey_      ->setChecked(notifier->getScrollBottomOnKey());
   scrollBottomTty_      ->setChecked(notifier->getScrollBottomOnTty());
   applicationCursorKeys_->setChecked(notifier->getApplicationCursorKeys());
   insertMode_           ->setChecked(notifier->getInsertMode());
   lineWrap_             ->setChecked(notifier->getLineWrap());
   ansiVt52Mode_         ->setChecked(notifier->getAnsiVT52Mode());
+  tek4014Mode_          ->setChecked(notifier->getTek4014());
   keyPadMode_           ->setChecked(notifier->getKeyPadMode());
   lfNlMode_             ->setChecked(notifier->getLfNlMode());
   ffNpMode_             ->setChecked(notifier->getFfNpMode());
@@ -249,6 +276,7 @@ updateState()
   cursorBlink_          ->setChecked(notifier->getCursorBlink());
   reverseWrap_          ->setChecked(notifier->getReverseWrap());
   allow80132_           ->setChecked(notifier->getAllow80To132());
+  control8Bit_          ->setChecked(notifier->getControl8Bit());
 
   altPage_->setChecked(text_->isAlt());
 
@@ -258,19 +286,28 @@ updateState()
 
   //------
 
-  bgColor_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_BG)));
-  fgColor_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_FG)));
+  bgColor_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::BG)));
+  fgColor_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::FG)));
 
   cursorColor_->setColor(CQUtil::rgbaToColor(notifier->getCursorColor()));
 
-  color1_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_BLACK  )));
-  color2_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_RED    )));
-  color3_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_GREEN  )));
-  color4_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_YELLOW )));
-  color5_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_BLUE   )));
-  color6_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_MAGENTA)));
-  color7_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_CYAN   )));
-  color8_->setColor(CQUtil::rgbaToColor(notifier->getColor(CESCAPE_COLOR_WHITE  )));
+  color1_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::BLACK  )));
+  color2_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::RED    )));
+  color3_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::GREEN  )));
+  color4_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::YELLOW )));
+  color5_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::BLUE   )));
+  color6_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::MAGENTA)));
+  color7_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::CYAN   )));
+  color8_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::WHITE  )));
+
+  altColor1_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_BLACK  )));
+  altColor2_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_RED    )));
+  altColor3_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_GREEN  )));
+  altColor4_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_YELLOW )));
+  altColor5_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_BLUE   )));
+  altColor6_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_MAGENTA)));
+  altColor7_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_CYAN   )));
+  altColor8_->setColor(CQUtil::rgbaToColor(notifier->getColor(CEscapeColor::ALT_WHITE  )));
 
   std::string fontFamily;
   uint        fontSize;
@@ -359,19 +396,28 @@ colorChanged(const QColor &)
 {
   CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
 
-  notifier->setColor(CESCAPE_COLOR_BG, CQUtil::colorToRGBA(bgColor_->color()));
-  notifier->setColor(CESCAPE_COLOR_FG, CQUtil::colorToRGBA(fgColor_->color()));
+  notifier->setColor(CEscapeColor::BG, CQUtil::colorToRGBA(bgColor_->color()));
+  notifier->setColor(CEscapeColor::FG, CQUtil::colorToRGBA(fgColor_->color()));
 
   notifier->setCursorColor(CQUtil::colorToRGBA(cursorColor_->color()));
 
-  notifier->setColor(CESCAPE_COLOR_BLACK  , CQUtil::colorToRGBA(color1_->color()));
-  notifier->setColor(CESCAPE_COLOR_RED    , CQUtil::colorToRGBA(color2_->color()));
-  notifier->setColor(CESCAPE_COLOR_GREEN  , CQUtil::colorToRGBA(color3_->color()));
-  notifier->setColor(CESCAPE_COLOR_YELLOW , CQUtil::colorToRGBA(color4_->color()));
-  notifier->setColor(CESCAPE_COLOR_BLUE   , CQUtil::colorToRGBA(color5_->color()));
-  notifier->setColor(CESCAPE_COLOR_MAGENTA, CQUtil::colorToRGBA(color6_->color()));
-  notifier->setColor(CESCAPE_COLOR_CYAN   , CQUtil::colorToRGBA(color7_->color()));
-  notifier->setColor(CESCAPE_COLOR_WHITE  , CQUtil::colorToRGBA(color8_->color()));
+  notifier->setColor(CEscapeColor::BLACK  , CQUtil::colorToRGBA(color1_->color()));
+  notifier->setColor(CEscapeColor::RED    , CQUtil::colorToRGBA(color2_->color()));
+  notifier->setColor(CEscapeColor::GREEN  , CQUtil::colorToRGBA(color3_->color()));
+  notifier->setColor(CEscapeColor::YELLOW , CQUtil::colorToRGBA(color4_->color()));
+  notifier->setColor(CEscapeColor::BLUE   , CQUtil::colorToRGBA(color5_->color()));
+  notifier->setColor(CEscapeColor::MAGENTA, CQUtil::colorToRGBA(color6_->color()));
+  notifier->setColor(CEscapeColor::CYAN   , CQUtil::colorToRGBA(color7_->color()));
+  notifier->setColor(CEscapeColor::WHITE  , CQUtil::colorToRGBA(color8_->color()));
+
+  notifier->setColor(CEscapeColor::ALT_BLACK  , CQUtil::colorToRGBA(altColor1_->color()));
+  notifier->setColor(CEscapeColor::ALT_RED    , CQUtil::colorToRGBA(altColor2_->color()));
+  notifier->setColor(CEscapeColor::ALT_GREEN  , CQUtil::colorToRGBA(altColor3_->color()));
+  notifier->setColor(CEscapeColor::ALT_YELLOW , CQUtil::colorToRGBA(altColor4_->color()));
+  notifier->setColor(CEscapeColor::ALT_BLUE   , CQUtil::colorToRGBA(altColor5_->color()));
+  notifier->setColor(CEscapeColor::ALT_MAGENTA, CQUtil::colorToRGBA(altColor6_->color()));
+  notifier->setColor(CEscapeColor::ALT_CYAN   , CQUtil::colorToRGBA(altColor7_->color()));
+  notifier->setColor(CEscapeColor::ALT_WHITE  , CQUtil::colorToRGBA(altColor8_->color()));
 
   text_->update();
 }

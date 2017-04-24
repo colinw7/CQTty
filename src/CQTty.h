@@ -17,7 +17,7 @@ class CQTty : public QWidget {
   Q_OBJECT
 
  public:
-  CQTty(QWidget *parent=NULL);
+  CQTty(QWidget *parent=nullptr);
 
   void loadConfig();
 
@@ -32,6 +32,10 @@ class CQTty : public QWidget {
 
   void showFileBrowser();
 
+  void resizeEvent(QResizeEvent *);
+
+  QSize sizeHint() const;
+
  private slots:
   void displayImage(const QString &);
   void displayFile (const QString &);
@@ -41,6 +45,8 @@ class CQTty : public QWidget {
   void changeCurrentDir(const QString &dirName);
 
   void flush();
+
+  void fitAreaSlot();
 
  public slots:
   void showText ();

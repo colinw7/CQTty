@@ -3,68 +3,41 @@
 
 #include <CEscapeType.h>
 #include <CRGBA.h>
+#include <map>
 
-struct CEscapeColors {
- private:
-  enum { MAX_COLORS = 8 };
+#define CEscapeColorsInst CEscapeColors::instance()
 
-  CRGBA bg_, fg_;
-  CRGBA colors_[8];
-
+class CEscapeColors {
  public:
-  CEscapeColors() {
-    bg_ = CRGBA(0,0,0);
-    fg_ = CRGBA(1,1,1);
+  static CEscapeColors *instance();
 
-    colors_[CESCAPE_COLOR_BLACK  ] = CRGBA(0,0,0);
-    colors_[CESCAPE_COLOR_RED    ] = CRGBA(1,0,0);
-    colors_[CESCAPE_COLOR_GREEN  ] = CRGBA(0,1,0);
-    colors_[CESCAPE_COLOR_YELLOW ] = CRGBA(1,1,0);
-    colors_[CESCAPE_COLOR_BLUE   ] = CRGBA(0,0,1);
-    colors_[CESCAPE_COLOR_MAGENTA] = CRGBA(1,0,1);
-    colors_[CESCAPE_COLOR_CYAN   ] = CRGBA(0,1,1);
-    colors_[CESCAPE_COLOR_WHITE  ] = CRGBA(1,1,1);
-  }
+ ~CEscapeColors();
 
   const CRGBA &getBg() const { return bg_; }
+  void setBg(const CRGBA &bg);
+
   const CRGBA &getFg() const { return fg_; }
+  void setFg(const CRGBA &fg);
 
-  void setBg(const CRGBA &bg) { bg_ = bg; }
-  void setFg(const CRGBA &fg) { fg_ = fg; }
+  const CRGBA &getColor(CEscapeColor type) const;
+  void setColor(CEscapeColor type, const CRGBA &rgba);
 
-  const CRGBA &getColor(CEscapeColor type) const {
-    static CRGBA c;
+  bool isDim(CEscapeColor type) const;
+  CEscapeColor setDim(CEscapeColor type) const;
 
-    bool dim = (type & CESCAPE_COLOR_DIM);
+  CEscapeColor encode(const CRGBA &c) const;
+  CRGBA decode(const CEscapeColor &c) const;
 
-    if      (type == CESCAPE_COLOR_BG || type == (CESCAPE_COLOR_BG | CESCAPE_COLOR_DIM))
-      c = getBg();
-    else if (type == CESCAPE_COLOR_FG || type == (CESCAPE_COLOR_FG | CESCAPE_COLOR_DIM))
-      c = getFg();
-    else {
-      uint itype = (type & 0x07);
+ private:
+  CEscapeColors();
 
-      assert(itype < MAX_COLORS);
+  void init();
 
-      c = colors_[itype];
-    }
+ private:
+  typedef std::map<CEscapeColor,CRGBA> Colors;
 
-    if (dim)
-      c *= 0.8;
-
-    return c;
-  }
-
-  void setColor(CEscapeColor type, const CRGBA &rgba) {
-    if (type == CESCAPE_COLOR_BG) { setBg(rgba); return; }
-    if (type == CESCAPE_COLOR_FG) { setFg(rgba); return; }
-
-    int id = type;
-
-    assert(id >= 0 && id < MAX_COLORS);
-
-    colors_[id] = rgba;
-  }
+  CRGBA  bg_, fg_;
+  Colors colors_;
 };
 
 #endif

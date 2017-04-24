@@ -1,187 +1,321 @@
 #include <CEscapeParse.h>
+#include <CEscapeColors.h>
 #include <CStrUtil.h>
 #include <CStrParse.h>
 #include <CImageLib.h>
+#include <CRGBName.h>
 #include <sstream>
 
-using std::string;
-using std::vector;
-using std::ostream;
-using std::ostringstream;
-using std::pair;
-
 #define UNHANDLED(m) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << "\n"; \
   log(ostr.str()); \
 }
 
 #define UNHANDLED1(m,a) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << "\n"; \
   log(ostr.str()); \
 }
 
 #define UNHANDLED2(m,a,b) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "\n"; \
   log(ostr.str()); \
 }
 
 #define UNHANDLED3(m,a,b,c) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "" << c << "\n"; \
   log(ostr.str()); \
 }
 
+//------
+
+namespace {
+
+bool roundBracketString(const std::string &str, uint &pos, std::string &str1) {
+  if (str[pos] != '(')
+    return false;
+
+  ++pos;
+
+  str1 = "";
+
+  while (str[pos] != ')')
+    str1 += str[pos++];
+
+  if (str[pos] == ')')
+    ++pos;
+
+  return true;
+}
+
+bool squareBracketString(const std::string &str, uint &pos, std::string &str1) {
+  if (str[pos] != '[')
+    return false;
+
+  ++pos;
+
+  str1 = "";
+
+  while (str[pos] != ']')
+    str1 += str[pos++];
+
+  if (str[pos] == ']')
+    ++pos;
+
+  return true;
+}
+
+struct RegisPoint {
+  int  x     { 0 };
+  int  y     { 0 };
+  bool x_rel { false };
+  bool y_rel { false };
+
+  RegisPoint() { }
+};
+
+struct RegisData {
+  RegisPoint  point;
+  std::string parameter;
+
+  RegisData(const std::string &str) :
+   parameter(str) {
+  }
+
+  RegisData(const RegisPoint &p) :
+   point(p) {
+  }
+};
+
+bool regisValueToPoint(const std::string &str, RegisPoint &point) {
+  int pos = 0;
+  int len = str.size();
+  int num = 0;
+
+  std::string str1;
+
+  while (pos < len) {
+    if (str[pos] == ',') {
+      ++num;
+
+      point.x = std::stoi(str1);
+
+      ++pos;
+
+      str1 = "";
+    }
+    else {
+      if (str1 == "" && (str[pos] == '+' || str[pos] == '-')) {
+        if (num == 0)
+          point.x_rel = true;
+        else
+          point.y_rel = true;
+      }
+
+      str1 += str[pos++];
+    }
+  }
+
+  point.y = std::stoi(str1);
+
+  return true;
+}
+
+bool getRegisData(const std::string &str, uint &pos, std::vector<RegisData> &values)
+{
+  uint len = str.size();
+
+  while (pos < len) {
+    if      (str[pos] == '(') {
+      std::string str1;
+
+      if (! roundBracketString(str, pos, str1))
+        return false;
+
+      values.push_back(RegisData(str1));
+    }
+    else if (str[pos] == '[') {
+      std::string str1;
+
+      if (! squareBracketString(str, pos, str1))
+        return false;
+
+      RegisPoint point;
+
+      if (! regisValueToPoint(str1, point))
+        return false;
+
+      values.push_back(RegisData(point));
+    }
+    else if (str[pos] == ',') {
+      ++pos;
+    }
+    else if (str[pos] == ' ') {
+      while (str[pos] == ' ')
+        ++pos;
+    }
+    else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+}
+
+//------
+
 CEscapeParse::
 CEscapeParse() :
- NUL_escape_            (CESCAPE_TYPE_NUL),
- SOH_escape_            (CESCAPE_TYPE_SOH),
- STX_escape_            (CESCAPE_TYPE_STX),
- ETX_escape_            (CESCAPE_TYPE_ETX),
- EOT_escape_            (CESCAPE_TYPE_EOT),
- ENQ_escape_            (CESCAPE_TYPE_ENQ),
- ACK_escape_            (CESCAPE_TYPE_ACK),
- BEL_escape_            (CESCAPE_TYPE_BEL),
- BS_escape_             (CESCAPE_TYPE_BS),
- HT_escape_             (CESCAPE_TYPE_HT),
- LF_escape_             (CESCAPE_TYPE_LF),
- VT_escape_             (CESCAPE_TYPE_VT),
- FF_escape_             (CESCAPE_TYPE_FF),
- CR_escape_             (CESCAPE_TYPE_CR),
- SO_escape_             (CESCAPE_TYPE_SO),
- SI_escape_             (CESCAPE_TYPE_SI),
- DLE_escape_            (CESCAPE_TYPE_DLE),
- DC1_escape_            (CESCAPE_TYPE_DC1),
- DC2_escape_            (CESCAPE_TYPE_DC2),
- DC3_escape_            (CESCAPE_TYPE_DC3),
- DC4_escape_            (CESCAPE_TYPE_DC4),
- NAK_escape_            (CESCAPE_TYPE_NAK),
- SYN_escape_            (CESCAPE_TYPE_SYN),
- ETB_escape_            (CESCAPE_TYPE_ETB),
- CAN_escape_            (CESCAPE_TYPE_CAN),
- EM_escape_             (CESCAPE_TYPE_EM),
- SUB_escape_            (CESCAPE_TYPE_SUB),
- FS_escape_             (CESCAPE_TYPE_FS),
- GS_escape_             (CESCAPE_TYPE_GS),
- RS_escape_             (CESCAPE_TYPE_RS),
- US_escape_             (CESCAPE_TYPE_US),
- DEL_escape_            (CESCAPE_TYPE_DEL),
- DECPAM_escape_         (CESCAPE_TYPE_DECPAM),
- DECPNM_escape_         (CESCAPE_TYPE_DECPNM),
- LS3R_escape_           (CESCAPE_TYPE_LS3R),
- LS2R_escape_           (CESCAPE_TYPE_LS2R),
- LS1R_escape_           (CESCAPE_TYPE_LS1R),
- S7C1T_escape_          (CESCAPE_TYPE_S7C1T),
- S8C1T_escape_          (CESCAPE_TYPE_S8C1T),
- ANSI1_escape_          (CESCAPE_TYPE_ANSI1),
- ANSI2_escape_          (CESCAPE_TYPE_ANSI2),
- ANSI3_escape_          (CESCAPE_TYPE_ANSI3),
- DECDHLTop_escape_      (CESCAPE_TYPE_DECDHLTop),
- DECDHLBottom_escape_   (CESCAPE_TYPE_DECDHLBottom),
- DECSWL_escape_         (CESCAPE_TYPE_DECSWL),
- DECDWL_escape_         (CESCAPE_TYPE_DECDWL),
- DECALN_escape_         (CESCAPE_TYPE_DECALN),
- ISO8859_1_escape_      (CESCAPE_TYPE_ISO8859_1),
- UTF_8_escape_          (CESCAPE_TYPE_UTF_8),
- G0_escape_             (CESCAPE_TYPE_G0),
- G1_escape_             (CESCAPE_TYPE_G1),
- G2_escape_             (CESCAPE_TYPE_G2),
- G3_escape_             (CESCAPE_TYPE_G3),
- IND_escape_            (CESCAPE_TYPE_IND),
- NEL_escape_            (CESCAPE_TYPE_NEL),
- ESA_escape_            (CESCAPE_TYPE_ESA),
- HTS_escape_            (CESCAPE_TYPE_HTS),
- RI_escape_             (CESCAPE_TYPE_RI),
- SS2_escape_            (CESCAPE_TYPE_SS2),
- SS3_escape_            (CESCAPE_TYPE_SS3),
- CCH_escape_            (CESCAPE_TYPE_CCH),
- SPA_escape_            (CESCAPE_TYPE_SPA),
- EPA_escape_            (CESCAPE_TYPE_EPA),
- SOS_escape_            (CESCAPE_TYPE_SOS),
- DECID_escape_          (CESCAPE_TYPE_DECID),
- RIS_escape_            (CESCAPE_TYPE_RIS),
- MemoryLock_escape_     (CESCAPE_TYPE_MemoryLock),
- MemoryUnlock_escape_   (CESCAPE_TYPE_MemoryUnlock),
- LS2_escape_            (CESCAPE_TYPE_LS2),
- LS3_escape_            (CESCAPE_TYPE_LS3),
- DECSC_escape_          (CESCAPE_TYPE_DECSC),
- DECRC_escape_          (CESCAPE_TYPE_DECRC),
- DECSED_escape_         (CESCAPE_TYPE_DECSED),
- DECSEL_escape_         (CESCAPE_TYPE_DECSEL),
- DA2_escape_            (CESCAPE_TYPE_DA2),
- DECSET_escape_         (CESCAPE_TYPE_DECSET),
- DECMC_escape_          (CESCAPE_TYPE_DECMC),
- DECRST_escape_         (CESCAPE_TYPE_DECRST),
- DECDSR_escape_         (CESCAPE_TYPE_DECDSR),
- DECSTR_escape_         (CESCAPE_TYPE_DECSTR),
- DECRestorePriv_escape_ (CESCAPE_TYPE_DECRestorePriv),
- DECSavePriv_escape_    (CESCAPE_TYPE_DECSavePriv),
- HPA_escape_            (CESCAPE_TYPE_HPA),
- DECSCL_escape_         (CESCAPE_TYPE_DECSCL),
- DECSCA_escape_         (CESCAPE_TYPE_DECSCA),
- DECCARA_escape_        (CESCAPE_TYPE_DECCARA),
- DECRARA_escape_        (CESCAPE_TYPE_DECRARA),
- DECCRA_escape_         (CESCAPE_TYPE_DECCRA),
- DECEFR_escape_         (CESCAPE_TYPE_DECEFR),
- DECLRP_escape_         (CESCAPE_TYPE_DECLRP),
- DECFRA_escape_         (CESCAPE_TYPE_DECFRA),
- DECSACE_escape_        (CESCAPE_TYPE_DECSACE),
- DECELR_escape_         (CESCAPE_TYPE_DECELR),
- DECERA_escape_         (CESCAPE_TYPE_DECERA),
- DECSLE_escape_         (CESCAPE_TYPE_DECSLE),
- DECSERA_escape_        (CESCAPE_TYPE_DECSERA),
- DECRQLP_escape_        (CESCAPE_TYPE_DECRQLP),
- ICH_escape_            (CESCAPE_TYPE_ICH),
- CUU_escape_            (CESCAPE_TYPE_CUU),
- CUD_escape_            (CESCAPE_TYPE_CUD),
- CUF_escape_            (CESCAPE_TYPE_CUF),
- CUB_escape_            (CESCAPE_TYPE_CUB),
- CNL_escape_            (CESCAPE_TYPE_CNL),
- CPL_escape_            (CESCAPE_TYPE_CPL),
- CHA_escape_            (CESCAPE_TYPE_CHA),
- CUP_escape_            (CESCAPE_TYPE_CUP),
- CHT_escape_            (CESCAPE_TYPE_CHT),
- ED_escape_             (CESCAPE_TYPE_ED),
- EL_escape_             (CESCAPE_TYPE_EL),
- IL_escape_             (CESCAPE_TYPE_IL),
- DL_escape_             (CESCAPE_TYPE_DL),
- DCH_escape_            (CESCAPE_TYPE_DCH),
- SU_escape_             (CESCAPE_TYPE_SU),
- SD_escape_             (CESCAPE_TYPE_SD),
- StartMouseTrack_escape_(CESCAPE_TYPE_StartMouseTrack),
- ECH_escape_            (CESCAPE_TYPE_ECH),
- CBT_escape_            (CESCAPE_TYPE_CBT),
- REP_escape_            (CESCAPE_TYPE_REP),
- DA1_escape_            (CESCAPE_TYPE_DA1),
- VPA_escape_            (CESCAPE_TYPE_VPA),
- HVP_escape_            (CESCAPE_TYPE_HVP),
- TBC_escape_            (CESCAPE_TYPE_TBC),
- SM_escape_             (CESCAPE_TYPE_SM),
- MC_escape_             (CESCAPE_TYPE_MC),
- RM_escape_             (CESCAPE_TYPE_RM),
- SGR_escape_            (CESCAPE_TYPE_SGR),
- DSR_escape_            (CESCAPE_TYPE_DSR),
- DECLL_escape_          (CESCAPE_TYPE_DECLL),
- DECSTBM_escape_        (CESCAPE_TYPE_DECSTBM),
- SC_escape_             (CESCAPE_TYPE_SC),
- WindowManip_escape_    (CESCAPE_TYPE_WindowManip),
- DECREQTPARM_escape_    (CESCAPE_TYPE_DECREQTPARM),
- DECTST_escape_         (CESCAPE_TYPE_DECTST),
- set_dir_escape_        (CESCAPE_TYPE_SET_DIR),
- sized_image_escape_    (CESCAPE_TYPE_SIZED_IMAGE),
- image_escape_          (CESCAPE_TYPE_IMAGE),
- pixel_escape_          (CESCAPE_TYPE_PIXEL),
- line_escape_           (CESCAPE_TYPE_LINE),
- preview_files_escape_  (CESCAPE_TYPE_PREVIEW_FILES),
- paste_escape_          (CESCAPE_TYPE_PASTE),
- trace_escape_          (CESCAPE_TYPE_TRACE),
- debug_escape_          (CESCAPE_TYPE_DEBUG),
- DCS_escape_            (CESCAPE_TYPE_DCS)
+ NUL_escape_            (CEscapeType::NUL),
+ SOH_escape_            (CEscapeType::SOH),
+ STX_escape_            (CEscapeType::STX),
+ ETX_escape_            (CEscapeType::ETX),
+ EOT_escape_            (CEscapeType::EOT),
+ ENQ_escape_            (CEscapeType::ENQ),
+ ACK_escape_            (CEscapeType::ACK),
+ BEL_escape_            (CEscapeType::BEL),
+ BS_escape_             (CEscapeType::BS),
+ HT_escape_             (CEscapeType::HT),
+ LF_escape_             (CEscapeType::LF),
+ VT_escape_             (CEscapeType::VT),
+ FF_escape_             (CEscapeType::FF),
+ CR_escape_             (CEscapeType::CR),
+ SO_escape_             (CEscapeType::SO),
+ SI_escape_             (CEscapeType::SI),
+ DLE_escape_            (CEscapeType::DLE),
+ DC1_escape_            (CEscapeType::DC1),
+ DC2_escape_            (CEscapeType::DC2),
+ DC3_escape_            (CEscapeType::DC3),
+ DC4_escape_            (CEscapeType::DC4),
+ NAK_escape_            (CEscapeType::NAK),
+ SYN_escape_            (CEscapeType::SYN),
+ ETB_escape_            (CEscapeType::ETB),
+ CAN_escape_            (CEscapeType::CAN),
+ EM_escape_             (CEscapeType::EM),
+ SUB_escape_            (CEscapeType::SUB),
+ FS_escape_             (CEscapeType::FS),
+ GS_escape_             (CEscapeType::GS),
+ RS_escape_             (CEscapeType::RS),
+ US_escape_             (CEscapeType::US),
+ DEL_escape_            (CEscapeType::DEL),
+ DECPAM_escape_         (CEscapeType::DECPAM),
+ DECPNM_escape_         (CEscapeType::DECPNM),
+ LS3R_escape_           (CEscapeType::LS3R),
+ LS2R_escape_           (CEscapeType::LS2R),
+ LS1R_escape_           (CEscapeType::LS1R),
+ S7C1T_escape_          (CEscapeType::S7C1T),
+ S8C1T_escape_          (CEscapeType::S8C1T),
+ ANSI1_escape_          (CEscapeType::ANSI1),
+ ANSI2_escape_          (CEscapeType::ANSI2),
+ ANSI3_escape_          (CEscapeType::ANSI3),
+ DECDHL_escape_         (CEscapeType::DECDHL),
+ DECSWL_escape_         (CEscapeType::DECSWL),
+ DECDWL_escape_         (CEscapeType::DECDWL),
+ DECALN_escape_         (CEscapeType::DECALN),
+ ISO8859_1_escape_      (CEscapeType::ISO8859_1),
+ UTF_8_escape_          (CEscapeType::UTF_8),
+ G0_escape_             (CEscapeType::G0),
+ G1_escape_             (CEscapeType::G1),
+ G2_escape_             (CEscapeType::G2),
+ G3_escape_             (CEscapeType::G3),
+ IND_escape_            (CEscapeType::IND),
+ NEL_escape_            (CEscapeType::NEL),
+ SSA_escape_            (CEscapeType::SSA),
+ ESA_escape_            (CEscapeType::ESA),
+ HTS_escape_            (CEscapeType::HTS),
+ RI_escape_             (CEscapeType::RI),
+ SS2_escape_            (CEscapeType::SS2),
+ SS3_escape_            (CEscapeType::SS3),
+ CCH_escape_            (CEscapeType::CCH),
+ SPA_escape_            (CEscapeType::SPA),
+ EPA_escape_            (CEscapeType::EPA),
+ SOS_escape_            (CEscapeType::SOS),
+ DECID_escape_          (CEscapeType::DECID),
+ RIS_escape_            (CEscapeType::RIS),
+ MemoryLock_escape_     (CEscapeType::MemoryLock),
+ MemoryUnlock_escape_   (CEscapeType::MemoryUnlock),
+ LS2_escape_            (CEscapeType::LS2),
+ LS3_escape_            (CEscapeType::LS3),
+ DECSC_escape_          (CEscapeType::DECSC),
+ DECRC_escape_          (CEscapeType::DECRC),
+ DECSED_escape_         (CEscapeType::DECSED),
+ DECSEL_escape_         (CEscapeType::DECSEL),
+ DA2_escape_            (CEscapeType::DA2),
+ DECSET_escape_         (CEscapeType::DECSET),
+ DECMC_escape_          (CEscapeType::DECMC),
+ DECRST_escape_         (CEscapeType::DECRST),
+ DECDSR_escape_         (CEscapeType::DECDSR),
+ DECSTR_escape_         (CEscapeType::DECSTR),
+ DECRestorePriv_escape_ (CEscapeType::DECRestorePriv),
+ DECSavePriv_escape_    (CEscapeType::DECSavePriv),
+ HPA_escape_            (CEscapeType::HPA),
+ DECSCL_escape_         (CEscapeType::DECSCL),
+ DECSCA_escape_         (CEscapeType::DECSCA),
+ DECCARA_escape_        (CEscapeType::DECCARA),
+ DECRARA_escape_        (CEscapeType::DECRARA),
+ DECCRA_escape_         (CEscapeType::DECCRA),
+ DECEFR_escape_         (CEscapeType::DECEFR),
+ DECLRP_escape_         (CEscapeType::DECLRP),
+ DECFRA_escape_         (CEscapeType::DECFRA),
+ DECSACE_escape_        (CEscapeType::DECSACE),
+ DECELR_escape_         (CEscapeType::DECELR),
+ DECERA_escape_         (CEscapeType::DECERA),
+ DECSLE_escape_         (CEscapeType::DECSLE),
+ DECSERA_escape_        (CEscapeType::DECSERA),
+ DECRQLP_escape_        (CEscapeType::DECRQLP),
+ ICH_escape_            (CEscapeType::ICH),
+ CUU_escape_            (CEscapeType::CUU),
+ CUD_escape_            (CEscapeType::CUD),
+ CUF_escape_            (CEscapeType::CUF),
+ CUB_escape_            (CEscapeType::CUB),
+ CNL_escape_            (CEscapeType::CNL),
+ CPL_escape_            (CEscapeType::CPL),
+ CHA_escape_            (CEscapeType::CHA),
+ CUP_escape_            (CEscapeType::CUP),
+ CHT_escape_            (CEscapeType::CHT),
+ ED_escape_             (CEscapeType::ED),
+ EL_escape_             (CEscapeType::EL),
+ IL_escape_             (CEscapeType::IL),
+ DL_escape_             (CEscapeType::DL),
+ DCH_escape_            (CEscapeType::DCH),
+ SU_escape_             (CEscapeType::SU),
+ SD_escape_             (CEscapeType::SD),
+ StartMouseTrack_escape_(CEscapeType::StartMouseTrack),
+ ECH_escape_            (CEscapeType::ECH),
+ CBT_escape_            (CEscapeType::CBT),
+ REP_escape_            (CEscapeType::REP),
+ DA1_escape_            (CEscapeType::DA1),
+ VPA_escape_            (CEscapeType::VPA),
+ HVP_escape_            (CEscapeType::HVP),
+ TBC_escape_            (CEscapeType::TBC),
+ SM_escape_             (CEscapeType::SM),
+ MC_escape_             (CEscapeType::MC),
+ RM_escape_             (CEscapeType::RM),
+ SGR_escape_            (CEscapeType::SGR),
+ DSR_escape_            (CEscapeType::DSR),
+ DECLL_escape_          (CEscapeType::DECLL),
+ DECSTBM_escape_        (CEscapeType::DECSTBM),
+ SC_escape_             (CEscapeType::SC),
+ WindowManip_escape_    (CEscapeType::WindowManip),
+ DECREQTPARM_escape_    (CEscapeType::DECREQTPARM),
+ DECTST_escape_         (CEscapeType::DECTST),
+ set_dir_escape_        (CEscapeType::SET_DIR),
+ sized_image_escape_    (CEscapeType::SIZED_IMAGE),
+ file_image_escape_     (CEscapeType::FILE_IMAGE),
+ image_escape_          (CEscapeType::IMAGE),
+ pixel_escape_          (CEscapeType::PIXEL),
+ line_escape_           (CEscapeType::LINE),
+ preview_files_escape_  (CEscapeType::PREVIEW_FILES),
+ paste_escape_          (CEscapeType::PASTE),
+ trace_escape_          (CEscapeType::TRACE),
+ debug_escape_          (CEscapeType::DEBUG),
+ DCS_escape_            (CEscapeType::DCS)
 {
-  in_escape_   = false;
-  in_apc_type_ = false;
 }
 
 CEscapeParse::
@@ -196,7 +330,7 @@ setInEscape(bool in_escape)
   if (in_escape_ != in_escape) {
     in_escape_ = in_escape;
 
-    //log(string("InEscape=") + (in_escape_ ? "1" : "0"));
+    //log(std::string("InEscape=") + (in_escape_ ? "1" : "0"));
   }
 }
 
@@ -232,11 +366,11 @@ void
 CEscapeParse::
 addOutputChars(const char *str, uint len)
 {
-  static bool   locked;
-  static string buffer;
+  static bool        locked;
+  static std::string buffer;
 
   if (locked) {
-    buffer += string(str, len);
+    buffer += std::string(str, len);
     return;
   }
 
@@ -248,14 +382,19 @@ addOutputChars(const char *str, uint len)
 
   while (i < len) {
     if (! getInEscape()) {
-      if      (str[i] < 32)
-        addControlChar(str[i]);
-      else if (str[i] < 127)
+      if      (str[i] < 32) {
+        addControlChar(str, &i);
+      }
+      else if (str[i] < 127) {
         addNormalChar(str[i]);
-      else
+
+        ++i;
+      }
+      else {
         addGraphicChar(str[i]);
 
-      ++i;
+        ++i;
+      }
     }
     else {
       escape_buf_.addChars(&str[i], len - i);
@@ -295,7 +434,7 @@ addOutputChars(const char *str, uint len)
   locked = false;
 
   if (! buffer.empty()) {
-    string buffer1 = buffer;
+    std::string buffer1 = buffer;
 
     buffer.clear();
 
@@ -310,10 +449,12 @@ addNormalChar(char c)
   handleChar(c);
 }
 
-void
+bool
 CEscapeParse::
-addControlChar(char c)
+addControlChar(const char *str, uint *pos)
 {
+  char c = str[(*pos)++];
+
   switch (c) {
     case 0x00: { // NUL,   ,   , Nul
       handleEscape(&NUL_escape_);
@@ -433,19 +574,97 @@ addControlChar(char c)
       break;
     }
     case 0x1C: { // FS ,^\ , Quit
+      if (is4014()) {
+        // Point Plot Mode
+      }
+
       handleEscape(&FS_escape_);
+
       break;
     }
     case 0x1D: { // GS ,^]
-      handleEscape(&GS_escape_);
+      if (is4014()) {
+        // Graph Mode
+        std::vector<int> yVals;
+
+        int xl, xh, yl, yh;
+
+        yh = str[(*pos)++]; // 32->63
+
+        if (yh == 7) // pen ?
+          yh = str[(*pos)++]; // 32->63
+
+        if (yh >= 96) {
+          yl = yh;
+          yh = 32;
+        }
+        else {
+          yl = str[(*pos)++]; // 96-127
+        }
+
+        while (yl >= 96) {
+          assert(yh >= 32 && yh <= 63);
+          assert(yl >= 96 && yl <= 127);
+
+          int y = 32*(yh - 32) + (yl - 96);
+
+          yVals.push_back(y);
+
+          yh = str[(*pos)++]; // 32->63
+
+          if      (yh >= 96) {
+            yl = yh;
+            yh = 32;
+          }
+          else if (yh >= 64) {
+            yl = yh;
+            yh = 32;
+          }
+          else {
+            yl = str[(*pos)++]; // 96-127
+          }
+
+          if (yl < 96)
+            break;
+        }
+
+        xh = yh; // 32-63
+        xl = yl; // 64-95
+
+        assert(xh >= 32 && xh <= 63);
+        assert(xl >= 64 && xl <= 95);
+
+        int x = 32*(xh - 32) + (xl - 64);
+
+        for (const auto &y : yVals) {
+          GS_escape_.x = x;
+          GS_escape_.y = y;
+
+          handleEscape(&GS_escape_);
+        }
+      }
+      else {
+        handleEscape(&GS_escape_);
+      }
+
       break;
     }
     case 0x1E: { // RS ,^^
+      if (is4014()) {
+        // Incremental Plot Mode
+      }
+
       handleEscape(&RS_escape_);
+
       break;
     }
-    case 0x1F: { // US
+    case 0x1F: { // US ,^_
+      if (is4014()) {
+        // Alpha Mode
+      }
+
       handleEscape(&US_escape_);
+
       break;
     }
     case 0x7f: { // DEL
@@ -453,6 +672,8 @@ addControlChar(char c)
       break;
     }
   }
+
+  return true;
 }
 
 void
@@ -479,7 +700,7 @@ addEscapeChar(char c)
     setInEscape(false);
 
     if (i < escape_buf_.getLen()) {
-      string buf(&escape_buf_.getChars()[i], escape_buf_.getLen() - i);
+      std::string buf(&escape_buf_.getChars()[i], escape_buf_.getLen() - i);
 
       addOutputChars(buf.c_str(), buf.size());
     }
@@ -497,82 +718,171 @@ bool
 CEscapeParse::
 isEscape(const char *str, uint *pos)
 {
-  char c;
+  if (is4014())
+    return is4014Escape(str, pos);
+
+  //---
 
   bool flag = false;
 
   uint pos1 = *pos;
 
-  assert(str[*pos] == '');
+  assert(str[*pos] == '\033');
 
   ++(*pos);
 
   if (isalpha(str[*pos])) {
     flag = isAlphaEscape(str, pos);
-    goto done;
+    return flag;
   }
 
   if (isdigit(str[*pos])) {
     flag = isDigitEscape(str, pos);
-    goto done;
+    return flag;
   }
 
-  c = str[*pos];
+  char c = str[*pos];
 
   switch (c) {
     case ' ': {
       flag = isSpaceEscape(str, pos);
-      goto done;
+      return flag;
     }
     case '#': {
       flag = isHashEscape(str, pos);
-      goto done;
+      return flag;
     }
     case '%': {
       flag = isPercentEscape(str, pos);
-      goto done;
+      return flag;
     }
     case '(': {
       flag = isLParenEscape(str, pos);
-      goto done;
+      return flag;
     }
     case ')': {
       flag = isRParenEscape(str, pos);
-      goto done;
+      return flag;
     }
     case '*': {
       flag = isAsteriskEscape(str, pos);
-      goto done;
+      return flag;
     }
     case '+': {
       flag = isPlusEscape(str, pos);
-      goto done;
+      return flag;
     }
 
-    case '=': { // DECPAM, Application Keypad
+    // TODO:
+    //   ESC - C   Designate G1 Character Set (VT300).
+    //     The same character sets apply as for ESC ( C.
+    //   ESC . C   Designate G2 Character Set (VT300).
+    //     The same character sets apply as for ESC ( C.
+    //   ESC / C   Designate G3 Character Set (VT300).
+    //     These work for 96-character sets only.
+    //     C = A  -> ISO Latin-1 Supplemental.
+
+    case '-': {
       ++(*pos);
 
       setInEscape(false);
 
-      handleEscape(&DECPAM_escape_);
+      // Designate G1 Character Set (VT300).
+      // The same character sets apply as for ESC ( C
+
+      UNHANDLED1("Escape", c)
 
       flag = true;
 
-      goto done;
+      return flag;
     }
-    case '>': { // DECPNM, Normal Keypad
+    case '.': {
       ++(*pos);
 
       setInEscape(false);
 
-      handleEscape(&DECPNM_escape_);
+      // Designate G2 Character Set (VT300).
+      // The same character sets apply as for ESC ( C
+
+      UNHANDLED1("Escape", c)
 
       flag = true;
 
-      goto done;
+      return flag;
+    }
+    case '/': {
+      ++(*pos);
+
+      setInEscape(false);
+
+      // Designate G3 Character Set (VT300).
+      // The same character sets apply as for ESC ( C
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      return flag;
     }
 
-    case '|': { // LS3R, Invoke G3 Character Set as GR()
+    case '<': {
+      ++(*pos);
+
+      setInEscape(false);
+
+      // Exit VT52 mode (Enter VT100 mode)
+      if (isVT52()) {
+        setVT52(false);
+      }
+      else {
+        UNHANDLED1("Escape", c)
+      }
+
+      flag = true;
+
+      return flag;
+    }
+    // DECKPAM, Application Keypad (VT100)
+    // Enter alternate keypad mode (VT52)
+    case '=': {
+      ++(*pos);
+
+      setInEscape(false);
+
+      // Enter alternate keypad mode
+      if (isVT52()) {
+        // TODO
+      }
+      // DECKPAM, Application Keypad
+      else {
+        handleEscape(&DECPAM_escape_);
+      }
+
+      flag = true;
+
+      return flag;
+    }
+    // DECKPNM, Normal Keypad (VT100)
+    // Exit alternate keypad mode (VT52)
+    case '>': {
+      ++(*pos);
+
+      setInEscape(false);
+
+      if (isVT52()) {
+        // TODO
+      }
+      else {
+        handleEscape(&DECPNM_escape_);
+      }
+
+      flag = true;
+
+      return flag;
+    }
+
+    // LS3R, Invoke G3 Character Set as GR()
+    case '|': {
       ++(*pos);
 
       setInEscape(false);
@@ -581,9 +891,10 @@ isEscape(const char *str, uint *pos)
 
       flag = true;
 
-      goto done;
+      return flag;
     }
-    case '}': { // LS2R, Invoke G2 Character Set as GR()
+    // LS2R, Invoke G2 Character Set as GR()
+    case '}': {
       ++(*pos);
 
       setInEscape(false);
@@ -592,9 +903,10 @@ isEscape(const char *str, uint *pos)
 
       flag = true;
 
-      goto done;
+      return flag;
     }
-    case '~': { // LS1R, Invoke G1 Character Set as GR()
+    // LS1R, Invoke G1 Character Set as GR()
+    case '~': {
       ++(*pos);
 
       setInEscape(false);
@@ -603,39 +915,44 @@ isEscape(const char *str, uint *pos)
 
       flag = true;
 
-      goto done;
+      return flag;
     }
 
     //--------------
 
+    // CSI (0x9b) Control Sequence Introducer
     case '[': {
       flag = isCSIEscape(str, pos);
-      goto done;
+      return flag;
     }
 
+    // OSC (0x9d) Operating System Command
     case ']': {
       flag = isOSCEscape(str, pos);
-      goto done;
+      return flag;
     }
 
     //--------------
 
+    // ST (0x9c) String Terminator
     case '\\': {
       setInEscape(false);
 
       UNHANDLED1("Escape", c)
 
-      goto done;
+      return flag;
     }
 
+    // APC (0x9f) Application Program Command
     case '_': {
       flag = isAPCEscape(str, pos);
-      goto done;
+      return flag;
     }
 
     //--------------
 
-    case '^': { // PM
+    // PM (0x9e) Privacy Message
+    case '^': {
       setInEscape(false);
 
       UNHANDLED1("Escape", c)
@@ -645,12 +962,13 @@ isEscape(const char *str, uint *pos)
 
     //--------------
 
-    default:
+    default: {
       setInEscape(false);
 
       UNHANDLED1("Escape", c)
 
       break;
+    }
   }
 
   //--------------
@@ -667,14 +985,378 @@ isEscape(const char *str, uint *pos)
 
     flag = true;
 
-    goto done;
+    return flag;
   }
 
   //--------------
 
   *pos = pos1;
 
- done:
+  return flag;
+}
+
+bool
+CEscapeParse::
+is4014Escape(const char *str, uint *pos)
+{
+  bool flag = false;
+
+  //uint pos1 = *pos;
+
+  assert(str[*pos] == '\033');
+
+  ++(*pos);
+
+  char c = str[*pos];
+
+  switch (c) {
+    // ESC ETX : Switch to VT100 Mode
+    case '\003': {
+      static int num[1];
+
+      setInEscape(false);
+
+      num[0] = 38;
+
+      DECRST_escape_.num = num;
+      DECRST_escape_.nn  = 1;
+
+      handleEscape(&DECRST_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC ENQ : Return Terminal Status
+    case '\005': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC FF: PAGE (Clear Screen)
+    case '\014': {
+      static int num[1];
+
+      setInEscape(false);
+
+      num[0] = 2;
+
+      ED_escape_.num = num;
+      ED_escape_.nn  = 1;
+
+      handleEscape(&ED_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC SI : Begin 4015 APL mode
+    case '\016': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC ETB : COPY (Save Tektronix Codes to file COPYyyyy-mm-dd.hh:mm:ss)
+    case '\027': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC CAN : Bypass Condition
+    case '\030': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC SUB : GIN mode
+    case '\032': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC FS : Special Point Plot Mode
+    case '\034': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC 8 : Select Large Character Set
+    case '8': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC 9 : Select #2 Character Set
+    case '9': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC : : Select #3 Character Set
+    case ':': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      break;
+    }
+    // ESC ; : Select Small Character Set
+    case ';': {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      flag = true;
+
+      flag = true;
+
+      break;
+    }
+    // ESC ` : Normal Z Axis and Normal (solid) Vectors
+    case '`': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::SOLID;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC a : Normal Z Axis and Dotted Line Vectors.
+    case 'a': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::DOTTED;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC b : Normal Z Axis and Dot-Dashed Vectors.
+    case 'b': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::DOT_DASH;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC c : Normal Z Axis and Short-Dashed Vectors.
+    case 'c': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::SHORT_DASH;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC d : Normal Z Axis and Long-Dashed Vectors.
+    case 'd': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::LONG_DASH;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC h : Defocused Z Axis and Normal (solid) Vectors.
+    case 'h': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::SOLID;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC i : Defocused Z Axis and Dotted Line Vectors.
+    case 'i': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::DOTTED;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC j : Defocused Z Axis and Dot-Dashed Vectors.
+    case 'j': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::DOT_DASH;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC k : Defocused Z Axis and Short-Dashed Vectors.
+    case 'k': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::SHORT_DASH;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC l : Defocused Z Axis and Long-Dashed Vectors.
+    case 'l': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::LONG_DASH;
+      Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC p : Write-Thru Mode and Normal (solid) Vectors.
+    case 'p': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::SOLID;
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC q : Write-Thru Mode and Dotted Line Vectors.
+    case 'q': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::DOTTED;
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC r : Write-Thru Mode and Dot-Dashed Vectors.
+    case 'r': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::DOT_DASH;
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC s : Write-Thru Mode and Short-Dashed Vectors.
+    case 's': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::SHORT_DASH;
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+    // ESC t : Write-Thru Mode and Long-Dashed Vectors.
+    case 't': {
+      setInEscape(false);
+
+      Tek4014_escape_.lineStyle = CEscapeLineStyle::LONG_DASH;
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+
+      handleEscape(&Tek4014_escape_);
+
+      flag = true;
+
+      break;
+    }
+
+    // OSC Ps ; Pt BEL
+    case ']': {
+      flag = isOSCEscape(str, pos);
+      return flag;
+    }
+
+    default: {
+      setInEscape(false);
+
+      UNHANDLED1("Escape", c)
+
+      break;
+    }
+  }
+
   return flag;
 }
 
@@ -682,40 +1364,47 @@ bool
 CEscapeParse::
 isSpaceEscape(const char *str, uint *pos)
 {
+  assert(str[*pos] == ' ');
+
   if (str[++(*pos)] == '\0')
     return false;
 
   char c = str[(*pos)++];
 
   switch (c) {
-    case 'F': { // S7C1T
+    // ESC SP F : S7C1T (7-bit controls)
+    case 'F': {
       setInEscape(false);
 
       handleEscape(&S7C1T_escape_);
 
       break;
     }
-    case 'G': { // S8C1T
+    // ESC SP G : S8C1T (8-bit controls)
+    case 'G': {
       setInEscape(false);
 
       handleEscape(&S8C1T_escape_);
       break;
     }
-    case 'L': { // ANSI Set ANSI conformance 1
+    // ESC SP L : Set ANSI conformance level 1 (dpANS X3.134.1)
+    case 'L': {
       setInEscape(false);
 
       handleEscape(&ANSI1_escape_);
 
       break;
     }
-    case 'M': { // ANSI Set ANSI conformance 2
+    // ESC SP M : Set ANSI conformance level 2 (dpANS X3.134.1)
+    case 'M': {
       setInEscape(false);
 
       handleEscape(&ANSI2_escape_);
 
       break;
     }
-    case 'N': { // Set ANSI conformance 3
+    // ESC SP N : Set ANSI conformance level 3 (dpANS X3.134.1)
+    case 'N': {
       setInEscape(false);
 
       handleEscape(&ANSI3_escape_);
@@ -738,41 +1427,52 @@ bool
 CEscapeParse::
 isHashEscape(const char *str, uint *pos)
 {
+  assert(str[*pos] == '#');
+
   if (str[++(*pos)] == '\0')
     return false;
 
   char c = str[(*pos)++];
 
   switch (c) {
-    case '3': { // DECDHL
+    // ESC # 3 : DEC double-height line, top half (DECDHL)
+    case '3': {
       setInEscape(false);
 
-      handleEscape(&DECDHLTop_escape_);
+      DECDHL_escape_.pos = CEscapeDataDECDHL::Pos::TOP;
+
+      handleEscape(&DECDHL_escape_);
 
       break;
     }
-    case '4': { // DECDHL
+    // ESC # 4 : DEC double-height line, bottom half (DECDHL)
+    case '4': {
       setInEscape(false);
 
-      handleEscape(&DECDHLBottom_escape_);
+      DECDHL_escape_.pos = CEscapeDataDECDHL::Pos::BOTTOM;
+
+      handleEscape(&DECDHL_escape_);
 
       break;
     }
-    case '5': { // DECSWL
+    // ESC # 5 : DEC single-width line (DECSWL)
+    case '5': {
       setInEscape(false);
 
       handleEscape(&DECSWL_escape_);
 
       break;
     }
-    case '6': { // DECDWL
+    // ESC # 6 : DEC double-width line (DECDWL)
+    case '6': {
       setInEscape(false);
 
       handleEscape(&DECDWL_escape_);
 
       break;
     }
-    case '8': { // DECALN
+    // DEC Screen Alignment Test (DECALN)
+    case '8': {
       setInEscape(false);
 
       handleEscape(&DECALN_escape_);
@@ -795,19 +1495,23 @@ bool
 CEscapeParse::
 isPercentEscape(const char *str, uint *pos)
 {
+  assert(str[*pos] == '%');
+
   if (str[++(*pos)] == '\0')
     return false;
 
   char c = str[(*pos)++];
 
   switch (c) {
-    case '@': { // ISO 8859-1
+    // Select default character set.  That is ISO 8859-1 (ISO 2022)
+    case '@': {
       setInEscape(false);
 
       handleEscape(&ISO8859_1_escape_);
 
       break;
     }
+    // Select UTF-8 character set (ISO 2022)
     case 'G': { // UTF-8
       setInEscape(false);
 
@@ -831,12 +1535,39 @@ bool
 CEscapeParse::
 isLParenEscape(const char *str, uint *pos)
 {
+  assert(str[*pos] == '(');
+
   if (str[++(*pos)] == '\0')
     return false;
 
   char c = str[(*pos)++];
 
   // TODO: only certain chars allowed
+
+  // Designate G0 Character Set (ISO 2022, VT100).
+  // Final character C for designating 94-character sets.  In this list, 0, A and B
+  // apply to VT100 and up, the remainder to VT220 and up. The VT220 character sets,
+  // together with the Portuguese character set are activated by the National Replacement
+  // Character controls. The A is a special case, since it is also activated by the
+  // VT300-control for British Latin-1 separately from the National Replacement Character
+  // controls.
+  //   C = 0         -> DEC Special Character and Line Drawing Set.
+  //   C = <         -> DEC Supplementary (VT200).
+  //   C = % 5       -> DEC Supplementary Graphics (VT300).
+  //   C = >         -> DEC Technical (VT300).
+  //   C = A         -> United Kingdom (UK).
+  //   C = B         -> United States (USASCII).
+  //   C = 4         -> Dutch.
+  //   C = C  or 5   -> Finnish.
+  //   C = R  or f   -> French.
+  //   C = Q  or 9   -> French Canadian (VT200, VT300).
+  //   C = K         -> German.
+  //   C = Y         -> Italian.
+  //   C = `, E or 6 -> Norwegian/Danish.
+  //   C = % 6       -> Portuguese (VT300).
+  //   C = Z         -> Spanish.
+  //   C = H  or 7   -> Swedish.
+  //   C = =         -> Swiss.
 
   setInEscape(false);
 
@@ -851,10 +1582,17 @@ bool
 CEscapeParse::
 isRParenEscape(const char *str, uint *pos)
 {
+  assert(str[*pos] == ')');
+
   if (str[++(*pos)] == '\0')
     return false;
 
   char c = str[(*pos)++];
+
+  // TODO: only certain chars allowed
+
+  // Designate G1 Character Set (ISO 2022, VT100)
+  // The same character sets apply as for ESC ( C
 
   setInEscape(false);
 
@@ -869,10 +1607,17 @@ bool
 CEscapeParse::
 isAsteriskEscape(const char *str, uint *pos)
 {
+  assert(str[*pos] == '*');
+
   if (str[++(*pos)] == '\0')
     return false;
 
   char c = str[(*pos)++];
+
+  // TODO: only certain chars allowed
+
+  // Designate G2 Character Set (ISO 2022, VT220).
+  // The same character sets apply as for ESC ( C
 
   setInEscape(false);
 
@@ -887,10 +1632,17 @@ bool
 CEscapeParse::
 isPlusEscape(const char *str, uint *pos)
 {
+  assert(str[*pos] == '+');
+
   if (str[++(*pos)] == '\0')
     return false;
 
   char c = str[(*pos)++];
+
+  // TODO: only certain chars allowed
+
+  // Designate G3 Character Set (ISO 2022, VT220).
+  // The same character sets apply as for ESC ( C
 
   setInEscape(false);
 
@@ -905,126 +1657,318 @@ bool
 CEscapeParse::
 isAlphaEscape(const char *str, uint *pos)
 {
+  if (isVT52()) {
+    if (isVT52AlphaEscape(str, pos))
+      return true;
+  }
+
+  //------
+
   char c = str[(*pos)++];
 
   switch (c) {
-    case 'D': // IND
+    // IND (0x84) Index
+    case 'D': {
       setInEscape(false);
 
       handleEscape(&IND_escape_);
 
       break;
-    case 'E': // NEL
+    }
+    // NEL (0x85) Next Line
+    case 'E': {
       setInEscape(false);
 
       handleEscape(&NEL_escape_);
 
       break;
-    case 'F': { // Cursor Lower Left (if hpLowerLeftBugCompat)
+    }
+    // SSA (Start of Selected Area)
+    case 'F': {
+      // Cursor Lower Left (if hpLowerLeftBugCompat resource)
       // escapeCursorLowerLeft();
       setInEscape(false);
 
-      UNHANDLED1("Alpha Escape", c)
+      handleEscape(&SSA_escape_);
 
       break;
     }
-    case 'G': // ESA
+    // ESA (End of Selected Area)
+    case 'G': {
       setInEscape(false);
 
       handleEscape(&ESA_escape_);
 
       break;
-    case 'H': // HTS
+    }
+    // HTS (0x88) Tab Set
+    case 'H': {
       setInEscape(false);
 
       handleEscape(&HTS_escape_);
 
       break;
-    case 'M': // RI
+    }
+    // RI (0x8d) Reverse Index
+    case 'M': {
       setInEscape(false);
 
       handleEscape(&RI_escape_);
 
       break;
-    case 'N': // SS2
+    }
+    // SS2 (0x8e) Single Shift Select of G2 Character Set
+    case 'N': {
       setInEscape(false);
 
       handleEscape(&SS2_escape_);
 
       break;
-    case 'O': // SS3
+    }
+    // SS3 (0x8f) Single Shift Select of G3 Character Set
+    case 'O': {
       setInEscape(false);
 
       handleEscape(&SS3_escape_);
 
       break;
-    case 'P': { // DCS
+    }
+    // DCS (0x90) Device Control String
+    case 'P': {
       return isDCSEscape(str, pos);
     }
-    case 'T': // CCH
+    // CCH (0x94)
+    case 'T': {
       setInEscape(false);
 
       handleEscape(&CCH_escape_);
 
       break;
-    case 'V': // SPA
+    }
+    // SPA (0x96) Start of Guarded Area
+    case 'V': {
       setInEscape(false);
 
       handleEscape(&SPA_escape_);
 
       break;
-    case 'W': // EPA
+    }
+    // EPA (0x97) End of Guarded Area
+    case 'W': {
       setInEscape(false);
 
       handleEscape(&EPA_escape_);
 
       break;
-    case 'X': // SOS
+    }
+    // SOS (0x98) Start of String
+    case 'X': {
       setInEscape(false);
 
       handleEscape(&SOS_escape_);
 
       break;
-    case 'Z': // DECID
+    }
+    // DECID (0x9a) Return Terminal ID
+    case 'Z': {
       setInEscape(false);
 
       handleEscape(&DECID_escape_);
 
       break;
-    case 'c': // RIS, Full reset
+    }
+    // RIS, Full reset
+    case 'c': {
       setInEscape(false);
 
       handleEscape(&RIS_escape_);
 
       break;
-    case 'l': // Memory Lock
+    }
+    // Memory Lock (per HP terminals). Locks memory above the cursor
+    case 'l': {
       setInEscape(false);
 
       handleEscape(&MemoryLock_escape_);
 
       break;
-    case 'm': // Memory Unlock
+    }
+    // Memory Unlock (per HP terminals)
+    case 'm': {
       setInEscape(false);
 
       handleEscape(&MemoryUnlock_escape_);
 
       break;
-    case 'n': // LS2, Invoke G2 Character Set
+    }
+    // Invoke the G2 Character Set as GL (LS2)
+    case 'n': {
       setInEscape(false);
 
       handleEscape(&LS2_escape_);
 
       break;
-    case 'o': // LS3, Invoke G3 Character Set
+    }
+    // Invoke the G3 Character Set as GL (LS3)
+    case 'o': {
       setInEscape(false);
 
       handleEscape(&LS3_escape_);
 
       break;
+    }
     default: {
       setInEscape(false);
 
       UNHANDLED1("Alpha Escape", c)
+
+      break;
+    }
+  }
+
+  return true;
+}
+
+bool
+CEscapeParse::
+isVT52AlphaEscape(const char *str, uint *pos)
+{
+  char c = str[(*pos)++];
+
+  switch (c) {
+    // Cursor up.
+    case 'A': {
+      setInEscape(false);
+
+      CUU_escape_.num = 0;
+      CUU_escape_.nn  = 0;
+
+      handleEscape(&CUU_escape_);
+
+      break;
+    }
+    // Cursor down.
+    case 'B': {
+      setInEscape(false);
+
+      CUD_escape_.num = 0;
+      CUD_escape_.nn  = 0;
+
+      handleEscape(&CUD_escape_);
+
+      break;
+    }
+    // Cursor right.
+    case 'C': {
+      setInEscape(false);
+
+      CUF_escape_.num = 0;
+      CUF_escape_.nn  = 0;
+
+      handleEscape(&CUF_escape_);
+
+      break;
+    }
+    // Cursor left.
+    case 'D': {
+      setInEscape(false);
+
+      CUB_escape_.num = 0;
+      CUB_escape_.nn  = 0;
+
+      handleEscape(&CUB_escape_);
+
+      break;
+    }
+    // Enter graphics mode.
+    case 'F': {
+      setInEscape(false);
+
+      // TODO
+      break;
+    }
+    // Exit graphics mode.
+    case 'G': {
+      setInEscape(false);
+
+      // TODO
+      break;
+    }
+    // Move the cursor to the home position.
+    case 'H': {
+      static int num[2];
+
+      setInEscape(false);
+
+      CUP_escape_.num = num;
+      CUP_escape_.nn  = 2;
+
+      handleEscape(&CUP_escape_);
+      break;
+    }
+    // Reverse line feed.
+    case 'I': {
+      setInEscape(false);
+
+      UNHANDLED1("VT52 Escape", c)
+
+      break;
+    }
+    // Erase from the cursor to the end of the screen.
+    case 'J': {
+      static int num[1];
+
+      setInEscape(false);
+
+      EL_escape_.num = num;
+      EL_escape_.nn  = 1;
+
+      handleEscape(&EL_escape_);
+
+      ED_escape_.num = num;
+      ED_escape_.nn  = 1;
+
+      handleEscape(&ED_escape_);
+
+      break;
+    }
+    // Erase from the cursor to the end of the line.
+    case 'K': {
+      static int num[2];
+
+      setInEscape(false);
+
+      EL_escape_.num = num;
+      EL_escape_.nn  = 1;
+
+      handleEscape(&EL_escape_);
+      break;
+    }
+    // Move the cursor to given row and column.
+    case 'Y': {
+      static int num[2];
+
+      setInEscape(false);
+
+      num[0] = str[(*pos)++];
+      num[1] = str[(*pos)++];
+
+      CUP_escape_.num = num;
+      CUP_escape_.nn  = 2;
+
+      handleEscape(&CUP_escape_);
+      break;
+    }
+    // Identify.
+    case 'Z': {
+      setInEscape(false);
+
+      handleEscape(&ENQ_escape_);
+
+      break;
+    }
+    default: {
+      UNHANDLED1("VT52 Escape", c)
 
       break;
     }
@@ -1040,17 +1984,31 @@ isDigitEscape(const char *str, uint *pos)
   char c = str[(*pos)++];
 
   switch (c) {
-    case '7': { // DECSC, Save Cursor
+    // Back Index (DECBI), VT420 and up
+    case '6': {
+      // TODO
+
+      break;
+    }
+    // Save Cursor (DECSC)
+    case '7': {
       setInEscape(false);
 
       handleEscape(&DECSC_escape_);
 
       break;
     }
-    case '8': { // DECRC, Restore Cursor
+    // Restore Cursor (DECRC)
+    case '8': {
       setInEscape(false);
 
       handleEscape(&DECRC_escape_);
+
+      break;
+    }
+    // Forward Index (DECFI), VT420 and up
+    case '9': {
+      // TODO
 
       break;
     }
@@ -1078,8 +2036,7 @@ isCSIEscape(const char *str, uint *pos)
   char c1  = '\0';
   char cc1 = '\0';
 
-  if      (str[*pos] == '!' || str[*pos] == '?' ||
-           str[*pos] == '>' || str[*pos] == '=') {
+  if      (str[*pos] == '!' || str[*pos] == '?' || str[*pos] == '>' || str[*pos] == '=') {
     c1 = str[(*pos)++];
 
     if (str[*pos] == '\0')
@@ -1121,15 +2078,29 @@ isCSIEscape(const char *str, uint *pos)
 
   //-------
 
-  if (cc1 > 0 && cc1 < 32)
-    addControlChar(cc1);
+  if (cc1 > 0 && cc1 < 32) {
+    char str[2] = { cc1, 0 };
 
-  if (cc2 > 0 && cc2 < 32)
-    addControlChar(cc2);
+    uint pos = 0;
+
+    addControlChar(str, &pos);
+  }
+
+  if (cc2 > 0 && cc2 < 32) {
+    char str[2] = { cc2, 0 };
+
+    uint pos = 0;
+
+    addControlChar(str, &pos);
+  }
 
   if      (c1 != '\0') {
     switch (c3) {
-      case 'J': { // DECSED
+      // Erase in Display (DECSED).
+      //   Ps = 0  -> Selective Erase Below (default).
+      //   Ps = 1  -> Selective Erase Above.
+      //   Ps = 2  -> Selective Erase All.
+      case 'J': {
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
@@ -1146,7 +2117,11 @@ isCSIEscape(const char *str, uint *pos)
 
         break;
       }
-      case 'K': { // DECSEL
+      // Erase in Line (DECSEL).
+      //  Ps = 0  -> Selective Erase to Right (default).
+      //  Ps = 1  -> Selective Erase to Left.
+      //  Ps = 2  -> Selective Erase All.
+      case 'K': {
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
@@ -1163,7 +2138,8 @@ isCSIEscape(const char *str, uint *pos)
 
         break;
       }
-      case 'c': { // DA2
+      // DA2
+      case 'c': {
         if (c1 == '>' && c2 == '\0') {
           setInEscape(false);
 
@@ -1180,7 +2156,8 @@ isCSIEscape(const char *str, uint *pos)
 
         break;
       }
-      case 'h': { // DECSET
+      // DEC Set Mode (DECSET : DEC SM)
+      case 'h': {
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
@@ -1197,7 +2174,8 @@ isCSIEscape(const char *str, uint *pos)
 
         break;
       }
-      case 'i': { // DECMC
+      // Media Copy (DECMC)
+      case 'i': {
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
@@ -1214,7 +2192,8 @@ isCSIEscape(const char *str, uint *pos)
 
         break;
       }
-      case 'l': { // DECRST
+      // DEC Reset Mode (DECRST : DEC RM)
+      case 'l': {
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
@@ -1231,7 +2210,8 @@ isCSIEscape(const char *str, uint *pos)
 
         break;
       }
-      case 'n': // DECDSR
+      // DECDSR
+      case 'n': {
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
@@ -1247,7 +2227,9 @@ isCSIEscape(const char *str, uint *pos)
         }
 
         break;
-      case 'p': { // DECSTR
+      }
+      // DECSTR
+      case 'p': {
         if (c1 == '!' && c2 == '\0') {
           setInEscape(false);
 
@@ -1318,14 +2300,21 @@ isCSIEscape(const char *str, uint *pos)
     }
     else {
       switch (c3) {
-        case 'p': { // DECSCL
-          if (c2 == '\"') {
+        case 'p': {
+          // DECSCL
+          if      (c2 == '\"') {
             setInEscape(false);
 
             DECSCL_escape_.num = num;
             DECSCL_escape_.nn  = nn;
 
             handleEscape(&DECSCL_escape_);
+          }
+          // DECRQM
+          else if (c2 == '\"') {
+            setInEscape(false);
+
+            UNHANDLED1("CSI Escape", c3)
           }
           else {
             setInEscape(false);
@@ -1335,8 +2324,9 @@ isCSIEscape(const char *str, uint *pos)
 
           break;
         }
-        case 'q': { // DECSCA
-          if (c2 == '\"') {
+        case 'q': {
+          // DECSCA
+          if      (c2 == '\"') {
             setInEscape(false);
 
             DECSCA_escape_.num = num;
@@ -1534,7 +2524,9 @@ isCSIEscape(const char *str, uint *pos)
   }
   else {
     switch (c3) {
-      case '@': { // ICH, Insert N spaces
+      // ICH, Insert N spaces
+      // Insert Ps (Blank) Character(s) (default = 1)
+      case '@': {
         setInEscape(false);
 
         ICH_escape_.num = num;
@@ -1543,7 +2535,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&ICH_escape_);
         break;
       }
-      case 'A': { // CUU, Cursor up N
+      // CUU, Cursor up N
+      // Cursor Up Ps Times (default = 1)
+      case 'A': {
         setInEscape(false);
 
         CUU_escape_.num = num;
@@ -1552,7 +2546,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CUU_escape_);
         break;
       }
-      case 'B': { // CUD, Cursor down N
+      // CUD, Cursor down N
+      // Cursor Down Ps Times (default = 1)
+      case 'B': {
         setInEscape(false);
 
         CUD_escape_.num = num;
@@ -1561,7 +2557,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CUD_escape_);
         break;
       }
-      case 'C': { // CUF, Cursor forward N
+      // CUF, Cursor forward N
+      // Cursor Forward Ps Times (default = 1)
+      case 'C': {
         setInEscape(false);
 
         CUF_escape_.num = num;
@@ -1570,7 +2568,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CUF_escape_);
         break;
       }
-      case 'D': { // CUB, Cursor back N
+      // CUB, Cursor back N
+      // Cursor Backward Ps Times (default = 1)
+      case 'D': {
         setInEscape(false);
 
         CUB_escape_.num = num;
@@ -1579,7 +2579,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CUB_escape_);
         break;
       }
-      case 'E': { // CNL, Cursor next line N
+      // CNL, Cursor next line N
+      // Cursor Next Line Ps Times (default = 1)
+      case 'E': {
         setInEscape(false);
 
         CNL_escape_.num = num;
@@ -1588,7 +2590,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CNL_escape_);
         break;
       }
-      case 'F': { // CPL, Cursor previous line N
+      // CPL, Cursor previous line N
+      // Cursor Preceding Line Ps Times (default = 1)
+      case 'F': {
         setInEscape(false);
 
         CPL_escape_.num = num;
@@ -1597,7 +2601,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CPL_escape_);
         break;
       }
-      case 'G': { // CHA, Cursor to column N
+      // CHA, Cursor to column N
+      // Cursor Character Absolute  [column] (default = [row,1])
+      case 'G': {
         setInEscape(false);
 
         CHA_escape_.num = num;
@@ -1606,7 +2612,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CHA_escape_);
         break;
       }
-      case 'H': { // CUP, Cursor to row N1, column N2
+      // CUP, Cursor to row N1, column N2
+      // Cursor Position [row;column] (default = [1,1]) (CUP)
+      case 'H': {
         setInEscape(false);
 
         CUP_escape_.num = num;
@@ -1615,7 +2623,9 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CUP_escape_);
         break;
       }
-      case 'I': { // CHT
+      // CHT
+      // Cursor Forward Tabulation Ps tab stops (default = 1)
+      case 'I': {
         setInEscape(false);
 
         CHT_escape_.num = num;
@@ -1624,7 +2634,12 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&CHT_escape_);
         break;
       }
-      case 'J': { // ED, DECSED
+      // Erase in Display (ED).
+      //   Ps = 0  -> Erase Below (default).
+      //   Ps = 1  -> Erase Above.
+      //   Ps = 2  -> Erase All.
+      //   Ps = 3  -> Erase Saved Lines (xterm).
+      case 'J': {
         setInEscape(false);
 
         ED_escape_.num = num;
@@ -1633,7 +2648,11 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&ED_escape_);
         break;
       }
-      case 'K': { // EL, DECSEL
+      // Erase in Line (EL).
+      //   Ps = 0  -> Erase to Right (default).
+      //   Ps = 1  -> Erase to Left.
+      //   Ps = 2  -> Erase All.
+      case 'K': {
         setInEscape(false);
 
         EL_escape_.num = num;
@@ -1746,7 +2765,8 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&VPA_escape_);
         break;
       }
-      case 'f': { // HVP
+      // HVP
+      case 'f': {
         setInEscape(false);
 
         HVP_escape_.num = num;
@@ -1755,7 +2775,8 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&HVP_escape_);
         break;
       }
-      case 'g': { // TBC
+      // TBC
+      case 'g': {
         setInEscape(false);
 
         TBC_escape_.num = num;
@@ -1764,7 +2785,8 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&TBC_escape_);
         break;
       }
-      case 'h': { // SM
+      // SM
+      case 'h': {
         setInEscape(false);
 
         SM_escape_.num = num;
@@ -1773,7 +2795,8 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&SM_escape_);
         break;
       }
-      case 'i': { // MC
+      // Media Copy (MC)
+      case 'i': {
         setInEscape(false);
 
         MC_escape_.num = num;
@@ -1782,7 +2805,8 @@ isCSIEscape(const char *str, uint *pos)
         handleEscape(&MC_escape_);
         break;
       }
-      case 'l': { // RM
+      // ResetMode (RM)
+      case 'l': {
         setInEscape(false);
 
         RM_escape_.num = num;
@@ -1924,6 +2948,7 @@ isOSCEscape(const char *str, uint *pos)
   if (str[++(*pos)] == '\0')
     return false;
 
+  // get parameters
   int num = 0;
 
   if (isdigit(str[*pos])) {
@@ -1940,6 +2965,8 @@ isOSCEscape(const char *str, uint *pos)
       return false;
   }
 
+  //---
+
   if (str[*pos] != ';')
     return false;
 
@@ -1948,8 +2975,11 @@ isOSCEscape(const char *str, uint *pos)
   if (str[*pos] == '\0')
     return false;
 
-  string str1;
-  int    osc_len;
+  //---
+
+  // read to end of escape
+  std::string str1;
+  int         osc_len;
 
   while (str[*pos] != '\0' && ! isOSCEscape(str, pos, &osc_len))
     str1 += str[(*pos)++];
@@ -1978,8 +3008,8 @@ isAPCEscape(const char *str, uint *pos)
   if (str[++(*pos)] == '\0')
     return false;
 
-  string value;
-  int    apc_len;
+  std::string value;
+  int         apc_len;
 
   value += str[(*pos)++];
 
@@ -1991,6 +3021,8 @@ isAPCEscape(const char *str, uint *pos)
 
   (*pos) += apc_len;
 
+  //---
+
   char c = value[0];
 
   switch (c) {
@@ -2000,25 +3032,25 @@ isAPCEscape(const char *str, uint *pos)
       parse.skipChar();
       parse.skipSpace();
 
-      string name;
+      std::string name;
 
       if (! parse.readIdentifier(name))
         name = "";
 
-      typedef pair<string,string> NameValue;
-      typedef vector<NameValue>   NameValueList;
+      typedef std::pair<std::string,std::string> NameValue;
+      typedef std::vector<NameValue>             NameValueList;
 
-      vector<NameValue> name_values;
+      NameValueList name_values;
 
       while (! parse.eof() && ! parse.isString("/>")) {
         parse.skipSpace();
 
-        string opt_name;
+        std::string opt_name;
 
         if (! parse.readIdentifier(opt_name))
           break;
 
-        string opt_value;
+        std::string opt_value;
 
         parse.skipSpace();
 
@@ -2034,14 +3066,11 @@ isAPCEscape(const char *str, uint *pos)
         name_values.push_back(NameValue(opt_name, opt_value));
       }
 
-      NameValueList::const_iterator p1 = name_values.begin();
-      NameValueList::const_iterator p2 = name_values.end  ();
-
       // <state dir="dirname"/>
       if      (name == "state") {
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if (opt_name == "dir") {
             setInEscape(false);
@@ -2055,14 +3084,14 @@ isAPCEscape(const char *str, uint *pos)
 
       // <image filename="name" size="size" x1="x1" y1="y1" x2="x2" y2="y2"/>
       else if (name == "image") {
-        string name;
-        int    size = -1;
-        int    x1   = -1, y1 = -1;
-        int    x2   = -1, y2 = -1;
+        std::string name;
+        int         size = -1;
+        int         x1   = -1, y1 = -1;
+        int         x2   = -1, y2 = -1;
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if      (opt_name == "filename")
             name = opt_value;
@@ -2095,28 +3124,59 @@ isAPCEscape(const char *str, uint *pos)
         else {
           CImageFile *image = lookupFileImage(name);
 
-          image_escape_.name  = name;
-          image_escape_.image = image;
-          image_escape_.x1    = x1;
-          image_escape_.y1    = y1;
-          image_escape_.x2    = x2;
-          image_escape_.y2    = y2;
+          file_image_escape_.name  = name;
+          file_image_escape_.image = image;
+          file_image_escape_.x1    = x1;
+          file_image_escape_.y1    = y1;
+          file_image_escape_.x2    = x2;
+          file_image_escape_.y2    = y2;
 
-          handleEscape(&image_escape_);
+          handleEscape(&file_image_escape_);
         }
       }
 
       // <pixel x="x" y="y" color="color"/>
       else if (name == "pixel") {
+        typedef std::vector<CEscapeColor> Colors;
+
+        Colors colors;
         int    x = 0, y = 0;
-        string color("black");
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
-          if      (opt_name == "color")
-            color = opt_value;
+          if      (opt_name == "color") {
+            CRGBA c1;
+
+            std::string colorNames = opt_value;
+
+            std::string::size_type p1 = 0;
+            std::string::size_type p2 = colorNames.find(',');
+
+            while (p2 != std::string::npos) {
+              std::string color = colorNames.substr(p1, p2 - p1);
+
+              CRGBA c2;
+
+              if (color == "#")
+                c2 = c1;
+              else
+                c2 = CRGBName::toRGBA(color);
+
+              colors.push_back(CEscapeColorsInst->encode(c2));
+
+              c1 = c2;
+              p1 = p2 + 1;
+              p2 = colorNames.find(',', p1);
+            }
+
+            std::string color = colorNames.substr(p1, p2 - p1);
+
+            CRGBA c = CRGBName::toRGBA(color);
+
+            colors.push_back(CEscapeColorsInst->encode(c));
+          }
           else if (opt_name == "x")
             x = CStrUtil::toInteger(opt_value);
           else if (opt_name == "y")
@@ -2125,24 +3185,28 @@ isAPCEscape(const char *str, uint *pos)
 
         setInEscape(false);
 
-        pixel_escape_.x     = x;
-        pixel_escape_.y     = y;
-        pixel_escape_.color = color;
+        for (const auto &color : colors) {
+          pixel_escape_.x     = x;
+          pixel_escape_.y     = y;
+          pixel_escape_.color = color;
 
-        handleEscape(&pixel_escape_);
+          handleEscape(&pixel_escape_);
+
+          ++x;
+        }
       }
 
       // <line x1="x1" y1="y1" x2="x2" y2="y2" color="color"/>
       else if (name == "line") {
-        int    x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-        string color("black");
+        CRGBA color;
+        int   x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if      (opt_name == "color")
-            color = opt_value;
+            color = CRGBName::toRGBA(opt_value);
           else if (opt_name == "x1")
             x1 = CStrUtil::toInteger(opt_value);
           else if (opt_name == "y1")
@@ -2159,20 +3223,20 @@ isAPCEscape(const char *str, uint *pos)
         line_escape_.y1    = y1;
         line_escape_.x2    = x2;
         line_escape_.y2    = y2;
-        line_escape_.color = color;
+        line_escape_.color = CEscapeColorsInst->encode(color);
 
         handleEscape(&line_escape_);
       }
 
       // <link type=<type> dir=<dir> name=<name>
       else if (name == "link") {
-        string type = "text";
-        string dir;
-        string name;
+        std::string type = "text";
+        std::string dir;
+        std::string name;
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if      (opt_name == "type")
             type = opt_value;
@@ -2194,13 +3258,13 @@ isAPCEscape(const char *str, uint *pos)
       // <command name=<name> dir=<dir>
 
       else if (name == "command") {
-        string name;
-        string dir;
-        bool   start;
+        std::string name;
+        std::string dir;
+        bool        start;
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if      (opt_name == "name")
             name = opt_value;
@@ -2223,11 +3287,11 @@ isAPCEscape(const char *str, uint *pos)
       else if (name == "preview") {
         setInEscape(false);
 
-        string path;
+        std::string path;
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if (opt_name == "path")
             path = opt_value;
@@ -2242,11 +3306,11 @@ isAPCEscape(const char *str, uint *pos)
       else if (name == "paste") {
         setInEscape(false);
 
-        string text;
+        std::string text;
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if (opt_name == "text")
             text = opt_value;
@@ -2261,9 +3325,9 @@ isAPCEscape(const char *str, uint *pos)
       else if (name == "trace") {
         setInEscape(false);
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if (opt_name == "flag") {
             setInEscape(false);
@@ -2279,9 +3343,9 @@ isAPCEscape(const char *str, uint *pos)
       else if (name == "debug") {
         setInEscape(false);
 
-        for ( ; p1 != p2; ++p1) {
-          const string &opt_name  = (*p1).first;
-          const string &opt_value = (*p1).second;
+        for (const auto &name_value : name_values) {
+          const std::string &opt_name  = name_value.first;
+          const std::string &opt_value = name_value.second;
 
           if (opt_name == "flag") {
             setInEscape(false);
@@ -2309,8 +3373,8 @@ isDCSEscape(const char *str, uint *pos)
   if (str[*pos] == '\0')
     return false;
 
-  string value;
-  int    dcs_len;
+  std::string value;
+  int         dcs_len;
 
   value += str[(*pos)++];
 
@@ -2324,12 +3388,42 @@ isDCSEscape(const char *str, uint *pos)
 
   uint value_len = value.size();
 
-  if (value_len >= 2 && value[0] == '+' && value[1] == 'q') {
-    string value1 = value.substr(2);
+  // DCS $ q Pt ST
+  //   Request Status String (DECRQSS). The string following the "q" is one of the following:
+  //     " q  -> DECSCA
+  //     " p  -> DECSCL
+  //     r    -> DECSTBM
+  //     s    -> DECSLRM
+  //     m    -> SGR
+  //     SP q -> DECSCUSR
+  // xterm responds with DCS 1 $ r Pt ST for valid requests, replacing the Pt with the
+  // corresponding CSI string, or DCS 0 $ r Pt ST for invalid requests.
+  if      (value_len >= 2 && value[0] == '$' && value[1] == 'q') {
+    // UNHANDLED1("DECRQSS", value)
+  }
+  // DCS + p Pt ST
+  //   Set Termcap/Terminfo Data (xterm, experimental). The string following the "p" is a
+  //   name to use for retrieving data from the terminal database. The data will be used
+  //   for the "tcap" keyboard configuration's function- and special-keys, as well as by
+  //   the Request Termcap/Terminfo String control.
+  else if (value_len >= 2 && value[0] == '+' && value[1] == 'p') {
+    // UNHANDLED2("DCS", c, value)
+  }
+  // DCS + q Pt ST
+  //   Request Termcap/Terminfo String (xterm, experimental). The string following the "q"
+  //   is a list of names encoded in hexadecimal (2 digits per character) separated by ;
+  //   which correspond to termcap or terminfo key names. Two special features are also
+  //   recognized, which are not key names: Co for termcap colors (or colors for terminfo
+  //   colors), and TN for termcap name (or name for terminfo name).
+  //   xterm responds with DCS 1 + r Pt ST for valid requests, adding to Pt an = , and the
+  //   value of the corresponding string that xterm would send, or DCS 0 + r Pt ST for
+  //   invalid requests. The strings are encoded in hexadecimal (2 digits per character).
+  else if (value_len >= 2 && value[0] == '+' && value[1] == 'q') {
+    std::string value1 = value.substr(2);
 
     value_len -= 2;
 
-    string key;
+    std::string key;
 
     bool valid = true;
 
@@ -2588,6 +3682,167 @@ isDCSEscape(const char *str, uint *pos)
 
     handleEscape(&DCS_escape_);
   }
+  // DCS 0 p Pt ST
+  else if (value_len >= 2 && value[0] == '0' && value[1] == 'p') {
+    std::string value = value.substr(2);
+
+    CEscapeRegisState regisState;
+
+    parseRegisString(value, regisState);
+
+    setInEscape(false);
+  }
+  // DCS q "
+  else if (value_len >= 2 && value[0] == 'q' && value[1] == '"') {
+    std::vector<CRGBA> colors;
+
+    uint pos = 2;
+
+    int nn, *num;
+
+    if (! parseNumList(&value[0], &pos, &num, &nn))
+      return false;
+
+    if (nn != 4)
+      return false;
+
+    int w = num[2];
+    int h = num[3];
+
+    CImagePtr image = CImageMgrInst->createImage();
+
+    image->setType(CFILE_TYPE_IMAGE_SIX);
+
+    image->setDataSize(w, h);
+
+    //---
+
+    int c = 0;
+
+    while (pos < value_len && value[pos] == '#') {
+      ++pos;
+
+      int nn, *num;
+
+      if (! parseNumList(&value[0], &pos, &num, &nn))
+        return false;
+
+      if      (nn == 5) {
+        int r = num[2];
+        int g = num[3];
+        int b = num[4];
+
+        colors.push_back(CRGBA(r/255.0, g/255.0, b/255.0));
+      }
+      else if (nn == 1) {
+        c = num[0];
+      }
+      else {
+        return false;
+      }
+    }
+
+    //------
+
+    for (const auto &color : colors)
+      image->addColor(color);
+
+    //---
+
+    uint *data = new uint [w*h];
+
+    int x = 0;
+    int y = 0;
+
+    while (pos < value_len) {
+      // repeat data
+      if      (value[pos] == '!') {
+        ++pos;
+
+        int num;
+
+        if (! parseNumber(&value[0], &pos, &num))
+          break;
+
+        int d;
+
+        if (! parseDCSImageData(&value[0], &pos, &d))
+          break;
+
+        for (int i = 0; i < num; ++i) {
+          for (int i = 0; i < 6; ++i) {
+            bool b = d & (1<<i);
+            if (! b) continue;
+
+            if (x >= w || y + i >= h)
+              return false;
+
+            data[x + (y + i)*w] = c;
+          }
+
+          ++x;
+        }
+      }
+      // choose palette color
+      else if (value[pos] == '#') {
+        ++pos;
+
+        int num;
+
+        if (! parseNumber(&value[0], &pos, &num))
+          break;
+
+        c = num;
+      }
+      // carriage return
+      else if (value[pos] == '$') {
+        ++pos;
+
+        x = 0;
+      }
+      // next line
+      else if (value[pos] == '-') {
+        ++pos;
+
+        x = 0;
+
+        y += 6;
+      }
+      // add data
+      else {
+        int d;
+
+        if (! parseDCSImageData(&value[0], &pos, &d))
+          break;
+
+        for (int i = 0; i < 6; ++i) {
+          bool b = d & (1<<i);
+          if (! b) continue;
+
+          if (x >= w || y + i >= h)
+            return false;
+
+          data[x + (y + i)*w] = c;
+        }
+
+        ++x;
+      }
+    }
+
+    //---
+
+    image->setColorIndexData(data);
+
+    delete [] data;
+
+    //---
+
+    setInEscape(false);
+
+    image_escape_.image = image;
+
+    handleEscape(&image_escape_);
+  }
   else {
     UNHANDLED1("DCS", value)
 
@@ -2600,20 +3855,123 @@ isDCSEscape(const char *str, uint *pos)
       UNHANDLED3("DECUDK", num[0], num[1], value)
       break;
     }
-    case '$': {
-      UNHANDLED1("DECRQSS", value)
-      break;
-    }
-    case '+': {
-      UNHANDLED2("DCS", c, value)
-      break;
-    }
-    default: {
-      UNHANDLED2("DCS", c, value)
-      break;
-    }
   }
 #endif
+
+  return true;
+}
+
+bool
+CEscapeParse::
+parseRegisString(const std::string &str, CEscapeRegisState &regisState)
+{
+  static std::string chars = "PVCFTSRWL@";
+
+  uint pos = 0;
+  uint len = str.size();
+
+  RegisPoint currentPoint;
+
+  while (pos < len) {
+    char c = toupper(str[pos]);
+
+    auto p = chars.find(c);
+
+    if (p == std::string::npos)
+      break;
+
+    ++pos;
+
+    std::vector<RegisData> values;
+
+    getRegisData(str, pos, values);
+
+    // position
+    if      (c == 'P') {
+      for (const auto &value : values) {
+        if (value.parameter == "") {
+          currentPoint = value.point;
+        }
+      }
+    }
+    // vector
+    else if (c == 'V') {
+      RegisPoint p;
+
+      for (const auto &value : values) {
+        if      (value.parameter == "B") {
+          p = currentPoint;
+        }
+        else if (value.parameter == "E") {
+          currentPoint = p;
+        }
+        else if (value.parameter == "") {
+          line_escape_.x1 = currentPoint.x;
+          line_escape_.y1 = currentPoint.y;
+
+          if (value.point.x_rel)
+            line_escape_.x2 = line_escape_.x1 + value.point.x;
+          else
+            line_escape_.x2 = value.point.x;
+
+          if (value.point.y_rel)
+            line_escape_.y2 = line_escape_.y1 + value.point.y;
+          else
+            line_escape_.y2 = value.point.y;
+
+          currentPoint = value.point;
+
+          handleEscape(&line_escape_);
+        }
+      }
+    }
+    // curve
+    else if (c == 'C') {
+      for (const auto &value : values) {
+         if (value.parameter == "") {
+           // draw circle
+         }
+      }
+    }
+    // fill
+    else if (c == 'F') {
+      regisState.filled = true;
+
+      for (const auto &value : values) {
+         if (value.parameter != "") {
+           parseRegisString(value.parameter, regisState);
+         }
+      }
+
+      regisState.filled = false;
+    }
+    // text
+    else if (c == 'T') {
+    }
+    // screen
+    else if (c == 'S') {
+      for (const auto &value : values) {
+        if      (value.parameter == "E") {
+          // clear screen
+        }
+        else if (value.parameter == "C1") {
+          // show cursor
+        }
+      }
+    }
+    // report
+    else if (c == 'R') {
+    }
+    // write
+    else if (c == 'W') {
+    }
+    // load
+    else if (c == 'L') {
+    }
+    // macrograph
+    else if (c == '@') {
+    }
+  }
 
   return true;
 }
@@ -2629,7 +3987,7 @@ isOSCEscape(const char *str, uint *pos, int *len)
     return true;
   }
 
-  if (str[*pos] == '' && str[*pos + 1] == '\\') {
+  if (str[*pos] == '\033' && str[*pos + 1] == '\\') {
     *len = 2;
     return true;
   }
@@ -2643,7 +4001,7 @@ isAPCEscape(const char *str, uint *pos, int *len)
 {
   *len = 0;
 
-  if (str[*pos] == '' && str[*pos + 1] == '\\') {
+  if (str[*pos] == '\033' && str[*pos + 1] == '\\') {
     *len = 2;
     return true;
   }
@@ -2657,7 +4015,7 @@ isDCSTerm(const char *str, uint *pos, int *len)
 {
   *len = 0;
 
-  if (str[*pos] == '' && str[*pos + 1] == '\\') {
+  if (str[*pos] == '\033' && str[*pos + 1] == '\\') {
     *len = 2;
     return true;
   }
@@ -2716,9 +4074,45 @@ parseNumList(const char *str, uint *pos, int **values, int *num_values)
   return true;
 }
 
+bool
+CEscapeParse::
+parseNumber(const char *str, uint *pos, int *num)
+{
+  if (! isdigit(str[*pos]))
+    return false;
+
+  *num = 0;
+
+  while (str[*pos] != '\0' && isdigit(str[*pos]))
+    *num = 10*(*num) + str[(*pos)++] - '0';
+
+  return true;
+}
+
+bool
+CEscapeParse::
+parseDCSImageData(const char *str, uint *pos, int *data)
+{
+  int c = str[*pos];
+
+  if (c < 0x3f)
+    return false;
+
+  int c1 = c - 0x3f;
+
+  if (c1 > 0x3f)
+    return false;
+
+  *data = c1;
+
+  ++(*pos);
+
+  return true;
+}
+
 CImageFile *
 CEscapeParse::
-lookupFileImage(const string &filename)
+lookupFileImage(const std::string &filename)
 {
   CImageFileSrc src(filename);
 
@@ -2727,7 +4121,7 @@ lookupFileImage(const string &filename)
 
 CImageFile *
 CEscapeParse::
-lookupFileImage(const string &filename, int width, int height, bool keep_aspect)
+lookupFileImage(const std::string &filename, int width, int height, bool keep_aspect)
 {
   CImageSizedFileSrc src(filename, width, height, keep_aspect);
 
@@ -2744,97 +4138,168 @@ updateStyleFromSGR(const CEscapeDataSGR *sgr, CCellStyle &style)
   assert(nn);
 
   switch (num[0]) {
-    case 0:
+    // Normal (default)
+    case 0: {
       style.reset();
-
       break;
-    case 1:
+    }
+    // Bold
+    case 1: {
       style.setBold(true);
-
       break;
-    case 2:
+    }
+    // Faint, decreased intensity (ISO 6429)
+    case 2: {
       style.setDim(true);
-
       break;
-    case 4:
+    }
+    // Italicized (ISO 6429)
+    case 3: {
+      style.setItalic(true);
+      break;
+    }
+    // Underlined
+    case 4: {
       style.setUnderscore(true);
-
-      break;
-    case 5:
+      break; {
+    }
+    // Blink (appears as Bold)
+    case 5: {
       style.setBlink(true);
-
       break;
-    case 7:
+    }
+    // Inverse
+    case 7: {
       style.setInvert(true);
-
       break;
-    case 8:
+    }
+    // Invisible, i.e., hidden (VT300)
+    case 8: {
       style.setHidden(true);
-
       break;
-    case 21:
+    }
+    // Crossed-out characters (ISO 6429)
+    case 9:
+      style.setStrikeout(true);
+      break;
+    }
+    // Doubly-underlined (ISO 6429)
+    case 21: {
       style.setBold(false);
-
       break;
-    case 22:
+    }
+    // Normal (neither bold nor faint)
+    case 22: {
       style.setDim(false);
-
       break;
-    case 24:
+    }
+    // Not italicized (ISO 6429)
+    case 23: {
+      style.setItalic(false);
+      break;
+    }
+    // Not underlined
+    case 24: {
       style.setUnderscore(false);
-
       break;
-    case 25:
+    }
+    // Steady (not blinking)
+    case 25: {
       style.setBlink(false);
-
       break;
-    case 27:
+    }
+    // Positive (not inverse)
+    case 27: {
       style.setInvert(false);
-
       break;
-    case 28:
+    }
+    // Visible, i.e., not hidden (VT300)
+    case 28: {
       style.setHidden(false);
-
       break;
-
+    }
+    // Not crossed-out (ISO 6429)
+    case 29: {
+      style.setStrikeout(false);
+      break;
+    }
+    // Set foreground color :
+    //  30 -> Black.
+    //  31 -> Red.
+    //  32 -> Green.
+    //  33 -> Yellow.
+    //  34 -> Blue.
+    //  35 -> Magenta.
+    //  36 -> Cyan.
+    //  37 -> White.
     case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37: {
       style.setFg((CEscapeColor) (num[0] - 30));
-
       break;
     }
-    case 38:
+    // Set foreground color to the closest match in xterm's palette for the given RGB Pr/Pg/Pb
+    // (ISO-8613-3 controls)
+    case 38: {
       style.setFg(CRGB(num[1]/255.0, num[2]/255.0, num[3]/255.0));
-
       break;
-    case 39:
-      style.setFg(CESCAPE_COLOR_FG);
-
+    }
+    // Set foreground color to default (original)
+    case 39: {
+      style.setFg(CEscapeColor::FG);
       break;
+    }
+    // Set background color :
+    //  40 -> Black.
+    //  41 -> Red.
+    //  42 -> Green.
+    //  43 -> Yellow.
+    //  44 -> Blue.
+    //  45 -> Magenta.
+    //  46 -> Cyan.
+    //  47 -> White.
     case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47: {
       style.setBg((CEscapeColor) (num[0] - 40));
-
       break;
     }
-    case 48:
+    // Set background color to the closest match in xterm's palette for the given RGB Pr/Pg/Pb
+    // (ISO-8613-3 controls)
+    case 48: {
       style.setBg(CRGB(num[1]/255.0, num[2]/255.0, num[3]/255.0));
-
       break;
-    case 49:
-      style.setBg(CESCAPE_COLOR_BG);
-
+    }
+    // Set background color to default (original)
+    case 49: {
+      style.setBg(CEscapeColor::BG);
       break;
+    }
+    // Set foreground color (16-color support):
+    //  90 -> Black.
+    //  91 -> Red.
+    //  92 -> Green.
+    //  93 -> Yellow.
+    //  94 -> Blue.
+    //  95 -> Magenta.
+    //  96 -> Cyan.
+    //  97 -> White.
     case 90: case 91: case 92: case 93: case 94: case 95: case 96: case 97: {
-      style.setFg((CEscapeColor) (num[0] - 90));
-
+      style.setFg((CEscapeColor) (num[0] - 80));
       break;
     }
+    // Set background color (16-color support):
+    //  100 -> Black.
+    //  101 -> Red.
+    //  102 -> Green.
+    //  103 -> Yellow.
+    //  104 -> Blue.
+    //  105 -> Magenta.
+    //  106 -> Cyan.
+    //  107 -> White.
     case 100: case 101: case 102: case 103: case 104: case 105: case 106: case 107: {
-      style.setBg((CEscapeColor) (num[0] - 100));
-
+      style.setBg((CEscapeColor) (num[0] - 90));
       break;
     }
-    default:
+    default: {
       return false;
+    }
   }
 
   return true;
@@ -2844,35 +4309,51 @@ updateStyleFromSGR(const CEscapeDataSGR *sgr, CCellStyle &style)
 
 void
 CEscapeDataC::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(type) << ";" << c;
 }
 
 void
 CEscapeDataBool::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(type) << ";" << b;
 }
 
 void
 CEscapeDataStr::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(type) << ";" << str;
 }
 
 void
+CEscapeDataGS::
+print(std::ostream &os) const
+{
+  os << typeToName(type) << ";" << x << ";" << y;
+}
+
+void
+CEscapeDataDECDHL::
+print(std::ostream &os) const
+{
+  os << typeToName(type) << ";";
+
+  os << (pos == Pos::TOP ? "TOP" : "BOTTOM");
+}
+
+void
 CEscapeDataDCS::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(type) << ";" << CEvent::keyTypeName(key);
 }
 
 void
 CEscapeDataNums::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(type);
 
@@ -2882,7 +4363,7 @@ print(ostream &os) const
 
 void
 CEscapeDataOSC::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(type) << ";";
 
@@ -2903,43 +4384,58 @@ print(ostream &os) const
 }
 
 void
-CEscapeDataImage::
-print(ostream &os) const
+CEscapeDataTek4014::
+print(std::ostream &os) const
+{
+  os << typeToName(type) << ";";
+}
+
+void
+CEscapeDataFileImage::
+print(std::ostream &os) const
 {
   os << typeToName(type) << ";" << name;
 }
 
 void
-CEscapeDataPixel::
-print(ostream &os) const
+CEscapeDataImage::
+print(std::ostream &os) const
 {
-  os << typeToName(type) << ";" << color << ";" << x <<  ";" << y;
+  os << typeToName(type);
+}
+
+void
+CEscapeDataPixel::
+print(std::ostream &os) const
+{
+  os << typeToName(type) << ";" << uint(color) << ";" << x <<  ";" << y;
 }
 
 void
 CEscapeDataLine::
-print(ostream &os) const
+print(std::ostream &os) const
 {
-  os << typeToName(type) << ";" << color << ";" << x1 <<  ";" << y1 << ";" << x2 <<  ";" << y2;
+  os << typeToName(type) << ";" << uint(color) << ";" <<
+        x1 <<  ";" << y1 << ";" << x2 <<  ";" << y2;
 }
 
 void
 CEscapeDataLink::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(CEscapeData::type) << ";" << name << ";" << path <<  ";" << type;
 }
 
 void
 CEscapeDataCmd::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(CEscapeData::type) << ";" << name << ";" << path;
 }
 
 void
 CEscapeData::
-print(ostream &os) const
+print(std::ostream &os) const
 {
   os << typeToName(type);
 }
@@ -2949,153 +4445,175 @@ CEscapeData::
 typeToName(CEscapeType type)
 {
   switch (type) {
-    case CESCAPE_TYPE_NONE:            return "none";
-    case CESCAPE_TYPE_NUL:             return "nul";
-    case CESCAPE_TYPE_SOH:             return "soh";
-    case CESCAPE_TYPE_STX:             return "stx";
-    case CESCAPE_TYPE_ETX:             return "etx";
-    case CESCAPE_TYPE_EOT:             return "eot";
-    case CESCAPE_TYPE_ENQ:             return "enq";
-    case CESCAPE_TYPE_ACK:             return "ack";
-    case CESCAPE_TYPE_BEL:             return "bel";
-    case CESCAPE_TYPE_BS:              return "bs";
-    case CESCAPE_TYPE_HT:              return "ht";
-    case CESCAPE_TYPE_LF:              return "lf";
-    case CESCAPE_TYPE_VT:              return "vt";
-    case CESCAPE_TYPE_FF:              return "ff";
-    case CESCAPE_TYPE_CR:              return "cr";
-    case CESCAPE_TYPE_SO:              return "so";
-    case CESCAPE_TYPE_SI:              return "si";
-    case CESCAPE_TYPE_DLE:             return "dle";
-    case CESCAPE_TYPE_DC1:             return "dc1";
-    case CESCAPE_TYPE_DC2:             return "dc2";
-    case CESCAPE_TYPE_DC3:             return "dc3";
-    case CESCAPE_TYPE_DC4:             return "dc4";
-    case CESCAPE_TYPE_NAK:             return "nak";
-    case CESCAPE_TYPE_SYN:             return "syn";
-    case CESCAPE_TYPE_ETB:             return "etb";
-    case CESCAPE_TYPE_CAN:             return "can";
-    case CESCAPE_TYPE_EM:              return "em";
-    case CESCAPE_TYPE_SUB:             return "sub";
-    case CESCAPE_TYPE_FS:              return "fs";
-    case CESCAPE_TYPE_GS:              return "gs";
-    case CESCAPE_TYPE_RS:              return "rs";
-    case CESCAPE_TYPE_US:              return "us";
-    case CESCAPE_TYPE_DEL:             return "del";
-    case CESCAPE_TYPE_DECPAM:          return "decpam";
-    case CESCAPE_TYPE_DECPNM:          return "decpnm";
-    case CESCAPE_TYPE_LS3R:            return "ls3r";
-    case CESCAPE_TYPE_LS2R:            return "ls2r";
-    case CESCAPE_TYPE_LS1R:            return "ls1r";
-    case CESCAPE_TYPE_S7C1T:           return "s7c1t";
-    case CESCAPE_TYPE_S8C1T:           return "s8c1t";
-    case CESCAPE_TYPE_ANSI1:           return "ansi1";
-    case CESCAPE_TYPE_ANSI2:           return "ansi2";
-    case CESCAPE_TYPE_ANSI3:           return "ansi3";
-    case CESCAPE_TYPE_DECDHLTop:       return "decdhltop";
-    case CESCAPE_TYPE_DECDHLBottom:    return "decdhlbottom";
-    case CESCAPE_TYPE_DECSWL:          return "decswl";
-    case CESCAPE_TYPE_DECDWL:          return "decdwl";
-    case CESCAPE_TYPE_DECALN:          return "decaln";
-    case CESCAPE_TYPE_ISO8859_1:       return "iso8859_1";
-    case CESCAPE_TYPE_UTF_8:           return "utf_8";
-    case CESCAPE_TYPE_G0:              return "g0";
-    case CESCAPE_TYPE_G1:              return "g1";
-    case CESCAPE_TYPE_G2:              return "g2";
-    case CESCAPE_TYPE_G3:              return "g3";
-    case CESCAPE_TYPE_IND:             return "ind";
-    case CESCAPE_TYPE_NEL:             return "nel";
-    case CESCAPE_TYPE_ESA:             return "esa";
-    case CESCAPE_TYPE_HTS:             return "hts";
-    case CESCAPE_TYPE_RI:              return "ri";
-    case CESCAPE_TYPE_SS2:             return "ss2";
-    case CESCAPE_TYPE_SS3:             return "ss3";
-    case CESCAPE_TYPE_CCH:             return "cch";
-    case CESCAPE_TYPE_SPA:             return "spa";
-    case CESCAPE_TYPE_EPA:             return "epa";
-    case CESCAPE_TYPE_SOS:             return "sos";
-    case CESCAPE_TYPE_DECID:           return "decid";
-    case CESCAPE_TYPE_RIS:             return "ris";
-    case CESCAPE_TYPE_MemoryLock:      return "memorylock";
-    case CESCAPE_TYPE_MemoryUnlock:    return "memoryunlock";
-    case CESCAPE_TYPE_LS2:             return "ls2";
-    case CESCAPE_TYPE_LS3:             return "ls3";
-    case CESCAPE_TYPE_DECSC:           return "decsc";
-    case CESCAPE_TYPE_DECRC:           return "decrc";
-    case CESCAPE_TYPE_DECSED:          return "decsed";
-    case CESCAPE_TYPE_DECSEL:          return "decsel";
-    case CESCAPE_TYPE_DA2:             return "da2";
-    case CESCAPE_TYPE_DECSET:          return "decset";
-    case CESCAPE_TYPE_DECMC:           return "decmc";
-    case CESCAPE_TYPE_DECRST:          return "decrst";
-    case CESCAPE_TYPE_DECDSR:          return "decdsr";
-    case CESCAPE_TYPE_DECSTR:          return "decstr";
-    case CESCAPE_TYPE_DECRestorePriv:  return "decrestorepriv";
-    case CESCAPE_TYPE_DECSavePriv:     return "decsavepriv";
-    case CESCAPE_TYPE_HPA:             return "hpa";
-    case CESCAPE_TYPE_DECSCL:          return "decscl";
-    case CESCAPE_TYPE_DECSCA:          return "decsca";
-    case CESCAPE_TYPE_DECCARA:         return "deccara";
-    case CESCAPE_TYPE_DECRARA:         return "decrara";
-    case CESCAPE_TYPE_DECCRA:          return "deccra";
-    case CESCAPE_TYPE_DECEFR:          return "decefr";
-    case CESCAPE_TYPE_DECLRP:          return "declrp";
-    case CESCAPE_TYPE_DECFRA:          return "decfra";
-    case CESCAPE_TYPE_DECSACE:         return "decsace";
-    case CESCAPE_TYPE_DECELR:          return "decelr";
-    case CESCAPE_TYPE_DECERA:          return "decera";
-    case CESCAPE_TYPE_DECSLE:          return "decsle";
-    case CESCAPE_TYPE_DECSERA:         return "decsera";
-    case CESCAPE_TYPE_DECRQLP:         return "decrqlp";
-    case CESCAPE_TYPE_ICH:             return "ich";
-    case CESCAPE_TYPE_CUU:             return "cuu";
-    case CESCAPE_TYPE_CUD:             return "cud";
-    case CESCAPE_TYPE_CUF:             return "cuf";
-    case CESCAPE_TYPE_CUB:             return "cub";
-    case CESCAPE_TYPE_CNL:             return "cnl";
-    case CESCAPE_TYPE_CPL:             return "cpl";
-    case CESCAPE_TYPE_CHA:             return "cha";
-    case CESCAPE_TYPE_CUP:             return "cup";
-    case CESCAPE_TYPE_CHT:             return "cht";
-    case CESCAPE_TYPE_ED:              return "ed";
-    case CESCAPE_TYPE_EL:              return "el";
-    case CESCAPE_TYPE_IL:              return "il";
-    case CESCAPE_TYPE_DL:              return "dl";
-    case CESCAPE_TYPE_DCH:             return "dch";
-    case CESCAPE_TYPE_SU:              return "su";
-    case CESCAPE_TYPE_SD:              return "sd";
-    case CESCAPE_TYPE_StartMouseTrack: return "startmousetrack";
-    case CESCAPE_TYPE_ECH:             return "ech";
-    case CESCAPE_TYPE_CBT:             return "cbt";
-    case CESCAPE_TYPE_REP:             return "rep";
-    case CESCAPE_TYPE_DA1:             return "da1";
-    case CESCAPE_TYPE_VPA:             return "vpa";
-    case CESCAPE_TYPE_HVP:             return "hvp";
-    case CESCAPE_TYPE_TBC:             return "tbc";
-    case CESCAPE_TYPE_SM:              return "sm";
-    case CESCAPE_TYPE_MC:              return "mc";
-    case CESCAPE_TYPE_RM:              return "rm";
-    case CESCAPE_TYPE_SGR:             return "sgr";
-    case CESCAPE_TYPE_DSR:             return "dsr";
-    case CESCAPE_TYPE_DECLL:           return "decll";
-    case CESCAPE_TYPE_DECSTBM:         return "decstbm";
-    case CESCAPE_TYPE_SC:              return "sc";
-    case CESCAPE_TYPE_WindowManip:     return "windowmanip";
-    case CESCAPE_TYPE_DECREQTPARM:     return "decreqtparm";
-    case CESCAPE_TYPE_DECTST:          return "dectst";
-    case CESCAPE_TYPE_OSC:             return "osc";
-    case CESCAPE_TYPE_SET_DIR:         return "set_dir";
-    case CESCAPE_TYPE_SIZED_IMAGE:     return "sized_image";
-    case CESCAPE_TYPE_IMAGE:           return "image";
-    case CESCAPE_TYPE_PIXEL:           return "pixel";
-    case CESCAPE_TYPE_LINE:            return "line";
-    case CESCAPE_TYPE_LINK:            return "link";
-    case CESCAPE_TYPE_COMMAND:         return "command";
-    case CESCAPE_TYPE_PREVIEW_FILES:   return "preview_files";
-    case CESCAPE_TYPE_PASTE:           return "paste";
-    case CESCAPE_TYPE_TRACE:           return "trace";
-    case CESCAPE_TYPE_DEBUG:           return "debug";
-    case CESCAPE_TYPE_DCS:             return "dcs";
+    case CEscapeType::NUL:             return "NUL";
+    case CEscapeType::SOH:             return "SOH";
+    case CEscapeType::STX:             return "STX";
+    case CEscapeType::ETX:             return "ETX";
+    case CEscapeType::EOT:             return "EOT";
+    case CEscapeType::ENQ:             return "ENQ";
+    case CEscapeType::ACK:             return "ACK";
+    case CEscapeType::BEL:             return "BEL";
+    case CEscapeType::BS:              return "BS";
+    case CEscapeType::HT:              return "HT"; // also "TAB"
+    case CEscapeType::LF:              return "LF"; // also "NL"
+    case CEscapeType::VT:              return "VT";
+    case CEscapeType::FF:              return "FF"; // also "NP"
+    case CEscapeType::CR:              return "CR";
+    case CEscapeType::SO:              return "SO";
+    case CEscapeType::SI:              return "SI";
+    case CEscapeType::DLE:             return "DLE";
+    case CEscapeType::DC1:             return "DC1";
+    case CEscapeType::DC2:             return "DC2";
+    case CEscapeType::DC3:             return "DC3";
+    case CEscapeType::DC4:             return "DC4";
+    case CEscapeType::NAK:             return "NAK";
+    case CEscapeType::SYN:             return "SYN";
+    case CEscapeType::ETB:             return "ETB";
+    case CEscapeType::CAN:             return "CAN";
+    case CEscapeType::EM:              return "EM";
+    case CEscapeType::SUB:             return "SUB";
+    case CEscapeType::FS:              return "FS";
+    case CEscapeType::GS:              return "GS";
+    case CEscapeType::RS:              return "RS";
+    case CEscapeType::US:              return "US";
+    case CEscapeType::DEL:             return "DEL";
+
+    case CEscapeType::IND:             return "IND";
+    case CEscapeType::NEL:             return "NEL";
+    case CEscapeType::HTS:             return "HTS";
+    case CEscapeType::RI:              return "RI";
+    case CEscapeType::SS2:             return "SS2";
+    case CEscapeType::SS3:             return "SS3";
+    case CEscapeType::DCS:             return "DCS";
+    case CEscapeType::SPA:             return "SPA";
+    case CEscapeType::EPA:             return "EPA";
+    case CEscapeType::SOS:             return "SOS";
+    case CEscapeType::DECID:           return "DECID";
+
+    case CEscapeType::G0:              return "G0";
+    case CEscapeType::G1:              return "G1";
+    case CEscapeType::G2:              return "G2";
+    case CEscapeType::G3:              return "G3";
+
+#if 0
+    case CEscapeType::WIN:             return "WIN";
+    case CEscapeType::CSI:             return "CSI";
+#endif
+    case CEscapeType::OSC:             return "OSC";
+
+    case CEscapeType::DECSC:           return "DECSC";
+    case CEscapeType::DECRC:           return "DECRC";
+    case CEscapeType::DECPAM:          return "DECPAM";
+    case CEscapeType::DECPNM:          return "DECPNM";
+
+#if 0
+    case CEscapeType::SCS:             return "SCS";
+#endif
+
+    case CEscapeType::RIS:             return "RIS";
+
+    case CEscapeType::DECALN:          return "DECALN";
+
+    case CEscapeType::ICH:             return "ICH";
+    case CEscapeType::CUU:             return "CUU";
+    case CEscapeType::CUD:             return "CUD";
+    case CEscapeType::CUF:             return "CUF";
+    case CEscapeType::CUB:             return "CUB";
+    case CEscapeType::CNL:             return "CNL";
+    case CEscapeType::CPL:             return "CPL";
+    case CEscapeType::CHA:             return "CHA";
+    case CEscapeType::CUP:             return "CUP";
+    case CEscapeType::CHT:             return "CHT";
+    case CEscapeType::ED:              return "ED";
+    case CEscapeType::DECSED:          return "DECSED";
+    case CEscapeType::EL:              return "EL";
+    case CEscapeType::DECSEL:          return "DECSEL";
+    case CEscapeType::IL:              return "IL";
+    case CEscapeType::DL:              return "DL";
+    case CEscapeType::DCH:             return "DCH";
+    case CEscapeType::SU:              return "SU";
+    case CEscapeType::SD:              return "SD";
+    case CEscapeType::ECH:             return "ECH";
+    case CEscapeType::CBT:             return "CBT";
+    case CEscapeType::HPA:             return "HPA";
+    case CEscapeType::REP:             return "REP";
+    case CEscapeType::DA1:             return "DA1";
+    case CEscapeType::DA2:             return "DA2";
+    case CEscapeType::VPA:             return "VPA";
+    case CEscapeType::HVP:             return "HVP";
+    case CEscapeType::TBC:             return "TBC";
+    case CEscapeType::SM:              return "SM";
+    case CEscapeType::DECSET:          return "DECSET";
+    case CEscapeType::MC:              return "MC";
+    case CEscapeType::DECMC:           return "DECMC";
+    case CEscapeType::RM:              return "RM";
+    case CEscapeType::DECRST:          return "DECRST";
+    case CEscapeType::SGR:             return "SGR";
+    case CEscapeType::DSR:             return "DSR";
+    case CEscapeType::DECDSR:          return "DECDSR";
+    case CEscapeType::DECSTR:          return "DECSTR";
+    case CEscapeType::DECSCL:          return "DECSCL";
+    case CEscapeType::DECSTBM:         return "DECSTBM";
+    case CEscapeType::DECCARA:         return "DECCARA";
+    case CEscapeType::SC:              return "SC";
+    case CEscapeType::DECRARA:         return "DECRARA";
+    case CEscapeType::DECREQTPARM:     return "DECREQTPARM";
+    case CEscapeType::DECELR:          return "DECELR";
+    case CEscapeType::DECSLE:          return "DECSLE";
+    case CEscapeType::DECRQLP:         return "DECRQLP";
+
+    case CEscapeType::LS3R:            return "LS3R";
+    case CEscapeType::LS2R:            return "LS2R";
+    case CEscapeType::LS1R:            return "LS1R";
+    case CEscapeType::S7C1T:           return "S7C1T";
+    case CEscapeType::S8C1T:           return "S8C1T";
+    case CEscapeType::ANSI1:           return "ANSI1";
+    case CEscapeType::ANSI2:           return "ANSI2";
+    case CEscapeType::ANSI3:           return "ANSI3";
+    case CEscapeType::DECDHL:          return "DECDHL";
+    case CEscapeType::DECSWL:          return "DECSWL";
+    case CEscapeType::DECDWL:          return "DECDWL";
+    case CEscapeType::ISO8859_1:       return "ISO8859_1";
+    case CEscapeType::UTF_8:           return "UTF_8";
+    case CEscapeType::SSA:             return "SSA";
+    case CEscapeType::ESA:             return "ESA";
+    case CEscapeType::CCH:             return "CCH";
+    case CEscapeType::LS2:             return "LS2";
+    case CEscapeType::LS3:             return "LS3";
+
+    case CEscapeType::DECSCA:          return "DECSCA";
+    case CEscapeType::DECCRA:          return "DECCRA";
+    case CEscapeType::DECEFR:          return "DECEFR";
+    case CEscapeType::DECLRP:          return "DECLRP";
+    case CEscapeType::DECFRA:          return "DECFRA";
+    case CEscapeType::DECSACE:         return "DECSACE";
+    case CEscapeType::DECERA:          return "DECERA";
+    case CEscapeType::DECSERA:         return "DECSERA";
+    case CEscapeType::DECLL:           return "DECLL";
+    case CEscapeType::DECTST:          return "DECTST";
+
+    case CEscapeType::DECRestorePriv:  return "DECRestorePriv";
+    case CEscapeType::DECSavePriv:     return "DECSavePriv";
+    case CEscapeType::MemoryLock:      return "MemoryLock";
+    case CEscapeType::MemoryUnlock:    return "MemoryUnlock";
+    case CEscapeType::StartMouseTrack: return "StartMouseTrack";
+    case CEscapeType::WindowManip:     return "WindowManip";
+
+    case CEscapeType::TEK4014:         return "TEK4014";
+
+    case CEscapeType::SET_DIR:         return "set_dir";
+    case CEscapeType::SIZED_IMAGE:     return "sized_image";
+    case CEscapeType::IMAGE:           return "image";
+    case CEscapeType::PIXEL:           return "pixel";
+    case CEscapeType::LINE:            return "line";
+    case CEscapeType::LINK:            return "link";
+    case CEscapeType::COMMAND:         return "command";
+    case CEscapeType::PREVIEW_FILES:   return "preview_files";
+    case CEscapeType::PASTE:           return "paste";
+    case CEscapeType::TRACE:           return "trace";
+    case CEscapeType::DEBUG:           return "debug";
+
+    case CEscapeType::NONE:            return "none";
     default:                           return "???";
   }
 }

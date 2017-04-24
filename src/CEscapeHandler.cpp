@@ -1,33 +1,31 @@
 #include <CEscapeHandler.h>
+#include <CEscapeColors.h>
 #include <CCellStyle.h>
 #include <CWindow.h>
 #include <CRGBName.h>
+#include <limits>
 #include <sstream>
 
-using std::string;
-using std::vector;
-using std::ostringstream;
-
 #define UNHANDLED(m) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << "\n"; \
   log(ostr.str()); \
 }
 
 #define UNHANDLED1(m,a) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << "\n"; \
   log(ostr.str()); \
 }
 
 #define UNHANDLED2(m,a,b) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "\n"; \
   log(ostr.str()); \
 }
 
 #define UNHANDLED3(m,a,b,c) { \
-  ostringstream ostr; \
+  std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "" << c << "\n"; \
   log(ostr.str()); \
 }
@@ -52,28 +50,38 @@ handleChar(char c)
 
   logTrace(c);
 
-  // if at last column then:
-  //  wrap mode   : move to next line
-  //  no wrap mode: move back and overwrite last char
-  if (getDataPos().x >= int(getNumDataCols())) {
-    if (getLineWrap())
-      escapeNEL();
-    else
-      decOutputCol();
-  }
-
   int x = getDataPos().x;
   int y = getDataPos().y;
+
+  bool visible = true;
+
+  // if at last column then:
+  //  wrap mode   : move to next line
+  //  no wrap mode: clipped
+  if (x >= int(getNumDataCols())) {
+    if (getLineWrap()) {
+      while (x >= int(getNumDataCols())) {
+        x -= int(getNumDataCols());
+
+        ++y;
+      }
+    }
+    else {
+      visible = false;
+    }
+  }
 
   notifyChar(x, y, c);
 
   if (getInsertMode())
     shiftRight();
 
-  if (getInAPCType())
-    setLinkCell(y, x, c, getStyle(), getAPCTypeType(), getAPCTypeValue());
-  else
-    setCell(y, x, c, getStyle());
+  if (visible) {
+    if (getInAPCType())
+      setLinkCell(y, x, c, getStyle(), getAPCTypeType(), getAPCTypeValue());
+    else
+      setCell(y, x, c, getStyle());
+  }
 
   incOutputCol();
 }
@@ -90,307 +98,451 @@ CEscapeHandler::
 handleEscape(const CEscapeData *esc)
 {
   switch (esc->type) {
-    case CESCAPE_TYPE_NUL:
+    // NUL
+    case CEscapeType::NUL: {
       break;
-    case CESCAPE_TYPE_SOH:
+    }
+    // SOH
+    case CEscapeType::SOH: {
       UNHANDLED("SOH");
       break;
-    case CESCAPE_TYPE_STX:
+    }
+    // STX
+    case CEscapeType::STX: {
       UNHANDLED("STX");
       break;
-    case CESCAPE_TYPE_ETX:
+    }
+    // Switch to VT100 Mode (ESC  Ctrl-C)
+    case CEscapeType::ETX: {
       UNHANDLED("ETX");
       break;
-    case CESCAPE_TYPE_EOT:
+    }
+    // EOT
+    case CEscapeType::EOT: {
       UNHANDLED("EOT");
       break;
-    case CESCAPE_TYPE_ENQ:
+    }
+    // Return Terminal Status (Ctrl-E)
+    // Default response is an empty string, but may be overridden
+    // by a resource answerbackString
+    case CEscapeType::ENQ: {
       // terminal status (default is empty)
       // escapeDA1(NULL, 0);
       break;
-    case CESCAPE_TYPE_ACK:
+    }
+    // ACK
+    case CEscapeType::ACK: {
       UNHANDLED("ACK");
       break;
-    case CESCAPE_TYPE_BEL: {
+    }
+    // Bell (Ctrl-G)
+    case CEscapeType::BEL: {
       beep();
       break;
     }
-    case CESCAPE_TYPE_BS:
+    // Backspace (Ctrl-H)
+    case CEscapeType::BS: {
       decOutputCol();
       break;
-    case CESCAPE_TYPE_HT:
+    }
+    // Horizontal Tab (HT) (Ctrl-I).
+    case CEscapeType::HT: {
       nextTab();
       break;
-    case CESCAPE_TYPE_LF: {
-      setDispCol(0);
-
-      incOutputRow();
-
-      notifyEnter();
-
-      break;
     }
-    case CESCAPE_TYPE_VT:
+    // Line Feed or New Line (NL).
+    // (LF is Ctrl-J).
+    case CEscapeType::LF: {
       incOutputRow();
 
-      if (getLfNlMode())
+      if (getLfNlMode()) {
         setDispCol(0);
 
-      break;
-    case CESCAPE_TYPE_FF: {
-      if (getFfNpMode())
-        clearScreen();
-      else {
-        incOutputRow();
-
-        if (getLfNlMode())
-          setDispCol(0);
+        notifyEnter('\n');
       }
 
       break;
     }
-    case CESCAPE_TYPE_CR: {
-      setDispCol(0);
+    // Vertical Tab (Ctrl-K).  This is treated the same as LF.
+    case CEscapeType::VT: {
+      incOutputRow();
+
+      if (getLfNlMode()) {
+        setDispCol(0);
+
+        notifyEnter('\v');
+      }
 
       break;
     }
-    case CESCAPE_TYPE_SO:
+    // Form Feed or New Page (NP)
+    // (FF is Ctrl-L). FF is treated the same as LF .
+    case CEscapeType::FF: {
+      if (getFfNpMode()) {
+        clearScreen();
+      }
+      else {
+        incOutputRow();
+
+        if (getLfNlMode()) {
+          setDispCol(0);
+
+          notifyEnter('\f');
+        }
+      }
+
+      break;
+    }
+    // Carriage Return (Ctrl-M)
+    case CEscapeType::CR: {
+      setDispCol(0);
+
+      notifyEnter('\r');
+
+      break;
+    }
+    // Shift Out (Ctrl-N) -> Switch to Alternate Character Set.
+    // This invokes the G1 character set.
+    case CEscapeType::SO: {
       charset_.num = 1;
       break;
-    case CESCAPE_TYPE_SI:
+    }
+    // Shift In (Ctrl-O) -> Switch to Standard Character Set.
+    // This invokes the G0 character set (the default).
+    case CEscapeType::SI: {
       charset_.num = 0;
       break;
-    case CESCAPE_TYPE_DLE:
+    }
+    case CEscapeType::DLE: {
       break;
-    case CESCAPE_TYPE_DC1:
+    }
+    case CEscapeType::DC1: {
       break;
-    case CESCAPE_TYPE_DC2:
+    }
+    case CEscapeType::DC2: {
       break;
-    case CESCAPE_TYPE_DC3:
+    }
+    case CEscapeType::DC3: {
       break;
-    case CESCAPE_TYPE_DC4:
+    }
+    case CEscapeType::DC4: {
       break;
-    case CESCAPE_TYPE_NAK:
+    }
+    case CEscapeType::NAK: {
       break;
-    case CESCAPE_TYPE_SYN:
+    }
+    case CEscapeType::SYN: {
       break;
-    case CESCAPE_TYPE_ETB:
+    }
+    case CEscapeType::ETB: {
       break;
-    case CESCAPE_TYPE_CAN:
-      // cancel current sequence
+    }
+    // cancel current sequence
+    case CEscapeType::CAN: {
       UNHANDLED("CAN");
       break;
-    case CESCAPE_TYPE_EM:
+    }
+    case CEscapeType::EM: {
       break;
-    case CESCAPE_TYPE_SUB:
+    }
+    case CEscapeType::SUB: {
       // cancel current sequence and substitute character ?
       UNHANDLED("SUB");
       break;
-    case CESCAPE_TYPE_FS:
+    }
+    case CEscapeType::FS: {
+      if (is4014()) {
+        UNHANDLED("FS");
+      }
+      else {
+        UNHANDLED("FS");
+      }
       break;
-    case CESCAPE_TYPE_GS:
-      break;
-    case CESCAPE_TYPE_RS:
-      break;
-    case CESCAPE_TYPE_US:
-      break;
-    case CESCAPE_TYPE_DEL:
-      break;
+    }
+    case CEscapeType::GS: {
+      const CEscapeDataGS *escg = dynamic_cast<const CEscapeDataGS *>(esc);
 
-    case CESCAPE_TYPE_DECPAM:
+      if (is4014()) {
+        state_.addPoint(escg->x, escg->y);
+
+        if (state_.points().size() > 1) {
+          auto &p1 = state_.points()[state_.points().size() - 2];
+          auto &p2 = state_.points()[state_.points().size() - 1];
+
+          addLine(p1.x, p1.y, p2.x, p2.y, CEscapeColor::WHITE, getLineStyle());
+        }
+      }
+      else {
+        UNHANDLED("GS");
+      }
+      break;
+    }
+    case CEscapeType::RS: {
+      if (is4014()) {
+        UNHANDLED("RS");
+      }
+      else {
+        UNHANDLED("RS");
+      }
+      break;
+    }
+    case CEscapeType::US: {
+      if (is4014()) {
+        UNHANDLED("US");
+      }
+      else {
+        UNHANDLED("US");
+      }
+      break;
+    }
+    case CEscapeType::DEL: {
+      break;
+    }
+
+    // Application Keypad (DECKPAM)
+    case CEscapeType::DECPAM: {
       escapeDECPAM();
-
       break;
-    case CESCAPE_TYPE_DECPNM:
+    }
+    // Normal Keypad (DECKPNM)
+    case CEscapeType::DECPNM: {
       escapeDECPNM();
-
       break;
-    case CESCAPE_TYPE_LS3R:
+    }
+    // Invoke the G3 Character Set as GR (LS3R)
+    case CEscapeType::LS3R: {
       escapeLS3R();
-
       break;
-    case CESCAPE_TYPE_LS2R:
+    }
+    // Invoke the G2 Character Set as GR (LS2R)
+    case CEscapeType::LS2R: {
       escapeLS2R();
-
       break;
-    case CESCAPE_TYPE_LS1R:
+    }
+    // Invoke the G1 Character Set as GR (LS1R
+    case CEscapeType::LS1R: {
       escapeLS1R();
-
       break;
-    case CESCAPE_TYPE_S7C1T:
+    }
+    // 7-bit controls (S7C1T).
+    case CEscapeType::S7C1T: {
       escapeS7C1T();
-
       break;
-    case CESCAPE_TYPE_S8C1T:
+    }
+    // 8-bit controls (S8C1T).
+    case CEscapeType::S8C1T: {
       escapeS8C1T();
-
       break;
-    case CESCAPE_TYPE_ANSI1:
+    }
+    // Set ANSI conformance level 1 (dpANS X3.134.1).
+    case CEscapeType::ANSI1: {
       escapeANSIConformance(1);
-
       break;
-    case CESCAPE_TYPE_ANSI2:
+    }
+    // Set ANSI conformance level 2 (dpANS X3.134.1).
+    case CEscapeType::ANSI2: {
       escapeANSIConformance(2);
-
       break;
-    case CESCAPE_TYPE_ANSI3:
+    }
+    // Set ANSI conformance level 3 (dpANS X3.134.1).
+    case CEscapeType::ANSI3: {
       escapeANSIConformance(3);
+      break;
+    }
+    // DEC double-height line, top half (DECDHL).
+    case CEscapeType::DECDHL: {
+      const CEscapeDataDECDHL *esc1 = dynamic_cast<const CEscapeDataDECDHL *>(esc);
+
+      escapeDECDHL(esc1->pos);
 
       break;
-    case CESCAPE_TYPE_DECDHLTop:
-      escapeDECDHLTop();
-
-      break;
-    case CESCAPE_TYPE_DECDHLBottom:
-      escapeDECDHLBottom();
-
-      break;
-    case CESCAPE_TYPE_DECSWL:
+    }
+    // DEC single-width line (DECSWL).
+    case CEscapeType::DECSWL: {
       escapeDECSWL();
-
       break;
-    case CESCAPE_TYPE_DECDWL:
+    }
+    // DEC double-width line (DECDWL)
+    case CEscapeType::DECDWL: {
       escapeDECDWL();
-
       break;
-    case CESCAPE_TYPE_DECALN:
+    }
+    // DEC Screen Alignment Test (DECALN).
+    case CEscapeType::DECALN: {
       escapeDECALN();
-
       break;
-    case CESCAPE_TYPE_ISO8859_1:
+    }
+    // Select default character set.  That is ISO 8859-1 (ISO 2022).
+    case CEscapeType::ISO8859_1: {
       escapeISO8859_1();
-
       break;
-    case CESCAPE_TYPE_UTF_8:
+    }
+    // Select UTF-8 character set (ISO 2022).
+    case CEscapeType::UTF_8: {
       escapeUTF_8();
-
       break;
-    case CESCAPE_TYPE_G0: {
+    }
+    // Designate G0 Character Set (ISO 2022, VT100).
+    case CEscapeType::G0: {
       const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG0(escc->c);
 
       break;
     }
-    case CESCAPE_TYPE_G1: {
+    // Designate G1 Character Set (ISO 2022, VT100).
+    // The same character sets apply as for ESC ( C.
+    case CEscapeType::G1: {
       const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG1(escc->c);
 
       break;
     }
-    case CESCAPE_TYPE_G2: {
+    // Designate G2 Character Set (ISO 2022, VT220).
+    // The same character sets apply as for ESC ( C.
+    case CEscapeType::G2: {
       const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG2(escc->c);
 
       break;
     }
-    case CESCAPE_TYPE_G3: {
+    // Designate G3 Character Set (ISO 2022, VT220).
+    // The same character sets apply as for ESC ( C.
+    case CEscapeType::G3: {
       const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG3(escc->c);
 
       break;
     }
-    case CESCAPE_TYPE_IND:
+    // Index
+    case CEscapeType::IND: {
       escapeIND();
-
       break;
-    case CESCAPE_TYPE_NEL:
+    }
+    // Next Line
+    case CEscapeType::NEL: {
       escapeNEL();
-
       break;
-    case CESCAPE_TYPE_ESA:
+    }
+    // Start of Selected Area
+    case CEscapeType::SSA: {
       escapeESA();
-
       break;
-    case CESCAPE_TYPE_HTS:
+    }
+    // End of Selected Area
+    case CEscapeType::ESA: {
+      escapeESA();
+      break;
+    }
+    // Tab Set
+    case CEscapeType::HTS: {
       escapeHTS();
-
       break;
-    case CESCAPE_TYPE_RI:
+    }
+    // Reverse Index
+    case CEscapeType::RI: {
       escapeRI();
-
       break;
-    case CESCAPE_TYPE_SS2:
+    }
+    // Single Shift Select of G2 Character Set (next character only)
+    case CEscapeType::SS2: {
       escapeSS2();
-
       break;
-    case CESCAPE_TYPE_SS3:
+    }
+    // SS3
+    case CEscapeType::SS3: {
       escapeSS3();
-
       break;
-    case CESCAPE_TYPE_CCH:
+    }
+    // SS3
+    case CEscapeType::CCH: {
       escapeCCH();
-
       break;
-    case CESCAPE_TYPE_SPA:
+    }
+    // Start of Guarded Area
+    case CEscapeType::SPA: {
       escapeSPA();
-
       break;
-    case CESCAPE_TYPE_EPA:
+    }
+    // End of Guarded Area
+    case CEscapeType::EPA: {
       escapeEPA();
-
       break;
-    case CESCAPE_TYPE_SOS:
+    }
+    // Start of String
+    case CEscapeType::SOS: {
       escapeSOS();
-
       break;
-    case CESCAPE_TYPE_DECID:
+    }
+    // Return Terminal ID
+    case CEscapeType::DECID: {
       escapeDECID();
-
       break;
-    case CESCAPE_TYPE_RIS:
+    }
+    // Full Reset (RIS)
+    case CEscapeType::RIS: {
       escapeRIS();
-
       break;
-    case CESCAPE_TYPE_MemoryLock:
+    }
+    // Memory Lock (per HP terminals).
+    // Locks memory above the cursor
+    case CEscapeType::MemoryLock: {
       escapeMemoryLock();
-
       break;
-    case CESCAPE_TYPE_MemoryUnlock:
+    }
+    // Memory Unlock (per HP terminals)
+    case CEscapeType::MemoryUnlock: {
       escapeMemoryUnlock();
-
       break;
-    case CESCAPE_TYPE_LS2:
+    }
+    // Invoke the G2 Character Set as GL (LS2)
+    case CEscapeType::LS2: {
       escapeLS2();
-
       break;
-    case CESCAPE_TYPE_LS3:
+    }
+    // Invoke the G3 Character Set as GL (LS3)
+    case CEscapeType::LS3: {
       escapeLS3();
-
       break;
-    case CESCAPE_TYPE_DECSC:
+    }
+    // Save Cursor (DECSC)
+    case CEscapeType::DECSC: {
       escapeDECSC();
-
       break;
-    case CESCAPE_TYPE_DECRC:
+    }
+    // Restore Cursor (DECRC)
+    case CEscapeType::DECRC: {
       escapeDECRC();
-
       break;
-    case CESCAPE_TYPE_DECSED: {
+    }
+    // Erase in Display (DECSED).
+    case CEscapeType::DECSED: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSED(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSEL: {
+    // Erase in Line (DECSEL).
+    case CEscapeType::DECSEL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSEL(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DA2: {
+    case CEscapeType::DA2: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDA2(escn->num, escn->nn);
 
       break;
     }
-    case CESCAPE_TYPE_DECSET: {
+    // DEC Private Mode Set (DECSET)
+    case CEscapeType::DECSET: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       for (int i = 0; i < escn->nn; ++i)
@@ -398,14 +550,16 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    case CESCAPE_TYPE_DECMC: {
+    // Dec-specific Media Copy (DECMC)
+    case CEscapeType::DECMC: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECMC(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECRST: {
+    // DEC Private Mode Reset (DECRST)
+    case CEscapeType::DECRST: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       for (int i = 0; i < escn->nn; ++i)
@@ -413,68 +567,70 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    case CESCAPE_TYPE_DECDSR: {
+    // Soft terminal reset (DECSTR)
+    case CEscapeType::DECDSR: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECDSR(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSTR: {
+    case CEscapeType::DECSTR: {
       escapeDECSTR();
 
       break;
     }
-    case CESCAPE_TYPE_DECRestorePriv: {
+    case CEscapeType::DECRestorePriv: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECRestorePriv(escn->num, escn->nn);
 
       break;
     }
-    case CESCAPE_TYPE_DECSavePriv: {
+    case CEscapeType::DECSavePriv: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSavePriv(escn->num, escn->nn);
 
       break;
     }
-    case CESCAPE_TYPE_HPA: {
+    case CEscapeType::HPA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeHPA(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSCL: {
+    // Set conformance level (DECSCL)
+    case CEscapeType::DECSCL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSCL(escn->num[0], escn->num[1]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSCA: {
+    case CEscapeType::DECSCA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSCA(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECCARA: {
+    case CEscapeType::DECCARA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECCARA(escn->num[0], escn->num[1], escn->num[2], escn->num[3], escn->num[4]);
 
       break;
     }
-    case CESCAPE_TYPE_DECRARA: {
+    case CEscapeType::DECRARA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECRARA(escn->num[0], escn->num[1], escn->num[2], escn->num[3], escn->num[4]);
 
       break;
     }
-    case CESCAPE_TYPE_DECCRA: {
+    case CEscapeType::DECCRA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECCRA(escn->num[0], escn->num[1], escn->num[2], escn->num[3],
@@ -482,189 +638,189 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    case CESCAPE_TYPE_DECEFR: {
+    case CEscapeType::DECEFR: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECEFR(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
-    case CESCAPE_TYPE_DECLRP: {
+    case CEscapeType::DECLRP: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECLRP(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
-    case CESCAPE_TYPE_DECFRA: {
+    case CEscapeType::DECFRA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECFRA(escn->num[0], escn->num[1], escn->num[2], escn->num[3], escn->num[4]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSACE: {
+    case CEscapeType::DECSACE: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSACE(escn->num[0], escn->num[1], escn->num[2]);
 
       break;
     }
-    case CESCAPE_TYPE_DECELR: {
+    case CEscapeType::DECELR: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECELR(escn->num[0], escn->num[1]);
 
       break;
     }
-    case CESCAPE_TYPE_DECERA: {
+    case CEscapeType::DECERA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECERA(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSLE: {
+    case CEscapeType::DECSLE: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSLE(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSERA: {
+    case CEscapeType::DECSERA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSERA(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
-    case CESCAPE_TYPE_DECRQLP: {
+    case CEscapeType::DECRQLP: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECRQLP(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_ICH: {
+    case CEscapeType::ICH: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeICH(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_CUU: {
+    case CEscapeType::CUU: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
-      escapeCUU(escn->num[0]);
+      escapeCUU(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
-    case CESCAPE_TYPE_CUD: {
+    case CEscapeType::CUD: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
-      escapeCUD(escn->num[0]);
+      escapeCUD(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
-    case CESCAPE_TYPE_CUF: {
+    case CEscapeType::CUF: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
-      escapeCUF(escn->num[0]);
+      escapeCUF(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
-    case CESCAPE_TYPE_CUB: {
+    case CEscapeType::CUB: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
-      escapeCUB(escn->num[0]);
+      escapeCUB(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
-    case CESCAPE_TYPE_CNL: {
+    case CEscapeType::CNL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCNL(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_CPL: {
+    case CEscapeType::CPL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCPL(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_CHA: {
+    case CEscapeType::CHA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCHA(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_CUP: {
+    case CEscapeType::CUP: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCUP(escn->num[0], escn->num[1]);
 
       break;
     }
-    case CESCAPE_TYPE_CHT: {
+    case CEscapeType::CHT: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCHT(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_ED: {
+    case CEscapeType::ED: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeED(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_EL: {
+    case CEscapeType::EL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeEL(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_IL: {
+    case CEscapeType::IL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeIL(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DL: {
+    case CEscapeType::DL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDL(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DCH: {
+    case CEscapeType::DCH: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDCH(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_SU: {
+    case CEscapeType::SU: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeSU(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_SD: {
+    case CEscapeType::SD: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeSD(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_StartMouseTrack: {
+    case CEscapeType::StartMouseTrack: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeStartMouseTrack(escn->num[0], escn->num[1], escn->num[2],
@@ -672,98 +828,101 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    case CESCAPE_TYPE_ECH: {
+    case CEscapeType::ECH: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeECH(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_CBT: {
+    case CEscapeType::CBT: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCBT(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_REP: {
+    case CEscapeType::REP: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeREP(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DA1: {
+    case CEscapeType::DA1: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDA1(escn->num, escn->nn);
 
       break;
     }
-    case CESCAPE_TYPE_VPA: {
+    case CEscapeType::VPA: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeVPA(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_HVP: {
+    case CEscapeType::HVP: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeHVP(escn->num[0], escn->num[1]);
 
       break;
     }
-    case CESCAPE_TYPE_TBC: {
+    case CEscapeType::TBC: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeTBC(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_SM: {
+    case CEscapeType::SM: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeSM(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_MC: {
+    // Media Copy (MC)
+    case CEscapeType::MC: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeMC(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_RM: {
+    // Reset Mode (RM)
+    case CEscapeType::RM: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeRM(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_SGR: {
+    // Character Attributes (SGR).
+    case CEscapeType::SGR: {
       const CEscapeDataSGR *sgr = dynamic_cast<const CEscapeDataSGR *>(esc);
 
       escapeSGR(sgr);
 
       break;
     }
-    case CESCAPE_TYPE_DSR: {
+    case CEscapeType::DSR: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDSR(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECLL: {
+    case CEscapeType::DECLL: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECLL(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECSTBM: {
+    case CEscapeType::DECSTBM: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       if      (escn->nn <= 0)
@@ -775,47 +934,54 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    case CESCAPE_TYPE_SC:
+    case CEscapeType::SC:
       escapeSC();
 
       break;
-    case CESCAPE_TYPE_WindowManip: {
+    case CEscapeType::WindowManip: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeWindowManip(escn->num);
 
       break;
     }
-    case CESCAPE_TYPE_DECREQTPARM: {
+    case CEscapeType::DECREQTPARM: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECREQTPARM(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_DECTST: {
+    case CEscapeType::DECTST: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECTST(escn->num[0]);
 
       break;
     }
-    case CESCAPE_TYPE_OSC: {
+    case CEscapeType::OSC: {
       const CEscapeDataOSC *esco = dynamic_cast<const CEscapeDataOSC *>(esc);
 
       escapeOSC(esco->num, esco->str);
 
       break;
     }
-    case CESCAPE_TYPE_SET_DIR: {
+    case CEscapeType::TEK4014: {
+      const CEscapeDataTek4014 *esc4014 = dynamic_cast<const CEscapeDataTek4014 *>(esc);
+
+      escape4014(esc4014);
+
+      break;
+    }
+    case CEscapeType::SET_DIR: {
       const CEscapeDataStr *escs = dynamic_cast<const CEscapeDataStr *>(esc);
 
       setDirName(escs->str);
 
       break;
     }
-    case CESCAPE_TYPE_SIZED_IMAGE: {
-      const CEscapeDataImage *esci = dynamic_cast<const CEscapeDataImage *>(esc);
+    case CEscapeType::SIZED_IMAGE: {
+      const CEscapeDataFileImage *esci = dynamic_cast<const CEscapeDataFileImage *>(esc);
 
       if (esci->x1 > 0 && esci->y1 > 0 && esci->x2 > 0 && esci->y2 > 0) {
         addSizedImageChar(esci->name, esci->image, esci->x1, esci->y1, esci->x2, esci->y2);
@@ -827,8 +993,8 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    case CESCAPE_TYPE_IMAGE: {
-      const CEscapeDataImage *esci = dynamic_cast<const CEscapeDataImage *>(esc);
+    case CEscapeType::FILE_IMAGE: {
+      const CEscapeDataFileImage *esci = dynamic_cast<const CEscapeDataFileImage *>(esc);
 
       addImageChar(esci->name, esci->image, esci->x1, esci->y1, esci->x2, esci->y2);
 
@@ -836,71 +1002,90 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    case CESCAPE_TYPE_PIXEL: {
+    case CEscapeType::IMAGE: {
+      const CEscapeDataImage *esci = dynamic_cast<const CEscapeDataImage *>(esc);
+
+      addImage(esci->image);
+
+      break;
+    }
+    case CEscapeType::PIXEL: {
       const CEscapeDataPixel *escp = dynamic_cast<const CEscapeDataPixel *>(esc);
 
       addPixel(escp->x, escp->y, escp->color);
 
       break;
     }
-    case CESCAPE_TYPE_LINE: {
+    case CEscapeType::LINE: {
       const CEscapeDataLine *escl = dynamic_cast<const CEscapeDataLine *>(esc);
 
-      addLine(escl->x1, escl->y1, escl->x2, escl->y2, escl->color);
+      addLine(escl->x1, escl->y1, escl->x2, escl->y2, escl->color, CEscapeLineStyle::SOLID);
 
       break;
     }
-    case CESCAPE_TYPE_LINK: {
+    case CEscapeType::LINK: {
       const CEscapeDataLink *escl = dynamic_cast<const CEscapeDataLink *>(esc);
 
       addLink(escl->name, escl->path, escl->type);
 
       break;
     }
-    case CESCAPE_TYPE_PREVIEW_FILES: {
+    case CEscapeType::PREVIEW_FILES: {
       const CEscapeDataStr *escs = dynamic_cast<const CEscapeDataStr *>(esc);
 
       previewFile(escs->str);
 
       break;
     }
-    case CESCAPE_TYPE_PASTE: {
+    case CEscapeType::PASTE: {
       const CEscapeDataStr *escs = dynamic_cast<const CEscapeDataStr *>(esc);
 
       paste(escs->str);
 
       break;
     }
-    case CESCAPE_TYPE_TRACE: {
+    case CEscapeType::TRACE: {
       const CEscapeDataBool *escb = dynamic_cast<const CEscapeDataBool *>(esc);
 
       setTrace(escb->b);
 
       break;
     }
-    case CESCAPE_TYPE_DEBUG: {
+    case CEscapeType::DEBUG: {
       const CEscapeDataBool *escb = dynamic_cast<const CEscapeDataBool *>(esc);
 
       setDebug(escb->b);
 
       break;
     }
-    case CESCAPE_TYPE_DCS: {
+    // Device Control String
+    //  DCS Ps; Ps| Pt ST
+    //    User-Defined Keys (DECUDK).  The first parameter:
+    //      Ps = 0  -> Clear all UDK definitions before starting
+    //    (default).
+    //      Ps = 1  -> Erase Below (default).
+    //    The second parameter:
+    //      Ps = 0  <- Lock the keys (default).
+    //      Ps = 1  <- Do not lock.
+    //    The third parameter is a ';'-separated list of strings denoting the
+    //    key-code separated by a '/' from the hex-encoded key value. The key codes
+    //    correspond to the DEC function-key codes (e.g., F6=17).
+    case CEscapeType::DCS: {
       const CEscapeDataDCS *escd = dynamic_cast<const CEscapeDataDCS *>(esc);
 
-      string kstr;
+      std::string kstr;
 
 #if 0
       if (escd->key != CKEY_TYPE_NUL)
         kstr = CKeyEvent::getEscapeText(escd->key);
 #endif
 
-      string reply;
+      std::string reply;
 
       if (kstr != "")
-        reply = "P1+r" + escd->value + "=" + kstr + "\\";
+        reply = "\033P1+r" + escd->value + "=" + kstr + "\033\\";
       else
-        reply = "P0+r" + escd->value + "\\";
+        reply = "\033P0+r" + escd->value + "\033\\";
 
       processString(reply.c_str());
 
@@ -1138,7 +1323,8 @@ escapeDispPos(int row, int col)
   getDispSize(&rows, &cols);
 
   row = std::min(std::max(row, 1), int(rows));
-  col = std::min(std::max(col, 1), int(cols));
+//col = std::min(std::max(col, 1), int(cols));
+  col = std::max(col, 1);
 
   setDispPos(row - 1, col - 1);
 }
@@ -1161,6 +1347,10 @@ escapeDECSED(int num)
 {
   logTrace("<DECSED;" + CStrUtil::toString(num) + ">");
 
+  // Erase in Display (DECSED).
+  //   Ps = 0  -> Selective Erase Below (default).
+  //   Ps = 1  -> Selective Erase Above.
+  //   Ps = 2  -> Selective Erase All.
   if      (num == 0)
     clearScreenBelow();
   else if (num == 1)
@@ -1197,6 +1387,10 @@ escapeDECSEL(int type)
 {
   logTrace("<DECSEL;" + CStrUtil::toString(type) + ">");
 
+  // Erase in Line (DECSEL).
+  //   Ps = 0  -> Selective Erase to Right (default).
+  //   Ps = 1  -> Selective Erase to Left.
+  //   Ps = 2  -> Selective Erase All.
   if      (type == 0)
     eraseLineRight();
   else if (type == 1)
@@ -1292,6 +1486,7 @@ escapeSD(int num)
     scrollDown();
 }
 
+// Erase num Character(s)
 void
 CEscapeHandler::
 escapeECH(int num)
@@ -1332,6 +1527,7 @@ escapeVPA(int num)
   setDispRow(num - 1);
 }
 
+// Repeat the preceding graphic character num times
 void
 CEscapeHandler::
 escapeREP(int num)
@@ -1350,6 +1546,7 @@ escapeREP(int num)
   }
 }
 
+// Tab Clear
 void
 CEscapeHandler::
 escapeTBC(int num)
@@ -1370,12 +1567,26 @@ escapeMC(int num)
 {
   logTrace("<MC;" + CStrUtil::toString(num) + ">");
 
-  if      (num == 0)
+  // Print screen (default)
+  if      (num == 0) {
     printScreen();
-  else if (num == 4)
+  }
+  // Turn off printer controller mode
+  else if (num == 4) {
     stopPrintLog();
-  else if (num == 5)
+  }
+  // Turn on printer controller mode.
+  else if (num == 5) {
     startPrintLog();
+  }
+  // HTML screen dump.
+  else if (num == 10) {
+    // TODO
+  }
+  // SVG screen dump.
+  else if (num == 11) {
+    // TODO
+  }
   else
     UNHANDLED1("MC", num)
 }
@@ -1386,18 +1597,29 @@ escapeDECMC(int num)
 {
   logTrace("<DECMC;" + CStrUtil::toString(num) + ">");
 
-  if      (num == 0)
+  if      (num == 0) {
     printScreen();
-  else if (num == 1)
+  }
+  // Print line containing cursor
+  else if (num == 1) {
     printLine();
-  else if (num == 4)
+  }
+  // Turn off autoprint mode
+  else if (num == 4) {
     stopPrintLog();
-  else if (num == 5)
+  }
+  // Turn on autoprint mode
+  else if (num == 5) {
     startPrintLog();
-  else if (num == 10)
+  }
+  // Print composed display, ignores DECPEX
+  else if (num == 10) {
     printComposedScreen();
-  else if (num == 11)
+  }
+  // Print all pages
+  else if (num == 11) {
     printAllPages();
+  }
   else
     UNHANDLED1("DECMC", num)
 }
@@ -1409,186 +1631,305 @@ escapeDECSET(int num)
   logTrace("<DECSET;" + CStrUtil::toString(num) + ">");
 
   switch (num) {
+    // Application Cursor Keys (DECCKM)
     case 1: {
       escapeDECCKM(true);
       break;
     }
+    // Designate USASCII for character sets G0-G3 (DECANM), and set VT100 mode.
     case 2: {
       escapeDECANM(true);
       break;
     }
+    // 132 Column Mode (DECCOLM).
     case 3: {
       escapeDECCOLM(true);
       break;
     }
+    // Smooth (Slow) Scroll (DECSCLM).
     case 4: {
       escapeDECSCLM(true);
       break;
     }
+    // Reverse Video (DECSCNM).
     case 5: {
       escapeDECSCNM(true);
       break;
     }
+    // Origin Mode (DECOM).
     case 6: {
       escapeDECOM(true);
       break;
     }
+    // Wraparound Mode (DECAWM).
     case 7: {
       escapeDECAWM(true);
       break;
     }
+    // Auto-repeat Keys (DECARM).
     case 8: {
       escapeDECARM(true);
       break;
     }
+    // Send Mouse X & Y on button press. This is the X10 xterm mouse protocol.
     case 9: {
       setSendMousePress(true);
       break;
     }
+    // Show toolbar (rxvt)
     case 10: {
       setShowToolBar(true);
       break;
     }
+    // Start Blinking Cursor (att610)
     case 12: {
       setCursorBlink(true);
       break;
     }
+    // Print form feed (DECPFF)
     case 18: {
       escapeDECPFF(true);
       break;
     }
+    // Set print extent to full screen (DECPEX)
     case 19: {
       escapeDECPEX(true);
       break;
     }
+    // Show Cursor (DECTCEM)
     case 25: {
       escapeDECTCEM(true);
       break;
     }
+    // Show scrollbar (rxvt)
     case 30: {
       setShowScrollBar(true);
       break;
     }
+    // Enable font-shifting functions - rxvt
     case 35: {
-      // Enable shift fonts - rxvt
+      // TODO
       break;
     }
+    // Enter Tektronix Mode (DECTEK)
     case 38: {
       escapeDECTEK(true);
       break;
     }
+    // Allow 80 <-> 132
     case 40: {
-      // Allow 80 <-> 132
       setAllow80To132(true);
       break;
     }
+    // enable more fix
     case 41: {
-      // enable more fix
+      // TODO
       break;
     }
+    // Enable National Replacement Character sets
     case 42: {
       escapeDECNRCM(true);
       break;
     }
+    // Turn on Margin Bell
     case 44: {
-      // enable margin bell
+      // TODO
       break;
     }
+    // Reverse-wraparound Mode
     case 45: {
       setReverseWrap(true);
       break;
     }
+    // Start Logging
     case 46: {
-      // start logging
+      // TODO
       break;
     }
+    // Use Alternate Screen Buffer
     case 47: {
-      // use alternate screen
       setAlternative(true);
       break;
     }
+    // Application keypad (DECNKM)
     case 66: {
       escapeDECNKM(true);
       break;
     }
+    // Backarrow key sends backspace (DECBKM)
     case 67: {
       escapeDECBKM(true);
       break;
     }
+    // Enable left and right margin mode (DECLRMM), VT420 and up
+    case 69: {
+      // TODO
+      break;
+    }
+    // Do not clear screen when DECCOLM is set/reset (DECNCSM), VT510 and up.
+    case 95: {
+      // TODO
+      break;
+    }
+    // Send Mouse X & Y on button press and release. This is the X11 xterm mouse protocol
     case 1000: {
       setSendMousePress  (true);
       setSendMouseRelease(true);
       break;
     }
+    // Use Hilite Mouse Tracking
     case 1001: {
-      // hilite mouse tracking
+      // TODO
       break;
     }
+    // Use Cell Motion Mouse Tracking.
     case 1002: {
-      // use cell motion mouse tracking
       setSendMousePress  (true);
       setSendMouseRelease(true);
       break;
     }
+    // Use All Motion Mouse Tracking.
     case 1003: {
-      // use all motion mouse tracking
+      setSendMousePress  (true);
+      setSendMouseRelease(true);
+      setSendMouseMotion (true);
       break;
     }
+    // Send FocusIn/FocusOut events.
+    case 1004: {
+      setSendFocusInOut(true);
+      break;
+    }
+    // Enable UTF-8 Mouse Mode.
+    case 1005: {
+      // TODO
+      break;
+    }
+    // Enable SGR Mouse Mode.
+    case 1006: {
+      // TODO
+      break;
+    }
+    // Enable Alternate Scroll Mode
+    case 1007: {
+      // TODO
+      break;
+    }
+    // Scroll to bottom on tty output (rxvt)
     case 1010: {
       setScrollBottomOnTty(true);
       break;
     }
+    // Scroll to bottom on key press (rxvt)
     case 1011: {
       setScrollBottomOnKey(true);
       break;
     }
+    // Enable urxvt Mouse Mode
+    case 1015: {
+      // TODO
+      break;
+    }
+    // Interpret "meta" key, sets eighth bit.
+    case 1034: {
+      // TODO
+      break;
+    }
+    // Enable special modifiers for Alt and NumLock keys
     case 1035: {
-      // enable special modifiers Alt/NumLock
+      // TODO
       break;
     }
+    // Send ESC when Meta modifies a key
     case 1036: {
-      // Send ESC for meta
+      // TODO
       break;
     }
+    // Send DEL from the editing-keypad Delete key
     case 1037: {
-      // Delete is DEL
+      // TODO
       break;
     }
+    // Send ESC  when Alt modifies a key.
+    case 1039: {
+      // TODO
+      break;
+    }
+    // Keep selection even if not highlighted.
+    case 1040: {
+      // TODO
+      break;
+    }
+    // Use the CLIPBOARD selection.
+    case 1041: {
+      // TODO
+      break;
+    }
+    // Enable Urgency window manager hint when Control-G is received
+    case 1042: {
+      // TODO
+      break;
+    }
+    // Enable raising of the window when Control-G is received.
+    case 1043: {
+      // TODO
+      break;
+    }
+    // Reuse the most recent data copied to CLIPBOARD
+    case 1044: {
+      // TODO
+      break;
+    }
+    // Use Alternate Screen Buffer.
     case 1047: {
-      // use alternate screen
       setAlternative(true);
       break;
     }
+    // Save cursor as in DECSC
     case 1048: {
-      // save cursor
       saveCursor();
       break;
     }
+    // Save cursor as in DECSC and use Alternate Screen Buffer, clearing it first
     case 1049: {
-      // save cursor and use alternative screen
       saveCursor();
       setAlternative(true);
       clearScreen();
       break;
     }
+    // Set terminfo/termcap function-key mode.
+    case 1050: {
+      // TODO
+      break;
+    }
+    // Set Sun function-key mode
     case 1051: {
-      // set sun fn key mode
+      // TODO
       break;
     }
+    // Set HP function-key mode
     case 1052: {
-      // set hp fn key mode
+      // TODO
       break;
     }
+    // et SCO function-key mode.
     case 1053: {
-      // set sco fn key mode
+      // TODO
       break;
     }
+    // Set legacy keyboard emulation (X11R6)
     case 1060: {
-      // set legacy keyboard emulation
+      // TODO
       break;
     }
+    // Set VT220 keyboard emulation
     case 1061: {
-      // set vt220 keyboard emulation
+      // TODO
+      break;
+    }
+    // Set bracketed paste mode
+    case 2004: {
+      // TODO
       break;
     }
     default: {
@@ -1621,6 +1962,21 @@ escapeSM(int num)
       escapeLNM(true);
       break;
     }
+    // Ps = 8 0  -> Sixel scrolling
+    case 80: {
+      UNHANDLED1("SM", num)
+      break;
+    }
+    // Ps = 1 0 7 0  -> use private color registers for each graphic
+    case 1070: {
+      UNHANDLED1("SM", num)
+      break;
+    }
+    // Sixel scrolling leaves cursor to right of graphic
+    case 8452: {
+      UNHANDLED1("SM", num)
+      break;
+    }
     default: {
       UNHANDLED1("SM", num)
       break;
@@ -1635,185 +1991,294 @@ escapeDECRST(int num)
   logTrace("<DECRST;" + CStrUtil::toString(num) + ">");
 
   switch (num) {
+    // Normal Cursor Keys (DECCKM)
     case 1: {
       escapeDECCKM(false);
       break;
     }
+    // Designate VT52 mode (DECANM)
     case 2: {
       escapeDECANM(false);
       break;
     }
+    // 80 Column Mode (DECCOLM)
     case 3: {
       escapeDECCOLM(false);
       break;
     }
+    // Jump (Fast) Scroll (DECSCLM)
     case 4: {
       escapeDECSCLM(false);
       break;
     }
+    // Normal Video (DECSCNM)
     case 5: {
       escapeDECSCNM(false);
       break;
     }
+    // Normal Cursor Mode (DECOM)
     case 6: {
       escapeDECOM(false);
       break;
     }
+    // No Wraparound Mode (DECAWM)
     case 7: {
       escapeDECAWM(false);
       break;
     }
+    // No Auto-repeat Keys (DECARM)
     case 8: {
       escapeDECARM(false);
       break;
     }
+    // Don't send Mouse X & Y on button press
     case 9: {
       setSendMousePress(false);
       break;
     }
+    // Hide toolbar (rxvt)
     case 10: {
       setShowToolBar(false);
       break;
     }
+    // Stop Blinking Cursor (att610)
     case 12: {
       setCursorBlink(false);
       break;
     }
+    // Don't print form feed (DECPFF)
     case 18: {
       escapeDECPFF(false);
       break;
     }
+    // Limit print to scrolling region (DECPEX)
     case 19: {
       escapeDECPEX(false);
       break;
     }
+    // Hide Cursor (DECTCEM)
     case 25: {
       escapeDECTCEM(false);
       break;
     }
+    // Don't show scrollbar (rxvt)
     case 30: {
       setShowScrollBar(false);
       break;
     }
+    // Disable font-shifting functions (rxvt)
     case 35: {
-      // Enable shift fonts - rxvt
+      // TODO
       break;
     }
+    // Leave Tektronix Mode (DECTEK)
     case 38: {
       escapeDECTEK(false);
       break;
     }
+    // Disallow 80 <-> 132
     case 40: {
-      // Disallow 80 <-> 132
       setAllow80To132(false);
       break;
     }
+    // No more(1) fix
     case 41: {
-      // disable more fix
+      // TODO
       break;
     }
+    // Disable National Replacement Character sets (DECNRCM)
     case 42: {
       escapeDECNRCM(false);
       break;
     }
+    // Turn Off Margin Bell
     case 44: {
-      // disable margin bell
+      // TODO
       break;
     }
+    // No Reverse-wraparound Mode
     case 45: {
       setReverseWrap(false);
       break;
     }
+    // Stop Logging
     case 46: {
-      // stop logging
+      // TODO
       break;
     }
+    // Use Normal Screen Buffer
     case 47: {
-      // use normal screen
       setAlternative(false);
       break;
     }
+    // Numeric keypad (DECNKM)
     case 66: {
       escapeDECNKM(false);
       break;
     }
+    // Backarrow key sends delete (DECBKM)
     case 67: {
       escapeDECBKM(false);
       break;
     }
+    // Disable left and right margin mode (DECLRMM), VT420 and up
+    case 95: {
+      // TODO
+      break;
+    }
+    // Don't send Mouse X & Y on button press and release
     case 1000: {
       setSendMousePress  (false);
       setSendMouseRelease(false);
       break;
     }
+    // Don't use Hilite Mouse Tracking
     case 1001: {
-      // no hilite mouse tracking
+      // TODO
       break;
     }
+    // Don't use Cell Motion Mouse Tracking
     case 1002: {
-      // don't use cell motion mouse tracking
       setSendMousePress  (false);
       setSendMouseRelease(false);
       break;
     }
+    // Don't use All Motion Mouse Tracking
     case 1003: {
-      // don't use all motion mouse tracking
+      setSendMousePress  (false);
+      setSendMouseRelease(false);
+      setSendMouseMotion (false);
       break;
     }
+    // Don't send FocusIn/FocusOut events
+    case 1004: {
+      setSendFocusInOut(false);
+      break;
+    }
+    // Disable UTF-8 Mouse Mode
+    case 1005: {
+      // TODO
+      break;
+    }
+    // Disable SGR Mouse Mode
+    case 1006: {
+      // TODO
+      break;
+    }
+    // Disable Alternate Scroll Mode
+    case 1007: {
+      // TODO
+      break;
+    }
+    // Don't scroll to bottom on tty output (rxvt)
     case 1010: {
       setScrollBottomOnTty(false);
       break;
     }
+    // Don't scroll to bottom on key press (rxvt)
     case 1011: {
       setScrollBottomOnKey(false);
       break;
     }
+    // Disable urxvt Mouse Mode
+    case 1015: {
+      // TODO
+      break;
+    }
+    // Don't interpret "meta" key
+    case 1034: {
+      // TODO
+      break;
+    }
+    // Disable special modifiers for Alt and NumLock keys
     case 1035: {
-      // disable special modifiers Alt/NumLock
+      // TODO
       break;
     }
+    // Don't send ESC  when Meta modifies a key
     case 1036: {
-      // Don't send ESC for meta
+      // TODO
       break;
     }
+    // Send VT220 Remove from the editing-keypad Delete key
     case 1037: {
-      // Delete is Normal (not DEL)
+      // TODO
       break;
     }
+    // Don't send ESC  when Alt modifies a key.
+    case 1039: {
+      // TODO
+      break;
+    }
+    // Do not keep selection when not highlighted.
+    case 1040: {
+      // TODO
+      break;
+    }
+    // Use the PRIMARY selection
+    case 1041: {
+      // TODO
+      break;
+    }
+    // Disable Urgency window manager hint when Control-G is received
+    case 1042: {
+      // TODO
+      break;
+    }
+    // Disable raising of the window when Control-G is received
+    case 1043: {
+      // TODO
+      break;
+    }
+    // Use Normal Screen Buffer, clearing screen first if in the Alternate Screen
     case 1047: {
-      // use normal screen
       setAlternative(false);
       break;
     }
+    // Restore cursor as in DECRC
     case 1048: {
-      // restore cursor
       restoreCursor();
       break;
     }
+    // Use Normal Screen Buffer and restore cursor as in DECRC
     case 1049: {
-      // save cursor and use normal screen
       setAlternative(false);
       restoreCursor();
       break;
     }
+    // Reset terminfo/termcap function-key mode
+    case 1050: {
+      // TODO
+      break;
+    }
+    // Reset Sun function-key mode
     case 1051: {
-      // reset sun fn key mode
+      // TODO
       break;
     }
+    // Reset HP function-key mode
     case 1052: {
-      // reset hp fn key mode
+      // TODO
       break;
     }
+    // Reset SCO function-key mode
     case 1053: {
-      // reset sco fn key mode
+      // TODO
       break;
     }
+    // Reset legacy keyboard emulation (X11R6)
     case 1060: {
-      // reset legacy keyboard emulation
+      // TODO
       break;
     }
+    // Reset keyboard emulation to Sun/PC style
     case 1061: {
-      // reset vt220 keyboard emulation
+      // TODO
+      break;
+    }
+    // Reset bracketed paste mode
+    case 2004: {
+      // TODO
       break;
     }
     default: {
@@ -1830,18 +2295,22 @@ escapeRM(int num)
   logTrace("<RM;" + CStrUtil::toString(num) + ">");
 
   switch (num) {
+    // Keyboard Action Mode (AM)
     case 2: {
       escapeAM(false);
       break;
     }
+    // Replace Mode (IRM)
     case 4: {
       escapeIRM(false);
       break;
     }
+    // Send/receive (SRM)
     case 12: {
       escapeSRM(false);
       break;
     }
+    // Normal Linefeed (LNM)
     case 20: {
       escapeLNM(false);
       break;
@@ -1880,7 +2349,7 @@ void
 CEscapeHandler::
 escapeDECSTBM(int top, int bottom)
 {
-  logTrace("<DECSTBM;" + CStrUtil::toString(top   ) + ";" + CStrUtil::toString(bottom) + ">");
+  logTrace("<DECSTBM;" + CStrUtil::toString(top) + ";" + CStrUtil::toString(bottom) + ">");
 
   if (top > 0 && bottom <= 0) {
     uint rows, cols;
@@ -1906,7 +2375,7 @@ escapeDECID()
 {
   logTrace("<DECID>");
 
-  processString("[?1;2c");
+  processString("\033[?1;2c");
 }
 
 void
@@ -1916,7 +2385,7 @@ escapeDA1(int *, int nn)
   logTrace("<DA1>");
 
   if (nn == 0 || nn == 1)
-    processString("[?1;2c");
+    processString("\033[?1;2c");
 }
 
 void
@@ -1927,7 +2396,10 @@ escapeDA2(int *, int nn)
 
   // vt220=1,ver=1000,rom_ver=0
   if (nn == 0 || nn == 1)
-    processString("[>0;241;0c");
+    processString("\033[>0;241;0c");
+
+  // TODO: Ps = 3 -> ReGIS graphics
+  // TODO: Ps = 4 -> Sixel graphics
 }
 
 void
@@ -1937,26 +2409,26 @@ escapeDECDSR(int mode)
   logTrace("<DECDSR;" + CStrUtil::toString(mode) + ">");
 
   if      (mode == 5) {
-    processString("[?0n");
+    processString("\033[?0n");
   }
   else if (mode == 6) {
     int row, col;
 
     getDispPos(&row, &col);
 
-    string str = "[?" + CStrUtil::toString(row + 1) +
-                    ";" + CStrUtil::toString(col + 1) + "R";
+    std::string str = "\033[?" + CStrUtil::toString(row + 1) + ";" +
+                                 CStrUtil::toString(col + 1) + "R";
 
     processString(str.c_str());
   }
   else if (mode == 15)
-    processString("[?10n");
+    processString("\033[?10n");
   else if (mode == 25)
-    processString("[?20n");
+    processString("\033[?20n");
   else if (mode == 26)
-    processString("[?27;1;0;0n");
+    processString("\033[?27;1;0;0n");
   else if (mode == 53)
-    processString("[?53n");
+    processString("\033[?53n");
 }
 
 void
@@ -1966,14 +2438,14 @@ escapeDSR(int num)
   logTrace("<DSR;" + CStrUtil::toString(num) + ">");
 
   if      (num == 5)
-    processString("[0n");
+    processString("\033[0n");
   else if (num == 6) {
     int row, col;
 
     getDispPos(&row, &col);
 
-    string str = "[" + CStrUtil::toString(row + 1) +
-                   ";" + CStrUtil::toString(col + 1) + "R";
+    std::string str = "\033[" + CStrUtil::toString(row + 1) + ";" +
+                                CStrUtil::toString(col + 1) + "R";
 
     processString(str.c_str());
   }
@@ -1989,8 +2461,10 @@ escapeWindowManip(int *num)
   CWindow *window = getWindow();
 
   switch (num[0]) {
-    case 0:
+    case 0: {
       break;
+    }
+    // De-iconify window
     case 1: {
       if (window)
         window->deiconize();
@@ -1999,6 +2473,7 @@ escapeWindowManip(int *num)
 
       break;
     }
+    // Iconify window
     case 2: {
       if (window)
         window->iconize();
@@ -2007,71 +2482,115 @@ escapeWindowManip(int *num)
 
       break;
     }
-    case 3:
+    // Move window to [x, y]
+    case 3: {
       if (window)
         window->move(num[1], num[2]);
       else
         moveWindow(num[1], num[2]);
 
       break;
-    case 4:
+    }
+    // Resize the window to height and width
+    // Omitted parameters reuse the current height or width.
+    // Zero parameters use the display's height or width.
+    case 4: {
       if (window)
         window->resize(num[2], num[1]);
       else
         resizeWindow(num[2], num[1]);
 
       break;
-    case 5:
+    }
+    // Raise the window to the front of the stacking order
+    case 5: {
       if (window)
         window->raise();
       else
         raiseWindow();
 
       break;
-    case 6:
+    }
+    // Lower the window to the bottom of the stacking order.
+    case 6: {
       if (window)
         window->lower();
       else
         lowerWindow();
 
       break;
-    case 7:
+    }
+    // Refresh the window
+    case 7: {
       if (window)
         window->expose();
       else
         exposeWindow();
 
       break;
+    }
+    // Resize the text area to given height and width in characters.
+    // Omitted parameters reuse the current height or width.
+    // Zero parameters use the display's height or width.
     case 8: {
       int w, h;
 
       charsToPixels(num[2], num[1], &w, &h);
 
       if (window)
-        window->resize(num[2], num[1]);
+        window->resize(w, h);
       else
-        resizeWindow(num[2], num[1]);
+        resizeWindow(w, h);
 
       break;
     }
-    case 9:
-      if      (num[1] == 0)
+    // maximize window
+    case 9: {
+      // Restore maximized window
+      if      (num[1] == 0) {
         demaximizeWindow();
-      else if (num[1] == 1)
+      }
+      // Maximize window
+      else if (num[1] == 1) {
         maximizeWindow();
+      }
+      // Maximize window vertically
+      else if (num[1] == 2) {
+      }
+      // Maximize window horizontally
+      else if (num[1] == 2) {
+      }
 
       break;
-    case 10:
+    }
+    // full screen
+    case 10: {
+      // Undo full-screen mode.
+      if      (num[1] == 0) {
+      }
+      // Change to full-screen.
+      else if (num[1] == 1) {
+      }
+      // Toggle full-screen.
+      else if (num[1] == 2) {
+      }
+
       break;
+    }
+    // Report window state
+    // If the window is open (non-iconified), it returns CSI 1 t .
+    // If the window is iconified, it returns CSI 2 t
     case 11: {
       bool mapped = (window ? window->isMapped() : isWindowMapped());
 
-      processString(mapped ? "[1t" : "[2t");
+      processString(mapped ? "\033[1t" : "\033[2t");
 
       break;
     }
-    case 12:
+    case 12: {
       break;
+    }
+    // Report window position
     case 13: {
       int x, y;
 
@@ -2080,12 +2599,13 @@ escapeWindowManip(int *num)
       else
         getWindowPosition(&x, &y);
 
-      string str = "[3;" + CStrUtil::toString(x) + ";" + CStrUtil::toString(y) + "t";
+      std::string str = "\033[3;" + CStrUtil::toString(x) + ";" + CStrUtil::toString(y) + "t";
 
       processString(str.c_str());
 
       break;
     }
+    // Report window in pixels
     case 14: {
       uint width, height;
 
@@ -2094,24 +2614,32 @@ escapeWindowManip(int *num)
       else
         getWindowSize(&width, &height);
 
-      string str = "[4;" + CStrUtil::toString(height) + ";" + CStrUtil::toString(width ) + "t";
+      std::string str = "\033[4;" + CStrUtil::toString(height) + ";" +
+                                    CStrUtil::toString(width ) + "t";
 
       processString(str.c_str());
 
       break;
     }
-    case 15:
-    case 16:
-    case 17:
+    case 15: {
       break;
+    }
+    case 16: {
+      break;
+    }
+    case 17: {
+      break;
+    }
+    // Report the size of the text area in characters
     case 18: {
-      string str = "[8;" + CStrUtil::toString(getNumDispRows()) + ";" +
-                             CStrUtil::toString(getNumDispCols()) + "t";
+      std::string str = "\033[8;" + CStrUtil::toString(getNumDispRows()) + ";" +
+                                    CStrUtil::toString(getNumDispCols()) + "t";
 
       processString(str.c_str());
 
       break;
     }
+    // Report the size of the screen in characters
     case 19: {
       uint width, height;
 
@@ -2124,43 +2652,52 @@ escapeWindowManip(int *num)
 
       pixelsToChars(width, height, &cols, &rows);
 
-      string str = "[9;" + CStrUtil::toString(rows) + ";" + CStrUtil::toString(cols) + "t";
+      std::string str = "\033[9;" + CStrUtil::toString(rows) + ";" + CStrUtil::toString(cols) + "t";
 
       processString(str.c_str());
 
       break;
     }
+    // Report window's icon label. Result is OSC L label ST
     case 20: {
-      string name;
+      std::string name;
 
       if (window)
         window->getIconTitle(name);
       else
         getIconTitle(name);
 
-      string str = "]L" + name + "";
+      std::string str = "\033]L" + name + "";
 
       processString(str.c_str());
 
       break;
     }
+    // Report window's title. Result is OSC l label ST
     case 21: {
-      string name;
+      std::string name;
 
       if (window)
         window->getWindowTitle(name);
       else
         getWindowTitle(name);
 
-      string str = "]1" + name + "";
+      std::string str = "\033]1" + name + "";
 
       processString(str.c_str());
 
       break;
     }
-    case 22:
-    case 23:
+    // Save icon and window title on stack
+    case 22: {
       break;
+    }
+    // Restore icon and window title from stack
+    case 23: {
+      break;
+    }
+    // Resize to Ps lines (DECSLPP)
+    case 24:
     default: {
       escapeDECSLPP(num[0]);
 
@@ -2223,9 +2760,9 @@ CEscapeHandler::
 escapeDECREQTPARM(int num)
 {
   if      (num == 0)
-    processString("[2;1;1;128;128;1;0x");
+    processString("\033[2;1;1;128;128;1;0x");
   else if (num == 1)
-    processString("[3;1;1;128;128;1;0x");
+    processString("\033[3;1;1;128;128;1;0x");
 }
 
 void
@@ -2239,14 +2776,14 @@ void
 CEscapeHandler::
 escapeS7C1T()
 {
-  UNHANDLED("S7C1T")
+  setControl8Bit(false);
 }
 
 void
 CEscapeHandler::
 escapeS8C1T()
 {
-  UNHANDLED("S8C1T")
+  setControl8Bit(true);
 }
 
 void
@@ -2256,32 +2793,37 @@ escapeANSIConformance(int mode)
   UNHANDLED1("ANSI Conformance", mode)
 }
 
+// DEC Double Height Line
 void
 CEscapeHandler::
-escapeDECDHLTop()
+escapeDECDHL(CEscapeDataDECDHL::Pos pos)
 {
-  UNHANDLED1("DECDHL", "top")
+  int y = getDataPos().y;
+
+  if (pos == CEscapeDataDECDHL::Pos::TOP)
+    setLineHeightStyle(y, CCellLineHeightStyle::DOUBLE_TOP);
+  else
+    setLineHeightStyle(y, CCellLineHeightStyle::DOUBLE_BOTTOM);
 }
 
-void
-CEscapeHandler::
-escapeDECDHLBottom()
-{
-  UNHANDLED1("DECDHL", "bottom")
-}
-
+// DEC Single Width Line
 void
 CEscapeHandler::
 escapeDECSWL()
 {
-  UNHANDLED("DECSWL")
+  int y = getDataPos().y;
+
+  setLineWidthStyle(y, CCellLineWidthStyle::SINGLE);
 }
 
+// DEC Double Width Line
 void
 CEscapeHandler::
 escapeDECDWL()
 {
-  UNHANDLED("DECDWL")
+  int y = getDataPos().y;
+
+  setLineWidthStyle(y, CCellLineWidthStyle::DOUBLE);
 }
 
 void
@@ -2311,6 +2853,30 @@ void
 CEscapeHandler::
 escapeDesignateG0(char c)
 {
+  // Designate G0 Character Set (ISO 2022, VT100).
+  // Final character C for designating 94-character sets. In this list, 0 , A and B
+  // apply to VT100 and up, the remainder to VT220 and up. The VT220 character sets,
+  // together with the Portuguese character set are activated by the National
+  // Replacement Character controls. The A is a special case, since it is also
+  // activated by the VT300-control for British Latin-1 separately from the
+  // National Replacement Character controls.
+  //   C = 0  -> DEC Special Character and Line Drawing Set.
+  //   C = <  -> DEC Supplementary (VT200).
+  //   C = % 5  -> DEC Supplementary Graphics (VT300).
+  //   C = >  -> DEC Technical (VT300).
+  //   C = A  -> United Kingdom (UK).
+  //   C = B  -> United States (USASCII).
+  //   C = 4  -> Dutch.
+  //   C = C  or 5  -> Finnish.
+  //   C = R  or f  -> French.
+  //   C = Q  or 9  -> French Canadian (VT200, VT300).
+  //   C = K  -> German.
+  //   C = Y  -> Italian.
+  //   C = ` , E  or 6  -> Norwegian/Danish.
+  //   C = % 6  -> Portuguese (VT300).
+  //   C = Z  -> Spanish.
+  //   C = H  or 7  -> Swedish.
+  //   C = =  -> Swiss.
   charset_.id[0] = c;
 }
 
@@ -2479,11 +3045,19 @@ escapeNEL()
 
 void
 CEscapeHandler::
+escapeSSA()
+{
+  UNHANDLED("SSA")
+}
+
+void
+CEscapeHandler::
 escapeESA()
 {
   UNHANDLED("ESA")
 }
 
+// Tab Set
 void
 CEscapeHandler::
 escapeHTS()
@@ -2528,6 +3102,11 @@ void
 CEscapeHandler::
 escapeSPA()
 {
+  // Start Guarded Area. Writes an SSA-symbol to the Page
+  // These symbols are characters, just like any of the other graphic characters.
+  // They may be erased with erase controls, moved with edit controls, and are included
+  // in transfers exactly as any other character. When transferred to the printer,
+  // they are sent as a Space code (2/0) (not as ESC F or ESC G).
   UNHANDLED("SPA")
 }
 
@@ -2535,6 +3114,7 @@ void
 CEscapeHandler::
 escapeEPA()
 {
+  // Start Guarded Area. Writes an ESA-symbol to the Page
   UNHANDLED("EPA")
 }
 
@@ -2556,6 +3136,15 @@ void
 CEscapeHandler::
 escapeDECSCL(int, int)
 {
+  // Set conformance level (DECSCL).
+  //   Valid values for the first parameter:
+  //     Ps = 6 1  -> VT100.
+  //     Ps = 6 2  -> VT200.
+  //     Ps = 6 3  -> VT300.
+  //   Valid values for the second parameter:
+  //     Ps = 0  -> 8-bit controls.
+  //     Ps = 1  -> 7-bit controls (always set for VT100).
+  //     Ps = 2  -> 8-bit controls.
   UNHANDLED("DECSCL")
 }
 
@@ -2621,7 +3210,16 @@ void
 CEscapeHandler::
 escapeDECANM(bool set)
 {
-  setAnsiVT52Mode(set);
+  if (set) {
+    // Designate USASCII for character sets G0-G3 (DECANM), and set VT100 mode.
+    setAnsiVT52Mode(false);
+  }
+  else {
+    // Designate VT52 mode (DECANM)
+    setAnsiVT52Mode(true);
+
+    set4014(false);
+  }
 }
 
 // This mode selects the number of columns in a display line, 80 or 132.
@@ -2692,7 +3290,7 @@ escapeDECOM(bool set)
 // When Set:
 //  Any display characters received when cursor is at right margin appear on next line.
 //  The display scrolls up if cursor is at end of scrolling region.
-// When No Set:
+// When Not Set:
 //  Reset turns auto wrap off. Display characters received when cursor is at right margin
 //  replace previously displayed character.
 //
@@ -2737,9 +3335,12 @@ escapeDECTCEM(bool set)
 
 void
 CEscapeHandler::
-escapeDECTEK(bool)
+escapeDECTEK(bool set)
 {
-  UNHANDLED("DECTEK")
+  set4014(set);
+
+  if (set)
+    setAnsiVT52Mode(false);
 }
 
 void
@@ -2841,7 +3442,7 @@ escapeStartMouseTrack(int, int, int, int, int)
 
 void
 CEscapeHandler::
-escapeOSC(int num, const string &str1)
+escapeOSC(int num, const std::string &str1)
 {
   CWindow *window = getWindow();
 
@@ -2881,11 +3482,11 @@ escapeOSC(int num, const string &str1)
       break;
     }
     case 3: {
-      string::size_type pos = str1.find('=');
+      std::string::size_type pos = str1.find('=');
 
-      string name, value;
+      std::string name, value;
 
-      if (pos == string::npos)
+      if (pos == std::string::npos)
         name = str1;
       else {
         name  = str1.substr(0, pos);
@@ -2912,7 +3513,7 @@ escapeOSC(int num, const string &str1)
     case 17: { // Change Highlight Color (Tek Cursor Color ?)
       int start = num - 10;
 
-      vector<string> words;
+      std::vector<std::string> words;
 
       CStrUtil::addFields(str1, words, ";");
 
@@ -2923,10 +3524,10 @@ escapeOSC(int num, const string &str1)
 
         switch (pos) {
           case 0: // Text Foreground Color
-            setColor(CESCAPE_COLOR_FG, CRGBName::toRGBA(words[i]));
+            setColor(CEscapeColor::FG, CRGBName::toRGBA(words[i]));
             break;
           case 1: // Text Background Color
-            setColor(CESCAPE_COLOR_BG, CRGBName::toRGBA(words[i]));
+            setColor(CEscapeColor::BG, CRGBName::toRGBA(words[i]));
             break;
           case 2: // Text Cursor Color
             setCursorColor(CRGBName::toRGBA(words[i]));
@@ -2960,6 +3561,15 @@ escapeOSC(int num, const string &str1)
     default:
       break;
   }
+}
+
+void
+CEscapeHandler::
+escape4014(const CEscapeDataTek4014 *esc)
+{
+  state_.clearPoints();
+
+  state_.setLineStyle(esc->lineStyle);
 }
 
 void
@@ -3045,6 +3655,8 @@ nextTab()
 
   if (tabs_.nextPos(col, &col1))
     setDispPos(row, col1);
+  else
+    setDispPos(row, cols - 1);
 }
 
 void
@@ -3161,14 +3773,14 @@ const CRGBA &
 CEscapeHandler::
 getColor(CEscapeColor color) const
 {
-  return colors_.getColor(color);
+  return CEscapeColorsInst->getColor(color);
 }
 
 void
 CEscapeHandler::
 setColor(CEscapeColor color, const CRGBA &rgba)
 {
-  colors_.setColor(color, rgba);
+  CEscapeColorsInst->setColor(color, rgba);
 }
 
 const CRGBA &
@@ -3193,7 +3805,7 @@ sendMousePress(int button, int x, int y)
 {
   static char str[7];
 
-  str[0] = '';
+  str[0] = '\033';
   str[1] = '[';
   str[2] = 'M';
   str[3] = char(button + 32);
@@ -3212,7 +3824,7 @@ sendMouseRelease(int button, int x, int y)
 
   button = 3; // release
 
-  str[0] = '';
+  str[0] = '\033';
   str[1] = '[';
   str[2] = 'M';
   str[3] = char(button + 32);
@@ -3227,5 +3839,5 @@ void
 CEscapeHandler::
 logTrace(char c) const
 {
-  logTrace(string(&c, 1));
+  logTrace(std::string(&c, 1));
 }

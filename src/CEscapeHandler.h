@@ -2,135 +2,22 @@
 #define CESCAPE_HANDLER_H
 
 #include <CEscapeParse.h>
+#include <CEscapeState.h>
 #include <CCellStyle.h>
 #include <CTextTabs.h>
-#include <CEscapeColors.h>
 
 class CWindow;
 
-// terminal state
-class CEscapeState {
- private:
-  bool inverse_video_;
-  bool send_mouse_press_;
-  bool send_mouse_release_;
-  bool scroll_bottom_key_;
-  bool scroll_bottom_tty_;
-  bool application_cursor_keys_;
-  bool insert_mode_;
-  bool line_wrap_;
-  bool ansi_vt52_mode_;
-  bool key_pad_mode_;
-  bool lf_nl_mode_;
-  bool ff_np_mode_;
-  bool smooth_scroll_;
-  bool origin_mode_; // whether origin is top of scroll area (true) or (0,0) false
-  bool auto_repeat_;
-  bool cursor_visible_;
-  bool cursor_blink_;
-  bool reverse_wrap_;
-  bool allow_80_132_;
-
- public:
-  CEscapeState() {
-    reset();
-  }
-
-  void reset() {
-    inverse_video_           = false;
-    send_mouse_press_        = false;
-    send_mouse_release_      = false;
-    scroll_bottom_key_       = true ;
-    scroll_bottom_tty_       = true ;
-    application_cursor_keys_ = false;
-    insert_mode_             = false;
-    line_wrap_               = true ;
-    ansi_vt52_mode_          = false;
-    key_pad_mode_            = false;
-    lf_nl_mode_              = false;
-    ff_np_mode_              = false;
-    smooth_scroll_           = false;
-    origin_mode_             = false;
-    auto_repeat_             = false;
-    cursor_visible_          = true;
-    cursor_blink_            = true ;
-    reverse_wrap_            = false;
-    allow_80_132_            = true;
-  }
-
-  bool getInverseVideo() const { return inverse_video_; }
-  void setInverseVideo(bool flag) { inverse_video_ = flag; }
-
-  bool getSendMousePress() const { return send_mouse_press_; }
-  void setSendMousePress(bool flag) { send_mouse_press_ = flag; }
-
-  bool getSendMouseRelease() const { return send_mouse_release_; }
-  void setSendMouseRelease(bool flag) { send_mouse_release_ = flag; }
-
-  bool getScrollBottomOnKey() const { return scroll_bottom_key_; }
-  void setScrollBottomOnKey(bool flag) { scroll_bottom_key_ = flag; }
-
-  bool getScrollBottomOnTty() const { return scroll_bottom_tty_; }
-  void setScrollBottomOnTty(bool flag) { scroll_bottom_tty_ = flag; }
-
-  bool getApplicationCursorKeys() const { return application_cursor_keys_; }
-  void setApplicationCursorKeys(bool flag) { application_cursor_keys_ = flag; }
-
-  bool getInsertMode() const { return insert_mode_; }
-  void setInsertMode(bool flag) { insert_mode_ = flag; }
-
-  bool getLineWrap() const { return line_wrap_; }
-  void setLineWrap(bool flag) { line_wrap_ = flag; }
-
-  bool getAnsiVT52Mode() const { return ansi_vt52_mode_; }
-  void setAnsiVT52Mode(bool flag) { ansi_vt52_mode_ = flag; }
-
-  bool getKeyPadMode() const { return key_pad_mode_; }
-  void setKeyPadMode(bool flag) { key_pad_mode_ = flag; }
-
-  bool getLfNlMode() const { return lf_nl_mode_; }
-  void setLfNlMode(bool flag) { lf_nl_mode_ = flag; }
-
-  bool getFfNpMode() const { return ff_np_mode_; }
-  void setFfNpMode(bool flag) { ff_np_mode_ = flag; }
-
-  bool getSmoothScroll() const { return smooth_scroll_; }
-  void setSmoothScroll(bool flag) { smooth_scroll_ = flag; }
-
-  bool getOriginMode() const { return origin_mode_; }
-  void setOriginMode(bool flag) { origin_mode_ = flag; }
-
-  bool getAutoRepeat() const { return auto_repeat_; }
-  void setAutoRepeat(bool flag) { auto_repeat_ = flag; }
-
-  bool getCursorVisible() const { return cursor_visible_; }
-  void setCursorVisible(bool flag) { cursor_visible_ = flag; }
-
-  bool getCursorBlink() const { return cursor_blink_; }
-  void setCursorBlink(bool blink) { cursor_blink_ = blink; }
-
-  bool getReverseWrap() const { return reverse_wrap_; }
-  void setReverseWrap(bool wrap) { reverse_wrap_ = wrap; }
-
-  bool getAllow80To132() const { return allow_80_132_; }
-  void setAllow80To132(bool flag) { allow_80_132_ = flag; }
-};
+//------
 
 // class to handle and interpret escape text.
 // The escape characters are interpreted as operations on a character based screen
 class CEscapeHandler : public CEscapeParse {
  protected:
   // scoll area
-  struct ScrollArea {
-   private:
-    bool is_set_;
-    uint start_row_;
-    uint end_row_;
-
+  class ScrollArea {
    public:
-    ScrollArea() :
-     is_set_(false), start_row_(0), end_row_(0) {
-    }
+    ScrollArea() { }
 
     bool isSet() const { return is_set_; }
 
@@ -148,31 +35,39 @@ class CEscapeHandler : public CEscapeParse {
     void clear() {
       is_set_ = false;
     }
+
+   private:
+    bool is_set_    { false };
+    uint start_row_ { 0 };
+    uint end_row_   { 0 };
   };
+
+  //---
 
   // char set
   struct CharSet {
-    int  num;   // 0-3
-    char id[4]; // char set ids
+    int  num { 0 }; // 0-3
+    char id[4];     // char set ids
 
-    CharSet() :
-     num(0) {
+    CharSet() {
       memset(id, 'B', sizeof(id));
     }
   };
 
+  //---
+
   // save cursor
   struct SaveCursor {
-    int          row;
-    int          col;
+    int          row { 0 };
+    int          col { 0 };
     CEscapeState state;
     CCellStyle   style;
     CharSet      charset;
 
-    SaveCursor() :
-     row(0), col(0) {
-    }
+    SaveCursor() { }
   };
+
+  //---
 
  public:
   CEscapeHandler();
@@ -186,11 +81,17 @@ class CEscapeHandler : public CEscapeParse {
   void resetState() { state_.reset(); }
 
   // parser interface
-  void handleChar   (char c);
-  void handleGraphic(char c);
-  void handleEscape (const CEscapeData *esc);
+  void handleChar   (char c) override;
+  void handleGraphic(char c) override;
+  void handleEscape (const CEscapeData *esc) override;
 
-  void log(const std::string &str) const;
+  void log(const std::string &str) const override;
+
+  bool isVT52() const override { return getAnsiVT52Mode(); }
+  void setVT52(bool b) override { setAnsiVT52Mode(b); }
+
+  bool is4014() const override { return getTek4014(); }
+  void set4014(bool b) override { setTek4014(b); }
 
  protected:
   void escapeICH(int num);
@@ -246,8 +147,7 @@ class CEscapeHandler : public CEscapeParse {
   void escapeS7C1T();
   void escapeS8C1T();
   void escapeANSIConformance(int mode);
-  void escapeDECDHLTop();
-  void escapeDECDHLBottom();
+  void escapeDECDHL(CEscapeDataDECDHL::Pos pos);
   void escapeDECSWL();
   void escapeDECDWL();
   void escapeDECALN();
@@ -273,6 +173,7 @@ class CEscapeHandler : public CEscapeParse {
   void escapeLS3R();
   void escapeIND();
   void escapeNEL();
+  void escapeSSA();
   void escapeESA();
   void escapeHTS();
   void escapeRI();
@@ -316,6 +217,7 @@ class CEscapeHandler : public CEscapeParse {
   void escapeDECRestorePriv(int *modes, int num_modes);
   void escapeStartMouseTrack(int func, int x, int y, int first, int last);
   void escapeOSC(int num, const std::string &str1);
+  void escape4014(const CEscapeDataTek4014 *esc4014);
 
   void incOutputRow();
   void decOutputRow();
@@ -336,6 +238,12 @@ class CEscapeHandler : public CEscapeParse {
   virtual bool getSendMouseRelease() const { return state_.getSendMouseRelease(); }
   virtual void setSendMouseRelease(bool flag) { state_.setSendMouseRelease(flag); }
 
+  virtual bool getSendMouseMotion() const { return state_.getSendMouseMotion(); }
+  virtual void setSendMouseMotion(bool flag) { state_.setSendMouseMotion(flag); }
+
+  virtual bool getSendFocusInOut() const { return state_.getSendFocusInOut(); }
+  virtual void setSendFocusInOut(bool flag) { state_.setSendFocusInOut(flag); }
+
   virtual bool getScrollBottomOnKey() const { return state_.getScrollBottomOnKey(); }
   virtual void setScrollBottomOnKey(bool flag) { state_.setScrollBottomOnKey(flag); }
 
@@ -353,6 +261,9 @@ class CEscapeHandler : public CEscapeParse {
 
   virtual bool getAnsiVT52Mode() const { return state_.getAnsiVT52Mode(); }
   virtual void setAnsiVT52Mode(bool flag) { state_.setAnsiVT52Mode(flag); }
+
+  virtual bool getTek4014() const { return state_.getTek4014(); }
+  virtual void setTek4014(bool flag) { state_.setTek4014(flag); }
 
   virtual bool getKeyPadMode() const { return state_.getKeyPadMode(); }
   virtual void setKeyPadMode(bool flag) { state_.setKeyPadMode(flag); }
@@ -383,6 +294,12 @@ class CEscapeHandler : public CEscapeParse {
 
   virtual bool getAllow80To132() const { return state_.getAllow80To132(); }
   virtual void setAllow80To132(bool flag) { state_.setAllow80To132(flag); }
+
+  virtual bool getControl8Bit() const { return state_.getControl8Bit(); }
+  virtual void setControl8Bit(bool flag) { state_.setControl8Bit(flag); }
+
+  virtual CEscapeLineStyle getLineStyle() const { return state_.getLineStyle(); }
+  virtual void setLineStyle(CEscapeLineStyle style) { state_.setLineStyle(style); }
 
   //------
 
@@ -454,6 +371,9 @@ class CEscapeHandler : public CEscapeParse {
 
   virtual void resetAll() = 0;
 
+  virtual void setLineWidthStyle(uint row, const CCellLineWidthStyle &lineStyle) = 0;
+  virtual void setLineHeightStyle(uint row, const CCellLineHeightStyle &lineStyle) = 0;
+
   virtual void setCell(uint row, uint col, char c, const CCellStyle &style) = 0;
 
   virtual void addSizedImageChar(const std::string &path, CImageFile *file,
@@ -461,10 +381,11 @@ class CEscapeHandler : public CEscapeParse {
   virtual void addImageChar(const std::string &path, CImageFile *file,
                             int x1, int y1, int x2, int y2) = 0;
   virtual void addImage(const std::string &fileName, CImageFile *file) = 0;
+  virtual void addImage(const CImagePtr &image) = 0;
 
-  virtual void addPixel(int, int, const std::string &) { }
+  virtual void addPixel(int, int, const CEscapeColor &) { }
 
-  virtual void addLine(int, int, int, int, const std::string &) { }
+  virtual void addLine(int, int, int, int, const CEscapeColor &, const CEscapeLineStyle &) { }
 
   virtual void setLinkCell(uint row, uint col, char c, const CCellStyle &style,
                            const std::string &linkName, const std::string &linkDest) = 0;
@@ -486,11 +407,10 @@ class CEscapeHandler : public CEscapeParse {
   virtual void shiftRight() = 0;
 
   virtual const CCellStyle &getStyle() const = 0;
-
   virtual void setStyle(const CCellStyle &style) = 0;
 
   virtual void notifyChar(uint x, uint y, char c) = 0;
-  virtual void notifyEnter() = 0;
+  virtual void notifyEnter(char c) = 0;
 
   virtual void paste(const std::string &str) = 0;
 
@@ -531,7 +451,7 @@ class CEscapeHandler : public CEscapeParse {
   virtual void printAllPages() = 0;
 
   // window manipulation
-  virtual CWindow *getWindow() const { return NULL; }
+  virtual CWindow *getWindow() const { return nullptr; }
 
   virtual void setWindowTitle(const std::string &) { }
   virtual void getWindowTitle(std::string &title) { title = ""; }
@@ -569,15 +489,14 @@ class CEscapeHandler : public CEscapeParse {
 
  private:
   // private data
-  CEscapeState  state_;
-  CTextTabs     tabs_;
-  ScrollArea    scroll_area_;
-  CharSet       charset_;
-  SaveCursor    save_cursor_;
-  CEscapeColors colors_;
-  CRGBA         cursor_color_;
-  bool          debug_;
-  bool          trace_;
+  CEscapeState state_;
+  CTextTabs    tabs_;
+  ScrollArea   scroll_area_;
+  CharSet      charset_;
+  SaveCursor   save_cursor_;
+  CRGBA        cursor_color_;
+  bool         debug_ { false };
+  bool         trace_ { false };
 };
 
 #endif

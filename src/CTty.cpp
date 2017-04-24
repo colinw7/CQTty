@@ -1,19 +1,19 @@
 #include <CTty.h>
 #include <COSPty.h>
 #include <COSRead.h>
-#include <COSEnv.h>
+#include <CEnv.h>
 //#include <CReadLine.h>
 
 #include <cstdio>
 #include <cstdlib>
 #include <signal.h>
 #include <fcntl.h>
-#include <iostream>
+#include <unistd.h>
 
 extern "C" {
 # include <termios.h>
 # include <sys/ioctl.h>
-};
+}
 
 void
 exitSignalHandler(int)
@@ -34,15 +34,11 @@ childSignalHandler(int)
 #define TTYNAME "/dev/tty"
 
 CTty::
-CTty() :
- master_fd_(-1),
- read_wait_(5000),
- is_cterm_ (true),
- shell_    ("")
+CTty()
 {
   const char *shell = getenv("SHELL");
 
-  if (shell != NULL && shell[0] != '\0')
+  if (shell && shell[0] != '\0')
     shell_ = shell;
   else
     shell_ = "/bin/sh";
@@ -59,7 +55,6 @@ CTty::
 init()
 {
   // save terminal state
-
   struct termios *save_termios = new struct termios;
 
   if (tcgetattr(0, save_termios) < 0)
@@ -92,7 +87,6 @@ init()
   //------
 
   // create master pseudo terminal
-
   master_fd_ = getpt();
 
   if (master_fd_ <= 0)
@@ -108,7 +102,6 @@ init()
   //------
 
   // create slave pseudo terminal
-
   int slave_fd = open(dev_name, O_RDWR | O_NOCTTY, 0);
 
   //-------
@@ -121,10 +114,10 @@ init()
 
   //------
 
-  COSEnv::setenv("TERM", "xterm");
+  CEnvInst.set("TERM", "xterm");
 
   if (is_cterm_)
-    COSEnv::setenv("CTERM_VERSION", "0.1");
+    CEnvInst.set("CTERM_VERSION", "0.1");
 
   //------
 
