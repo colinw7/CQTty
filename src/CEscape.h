@@ -182,6 +182,8 @@ namespace CEscape {
   std::string DECSERA(int top=-1, int left=-1, int bottom=-1, int right=-1);
   std::string DECRQLP(int n=-1);
 
+  std::string DECSCNM(bool b=true);
+
   void        APC(std::ostream &os, const std::string &str);
   std::string APC(const std::string &str);
 

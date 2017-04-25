@@ -1,5 +1,6 @@
 #include <CPageTextEscapeNotifier.h>
 #include <CPageText.h>
+#include <CPageTextLine.h>
 
 CPageTextEscapeNotifier::
 CPageTextEscapeNotifier(CPageText *area) :
@@ -222,6 +223,13 @@ void
 CPageTextEscapeNotifier::
 notifyEnter(char)
 {
+}
+
+void
+CPageTextEscapeNotifier::
+notifyStateChange()
+{
+  area_->notifyStateChange();
 }
 
 void

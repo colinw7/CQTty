@@ -1,7 +1,9 @@
 #include <CQTty.h>
-#include <CQTtyPageTextWidget.h>
-
 #include <CTty.h>
+
+#include <CQTtyPageTextWidget.h>
+#include <CQPageTextToolBar.h>
+#include <CQPageTextStatus.h>
 #include <CQPageText.h>
 
 #ifdef IMAGE_PREVIEW
@@ -24,6 +26,8 @@
 #include <QVBoxLayout>
 #include <QApplication>
 #include <QTimer>
+
+#include <svg/home_svg.h>
 
 CQTty::
 CQTty(QWidget *parent) :
@@ -51,7 +55,10 @@ CQTty(QWidget *parent) :
 
   stack_->addWidget(text_);
 
-  (void) text_->createToolBar();
+  CQPageTextToolBar *toolBar = text_->createToolBar();
+
+  toolBar->addButton(CQPixmapCacheInst->getIcon("HOME"), "cd ${HOME}\n");
+  toolBar->addStretch();
 
   CQPageTextStatus *statusBar = text_->createStatusBar();
 
@@ -101,8 +108,7 @@ CQTty(QWidget *parent) :
 #ifdef FILE_EDIT
   edit_ = new CQEdit;
 
-  connect(edit_, SIGNAL(quitCommand()),
-          this, SLOT(showDefault()));
+  connect(edit_, SIGNAL(quitCommand()), this, SLOT(showDefault()));
 
   stack_->addWidget(edit_);
 #endif

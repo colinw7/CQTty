@@ -1,5 +1,8 @@
 #include <CPageText.h>
 #include <CPageTextEscapeNotifier.h>
+#include <CPageTextLine.h>
+#include <CTextCell.h>
+
 #include <CStrParse.h>
 #include <CFontMgr.h>
 #include <CEscape.h>
@@ -253,6 +256,8 @@ CPageText::
 setIsAlt(bool alt)
 {
   is_alt_ = alt;
+
+  update();
 }
 
 void
@@ -343,8 +348,6 @@ getSelectionText() const
 
     col = 0;
 
-    CPageTextLine::CellList::const_iterator pc1, pc2;
-
     for (const auto &cell : line->cells()) {
       if      (cell->getType() == CTextCell::Type::CHAR) {
         const CTextCharCell *char_cell = dynamic_cast<const CTextCharCell *>(cell);
@@ -369,8 +372,6 @@ getSelectionText() const
 
   for (const auto &line : lines()) {
     col = 0;
-
-    CPageTextLine::CellList::const_iterator pc1, pc2;
 
     for (const auto &cell : line->cells()) {
       if      (cell->getType() == CTextCell::Type::CHAR) {
@@ -1330,9 +1331,7 @@ loadCmdLine(const std::string &line)
     std::string str = CEscape::stringToEscape(line);
 
     if (str != "") {
-      CPageTextEscapeNotifier *notifier = getEscapeNotifier();
-
-      notifier->addOutputChars(str.c_str(), str.size());
+      addEscapeChars(str.c_str(), str.size());
     }
     else
       std::cerr << "Invalid command name \"" << cmd << "\"" << std::endl;
@@ -1345,8 +1344,6 @@ bool
 CPageText::
 loadEsc(const std::string &fileName)
 {
-  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
-
   CFile file(fileName);
 
   std::string buffer;
@@ -1364,7 +1361,7 @@ loadEsc(const std::string &fileName)
           break;
       }
 
-      notifier->addOutputChars(buffer.c_str(), buffer.size());
+      addEscapeChars(buffer.c_str(), buffer.size());
 
       buffer.clear();
     }
@@ -1381,7 +1378,7 @@ loadEsc(const std::string &fileName)
           break;
       }
 
-      notifier->addOutputChars(buffer.c_str(), buffer.size());
+      addEscapeChars(buffer.c_str(), buffer.size());
 
       buffer.clear();
     }
@@ -1451,9 +1448,7 @@ processString(const char *str)
   if (tty)
     tty->write(str);
   else {
-    CPageTextEscapeNotifier *notifier = getEscapeNotifier();
-
-    notifier->addOutputChars(str, strlen(str));
+    addEscapeChars(str, strlen(str));
   }
 
   flush();
@@ -1524,472 +1519,15 @@ setShowStatusBar(bool show)
 
 void
 CPageText::
+notifyStateChange()
+{
+  update();
+}
+
+void
+CPageText::
 checkLines()
 {
   for (const auto &line : lines())
     assert(line);
-}
-
-//---------
-
-CPageTextLine::
-CPageTextLine(CPageText *area) :
- area_(area)
-{
-}
-
-CPageTextLine::
-~CPageTextLine()
-{
-  for (auto &cell : cells_)
-    delete cell;
-
-  for (auto &link : links_)
-    delete link.second;
-
-  for (auto &image : images_)
-    delete image.second;
-}
-
-CTextCell *
-CPageTextLine::
-getCell(uint col)
-{
-  makeColValid(col);
-
-  return cells_[col];
-}
-
-CPageTextLine::CellList::const_iterator
-CPageTextLine::
-beginCell() const
-{
-  return cells_.begin();
-}
-
-CPageTextLine::CellList::const_iterator
-CPageTextLine::
-endCell() const
-{
-  return cells_.end();
-}
-
-CPageTextLine::LinkList::const_iterator
-CPageTextLine::
-beginLink() const
-{
-  return links_.begin();
-}
-
-CPageTextLine::LinkList::const_iterator
-CPageTextLine::
-endLink() const
-{
-  return links_.end();
-}
-
-CPageTextLine::ImageList::const_iterator
-CPageTextLine::
-beginImage() const
-{
-  return images_.begin();
-}
-
-CPageTextLine::ImageList::const_iterator
-CPageTextLine::
-endImage() const
-{
-  return images_.end();
-}
-
-void
-CPageTextLine::
-eraseLeft(uint col)
-{
-  uint num_cells = cells_.size();
-
-  for (uint i = 0; i <= col && i < num_cells; ++i)
-    clearCell(i, '\0');
-}
-
-void
-CPageTextLine::
-eraseRight(uint col)
-{
-  uint num_cells = cells_.size();
-
-  for (uint i = col; i < num_cells; ++i)
-    clearCell(i, '\0');
-}
-
-void
-CPageTextLine::
-erase()
-{
-  eraseRight(0);
-}
-
-void
-CPageTextLine::
-dumpLine(CFile &file)
-{
-  uint num_cells = cells_.size();
-
-  for (uint i = 0; i < num_cells; ++i) {
-    char c = getChar(i);
-
-    if (c)
-      file.write(c);
-  }
-
-  file.write('\n');
-}
-
-void
-CPageTextLine::
-fill(char c)
-{
-  uint num_cells = cells_.size();
-
-  for (uint i = 0; i < num_cells; ++i)
-    clearCell(i, c);
-}
-
-void
-CPageTextLine::
-shiftLeft(uint col)
-{
-  uint num_cells = cells_.size();
-
-  uint col1 = col;
-  uint col2 = col;
-
-  for ( ; col2 < num_cells; ++col2) {
-    CTextCell *cell = cells_[col2];
-
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-
-    if (! char_cell || char_cell->getChar() == '\0')
-      break;
-  }
-
-  makeColValid(col2);
-
-  CTextCell *old_cell = cells_[col1];
-
-  for (int c = col1; c < int(col2); ++c)
-    cells_[c] = cells_[c + 1];
-
-  cells_[col2] = old_cell;
-
-  clearCell(col2, ' ');
-}
-
-void
-CPageTextLine::
-shiftRight(uint col)
-{
-  uint num_cells = cells_.size();
-
-  uint col1 = col;
-  uint col2 = col;
-
-  for ( ; col2 < num_cells; ++col2) {
-    CTextCell *cell = cells_[col2];
-
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-
-    if (! char_cell || char_cell->getChar() == '\0')
-      break;
-  }
-
-  makeColValid(col2);
-
-  CTextCell *old_cell = cells_[col2];
-
-  for (int c = col2; c > int(col1); --c)
-    cells_[c] = cells_[c - 1];
-
-  cells_[col1] = old_cell;
-
-  clearCell(col1, ' ');
-}
-
-char
-CPageTextLine::
-getChar(uint col) const
-{
-  CTextCell *cell = cells_[col];
-
-  CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-
-  if (char_cell)
-    return char_cell->getChar();
-  else
-    return '\0';
-}
-
-void
-CPageTextLine::
-clearCell(uint col, char c)
-{
-  makeColValid(col);
-
-  CTextCell *old_cell = cells_[col];
-
-  CTextCell *new_cell = old_cell->convertTo(CTextCell::Type::CHAR);
-
-  CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(new_cell);
-
-  char_cell->resetStyle();
-
-  char_cell->setChar(c);
-
-  if (new_cell != old_cell) {
-    cells_[col] = new_cell;
-
-    delete old_cell;
-  }
-
-  ImageList::iterator pi = images_.find(col);
-
-  if (pi != images_.end()) {
-    delete (*pi).second;
-
-    images_.erase(pi);
-  }
-
-  LinkList::iterator pl = links_.find(col);
-
-  if (pl != links_.end()) {
-    delete (*pl).second;
-
-    links_.erase(pl);
-  }
-}
-
-void
-CPageTextLine::
-makeColValid(uint col)
-{
-  uint num_cells = cells_.size();
-
-  while (col >= num_cells) {
-    cells_.push_back(new CTextCell(this));
-
-    ++num_cells;
-  }
-}
-
-void
-CPageTextLine::
-replaceCell(CTextCell *old_cell, CTextCell *new_cell)
-{
-  assert(old_cell != new_cell);
-
-  uint num_cells = cells_.size();
-
-  for (uint i = 0; i < num_cells; ++i) {
-    if (cells_[i] != old_cell)
-      continue;
-
-    cells_[i] = new_cell;
-
-    return;
-  }
-
-  assert(false);
-}
-
-void
-CPageTextLine::
-addLink(CTextLinkCell *link_cell)
-{
-  int col = link_cell->getCol();
-
-  LinkList::iterator pl = links_.find(col);
-
-  if (pl != links_.end())
-    delete (*pl).second;
-
-  links_[col] = link_cell;
-}
-
-void
-CPageTextLine::
-addImage(CTextImageCell *image_cell)
-{
-  int col = image_cell->getCol();
-
-  ImageList::const_iterator pi = images_.find(col);
-
-  if (pi != images_.end())
-    delete (*pi).second;
-
-  images_[col] = image_cell;
-}
-
-bool
-CPageTextLine::
-getWordBounds(int col, uint &col1, uint &col2)
-{
-  uint num_cells = cells_.size();
-
-  if (col < 0 || col >= int(num_cells)) return false;
-
-  CTextCell *cell = cells_[col];
-
-  CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-  if (! char_cell) return false;
-
-  char c = char_cell->getChar();
-
-  if (c == '\0' || isspace(c)) return false;
-
-  col1 = col;
-  col2 = col;
-
-  while (col1 > 0) {
-    CTextCell *cell = cells_[col1 - 1];
-
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-    if (! char_cell) break;
-
-    char c = char_cell->getChar();
-
-    if (c == '\0' || isspace(c)) break;
-
-    --col1;
-  }
-
-  while (col2 < num_cells - 1) {
-    CTextCell *cell = cells_[col2 + 1];
-
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-    if (! char_cell) break;
-
-    char c = char_cell->getChar();
-
-    if (c == '\0' || isspace(c)) break;
-
-    ++col2;
-  }
-
-  return true;
-}
-
-//---------
-
-CTextCell::
-CTextCell(CPageTextLine *line, Type type) :
- line_(line), type_(type)
-{
-}
-
-CTextCell *
-CTextCell::
-convertTo(Type type)
-{
-  if (type_ == type)
-    return this;
-
-  CTextCell *cell1 = nullptr;
-
-  switch (type) {
-    case Type::CHAR:
-      cell1 = new CTextCharCell(line_);
-      break;
-    default:
-      break;
-  }
-
-  return cell1;
-}
-
-CIBBox2D
-CTextCell::
-getBBox(int x, int y, int cw, int ch, bool doubleHeight) const
-{
-  CIBBox2D bbox(CIPoint2D(x, y), CISize2D(cw - 1, ch - 1));
-
-  if (getLine()->widthStyle() == CCellLineWidthStyle::DOUBLE)
-    bbox.setWidth(bbox.getWidth()*2);
-
-  if (doubleHeight) {
-    if (getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM ||
-        getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_TOP) {
-      int h = bbox.getHeight();
-
-      if (getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM) {
-        bbox.setYMin(bbox.getYMin() - h);
-        bbox.setYMax(bbox.getYMax() - h);
-      }
-
-      bbox.setHeight(h*2);
-    }
-  }
-
-  return bbox;
-}
-
-//---------
-
-char
-CTextCharCell::
-getChar() const
-{
-  return c_;
-}
-
-void
-CTextCharCell::
-setChar(char c)
-{
-  c_ = c;
-}
-
-void
-CTextCharCell::
-setStyle(const CCellStyle &style)
-{
-  style_ = style;
-}
-
-void
-CTextCharCell::
-resetStyle()
-{
-  style_.reset();
-}
-
-//---------
-
-void
-CTextImageCell::
-setFileName(const std::string &fileName)
-{
-  fileName_ = fileName;
-}
-
-void
-CTextImageCell::
-setImage(CImagePtr image)
-{
-  image_ = image;
-}
-
-//---------
-
-void
-CTextLinkCell::
-setLinkDest(const std::string &linkDest)
-{
-  linkDest_ = linkDest;
-}
-
-void
-CTextLinkCell::
-setLinkName(const std::string &linkName)
-{
-  linkName_ = linkName;
 }

@@ -1,7 +1,7 @@
 #ifndef CQTtyPageTextWidget_H
 #define CQTtyPageTextWidget_H
 
-#include <CQPageText.h>
+#include <CQPageTextWidget.h>
 
 class CQTtyPageTextWidget : public CQPageTextWidget {
  public:

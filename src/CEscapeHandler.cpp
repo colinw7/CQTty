@@ -3639,6 +3639,242 @@ decOutputCol()
 
 void
 CEscapeHandler::
+setState(const CEscapeState &state)
+{
+  state_ = state;
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+resetState()
+{
+  state_.reset();
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setInverseVideo(bool flag)
+{
+  state_.setInverseVideo(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setSendMousePress(bool flag)
+{
+  state_.setSendMousePress(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setSendMouseRelease(bool flag)
+{
+  state_.setSendMouseRelease(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setSendMouseMotion(bool flag)
+{
+  state_.setSendMouseMotion(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setSendFocusInOut(bool flag)
+{
+  state_.setSendFocusInOut(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setScrollBottomOnKey(bool flag)
+{
+  state_.setScrollBottomOnKey(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setScrollBottomOnTty(bool flag)
+{
+  state_.setScrollBottomOnTty(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setApplicationCursorKeys(bool flag)
+{
+  state_.setApplicationCursorKeys(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setInsertMode(bool flag)
+{
+  state_.setInsertMode(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setLineWrap(bool flag)
+{
+  state_.setLineWrap(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setAnsiVT52Mode(bool flag)
+{
+  state_.setAnsiVT52Mode(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setTek4014(bool flag)
+{
+  state_.setTek4014(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setKeyPadMode(bool flag)
+{
+  state_.setKeyPadMode(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setLfNlMode(bool flag)
+{
+  state_.setLfNlMode(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setFfNpMode(bool flag)
+{
+  state_.setFfNpMode(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setSmoothScroll(bool flag)
+{
+  state_.setSmoothScroll(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setOriginMode(bool flag)
+{
+  state_.setOriginMode(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setAutoRepeat(bool flag)
+{
+  state_.setAutoRepeat(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setCursorVisible(bool flag)
+{
+  state_.setCursorVisible(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setCursorBlink(bool blink)
+{
+  state_.setCursorBlink(blink);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setReverseWrap(bool wrap)
+{
+  state_.setReverseWrap(wrap);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setAllow80To132(bool flag)
+{
+  state_.setAllow80To132(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setControl8Bit(bool flag)
+{
+  state_.setControl8Bit(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setLineStyle(CEscapeLineStyle style)
+{
+  state_.setLineStyle(style);
+
+  notifyStateChange();
+}
+
+//----------
+
+void
+CEscapeHandler::
 nextTab()
 {
   uint rows, cols;

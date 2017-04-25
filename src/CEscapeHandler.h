@@ -75,10 +75,9 @@ class CEscapeHandler : public CEscapeParse {
   virtual ~CEscapeHandler() { }
 
   const CEscapeState &getState() const { return state_; }
+  void setState(const CEscapeState &state);
 
-  void setState(const CEscapeState &state) { state_ = state; }
-
-  void resetState() { state_.reset(); }
+  void resetState();
 
   // parser interface
   void handleChar   (char c) override;
@@ -230,76 +229,76 @@ class CEscapeHandler : public CEscapeParse {
  public:
   // state
   virtual bool getInverseVideo() const { return state_.getInverseVideo(); }
-  virtual void setInverseVideo(bool flag) { state_.setInverseVideo(flag); }
+  virtual void setInverseVideo(bool flag);
 
   virtual bool getSendMousePress() const { return state_.getSendMousePress(); }
-  virtual void setSendMousePress(bool flag) { state_.setSendMousePress(flag); }
+  virtual void setSendMousePress(bool flag);
 
   virtual bool getSendMouseRelease() const { return state_.getSendMouseRelease(); }
-  virtual void setSendMouseRelease(bool flag) { state_.setSendMouseRelease(flag); }
+  virtual void setSendMouseRelease(bool flag);
 
   virtual bool getSendMouseMotion() const { return state_.getSendMouseMotion(); }
-  virtual void setSendMouseMotion(bool flag) { state_.setSendMouseMotion(flag); }
+  virtual void setSendMouseMotion(bool flag);
 
   virtual bool getSendFocusInOut() const { return state_.getSendFocusInOut(); }
-  virtual void setSendFocusInOut(bool flag) { state_.setSendFocusInOut(flag); }
+  virtual void setSendFocusInOut(bool flag);
 
   virtual bool getScrollBottomOnKey() const { return state_.getScrollBottomOnKey(); }
-  virtual void setScrollBottomOnKey(bool flag) { state_.setScrollBottomOnKey(flag); }
+  virtual void setScrollBottomOnKey(bool flag);
 
   virtual bool getScrollBottomOnTty() const { return state_.getScrollBottomOnTty(); }
-  virtual void setScrollBottomOnTty(bool flag) { state_.setScrollBottomOnTty(flag); }
+  virtual void setScrollBottomOnTty(bool flag);
 
   virtual bool getApplicationCursorKeys() const { return state_.getApplicationCursorKeys(); }
-  virtual void setApplicationCursorKeys(bool flag) { state_.setApplicationCursorKeys(flag); }
+  virtual void setApplicationCursorKeys(bool flag);
 
   virtual bool getInsertMode() const { return state_.getInsertMode(); }
-  virtual void setInsertMode(bool flag) { state_.setInsertMode(flag); }
+  virtual void setInsertMode(bool flag);
 
   virtual bool getLineWrap() const { return state_.getLineWrap(); }
-  virtual void setLineWrap(bool flag) { state_.setLineWrap(flag); }
+  virtual void setLineWrap(bool flag);
 
   virtual bool getAnsiVT52Mode() const { return state_.getAnsiVT52Mode(); }
-  virtual void setAnsiVT52Mode(bool flag) { state_.setAnsiVT52Mode(flag); }
+  virtual void setAnsiVT52Mode(bool flag);
 
   virtual bool getTek4014() const { return state_.getTek4014(); }
-  virtual void setTek4014(bool flag) { state_.setTek4014(flag); }
+  virtual void setTek4014(bool flag);
 
   virtual bool getKeyPadMode() const { return state_.getKeyPadMode(); }
-  virtual void setKeyPadMode(bool flag) { state_.setKeyPadMode(flag); }
+  virtual void setKeyPadMode(bool flag);
 
   virtual bool getLfNlMode() const { return state_.getLfNlMode(); }
-  virtual void setLfNlMode(bool flag) { state_.setLfNlMode(flag); }
+  virtual void setLfNlMode(bool flag);
 
   virtual bool getFfNpMode() const { return state_.getFfNpMode(); }
-  virtual void setFfNpMode(bool flag) { state_.setFfNpMode(flag); }
+  virtual void setFfNpMode(bool flag);
 
   virtual bool getSmoothScroll() const { return state_.getSmoothScroll(); }
-  virtual void setSmoothScroll(bool flag) { state_.setSmoothScroll(flag); }
+  virtual void setSmoothScroll(bool flag);
 
   virtual bool getOriginMode() const { return state_.getOriginMode(); }
-  virtual void setOriginMode(bool flag) { state_.setOriginMode(flag); }
+  virtual void setOriginMode(bool flag);
 
   virtual bool getAutoRepeat() const { return state_.getAutoRepeat(); }
-  virtual void setAutoRepeat(bool flag) { state_.setAutoRepeat(flag); }
+  virtual void setAutoRepeat(bool flag);
 
   virtual bool getCursorVisible() const { return state_.getCursorVisible(); }
-  virtual void setCursorVisible(bool flag) { state_.setCursorVisible(flag); }
+  virtual void setCursorVisible(bool flag);
 
   virtual bool getCursorBlink() const { return state_.getCursorBlink(); }
-  virtual void setCursorBlink(bool blink) { state_.setCursorBlink(blink); }
+  virtual void setCursorBlink(bool blink);
 
   virtual bool getReverseWrap() const { return state_.getReverseWrap(); }
-  virtual void setReverseWrap(bool wrap) { state_.setReverseWrap(wrap); }
+  virtual void setReverseWrap(bool wrap);
 
   virtual bool getAllow80To132() const { return state_.getAllow80To132(); }
-  virtual void setAllow80To132(bool flag) { state_.setAllow80To132(flag); }
+  virtual void setAllow80To132(bool flag);
 
   virtual bool getControl8Bit() const { return state_.getControl8Bit(); }
-  virtual void setControl8Bit(bool flag) { state_.setControl8Bit(flag); }
+  virtual void setControl8Bit(bool flag);
 
   virtual CEscapeLineStyle getLineStyle() const { return state_.getLineStyle(); }
-  virtual void setLineStyle(CEscapeLineStyle style) { state_.setLineStyle(style); }
+  virtual void setLineStyle(CEscapeLineStyle style);
 
   //------
 
@@ -411,6 +410,8 @@ class CEscapeHandler : public CEscapeParse {
 
   virtual void notifyChar(uint x, uint y, char c) = 0;
   virtual void notifyEnter(char c) = 0;
+
+  virtual void notifyStateChange() = 0;
 
   virtual void paste(const std::string &str) = 0;
 

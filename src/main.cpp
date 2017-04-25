@@ -1,6 +1,8 @@
-#include <CQApp.h>
 #include <CQTty.h>
 #include <CQPageText.h>
+#include <CQTtyPageTextWidget.h>
+
+#include <CQApp.h>
 #ifdef DIR_LIST
 #include <CQDirView.h>
 #endif

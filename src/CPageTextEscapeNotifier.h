@@ -66,6 +66,8 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
   void notifyChar(uint, uint, char) override;
   void notifyEnter(char c) override;
 
+  void notifyStateChange() override;
+
   void paste(const std::string &str) override;
 
   void setTrace(bool) override;

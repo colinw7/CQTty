@@ -9,14 +9,14 @@
 #include <CLogFile.h>
 #include <CImagePtr.h>
 
-class CWindow;
 class CPageTextLine;
+class CPageTextEscapeNotifier;
 class CTextCell;
 class CTextLinkCell;
 class CTextImageCell;
+class CWindow;
 class CTty;
 class CKeyEvent;
-class CPageTextEscapeNotifier;
 
 //------
 
@@ -269,6 +269,8 @@ class CPageText {
 
   virtual void notifyStyle(const CTextPos &) { }
 
+  virtual void notifyStateChange();
+
   virtual CTty *getTty() const { return nullptr; }
 
   //---------
@@ -317,194 +319,6 @@ class CPageText {
   bool                     trace_ { false };
   std::string              dirName_;
   CLogFile                 log_;
-};
-
-//------
-
-class CPageTextLine {
- public:
-  typedef std::vector<CTextCell *>       CellList;
-  typedef std::map<int,CTextLinkCell *>  LinkList;
-  typedef std::map<int,CTextImageCell *> ImageList;
-
- public:
-  CPageTextLine(CPageText *area);
-
-  virtual ~CPageTextLine();
-
-  CPageText *getArea() const { return area_; }
-
-  virtual const CCellStyle &getStyle() const { return area_->getStyle(); }
-
-  CTextCell *getCell(uint col);
-
-  //---
-  const CellList &cells() const { return cells_; }
-
-  CellList::const_iterator beginCell() const;
-  CellList::const_iterator endCell  () const;
-
-  //---
-
-  const LinkList links() const { return links_; }
-
-  LinkList::const_iterator beginLink() const;
-  LinkList::const_iterator endLink  () const;
-
-  //---
-
-  const ImageList &images() const { return images_; }
-
-  ImageList::const_iterator beginImage() const;
-  ImageList::const_iterator endImage  () const;
-
-  //---
-
-  const CCellLineWidthStyle &widthStyle() const { return widthStyle_; }
-  void setWidthStyle(const CCellLineWidthStyle &v) { widthStyle_ = v; }
-
-  const CCellLineHeightStyle &heightStyle() const { return heightStyle_; }
-  void setHeightStyle(const CCellLineHeightStyle &v) { heightStyle_ = v; }
-
-  //---
-
-  void eraseLeft(uint col);
-  void eraseRight(uint col);
-  void erase();
-
-  //---
-
-  void dumpLine(CFile &file);
-
-  void fill(char c);
-
-  void shiftLeft (uint col);
-  void shiftRight(uint col);
-
-  char getChar(uint i) const;
-
-  void clearCell(uint i, char c);
-
-  void makeColValid(uint col);
-
-  void replaceCell(CTextCell *old_cell, CTextCell *new_cell);
-
-  void addLink (CTextLinkCell  *link_cell);
-  void addImage(CTextImageCell *image_cell);
-
-  bool getWordBounds(int col, uint &col1, uint &col2);
-
- protected:
-  CPageText*           area_ { nullptr };
-  CellList             cells_;
-  LinkList             links_;
-  ImageList            images_;
-  CCellLineWidthStyle  widthStyle_  { CCellLineWidthStyle::SINGLE };
-  CCellLineHeightStyle heightStyle_ { CCellLineHeightStyle::SINGLE };
-};
-
-//------
-
-// row span, col span
-class CTextCell {
- public:
-  enum class Type {
-    NONE,
-    CHAR,
-    IMAGE,
-    LINK
-  };
-
- public:
-  CTextCell(CPageTextLine *line, Type type=Type::NONE);
-
-  virtual ~CTextCell() { }
-
-  CPageTextLine *getLine() const { return line_; }
-
-  Type getType() const { return type_; }
-
-  virtual const CCellStyle &getStyle() const { return line_->getStyle(); }
-
-  CTextCell *convertTo(Type type);
-
-  CIBBox2D getBBox(int x, int y, int w, int h, bool doubleHeight) const;
-
- protected:
-  CPageTextLine *line_ { nullptr };
-  Type           type_ { Type::NONE };
-};
-
-//------
-
-class CTextCharCell : public CTextCell {
- public:
-  CTextCharCell(CPageTextLine *line, char c='\0') :
-   CTextCell(line, Type::CHAR), c_(c) {
-  }
-
-  char getChar() const;
-
-  void setChar(char c);
-
-  const CCellStyle &getStyle() const { return style_; }
-  void setStyle(const CCellStyle &style);
-
-  void resetStyle();
-
- protected:
-  char       c_ { '\0' };
-  CCellStyle style_;
-};
-
-//------
-
-class CTextImageCell : public CTextCell {
- public:
-  CTextImageCell(CPageTextLine *line, uint col=0, const std::string &fileName="",
-                 const CImagePtr &image=CImagePtr()) :
-   CTextCell(line, Type::IMAGE), col_(col), fileName_(fileName), image_(image) {
-  }
-
-  uint getCol() const { return col_; }
-
-  void setCol(uint col) { col_ = col; }
-
-  const std::string &getFileName() const { return fileName_; }
-
-  void setFileName(const std::string &fileName);
-
-  CImagePtr getImage() const { return image_; }
-
-  void setImage(CImagePtr image);
-
- protected:
-  uint        col_ { 0 };
-  std::string fileName_;
-  CImagePtr   image_;
-};
-
-//------
-
-class CTextLinkCell : public CTextCell {
- public:
-  CTextLinkCell(CPageTextLine *line, uint col=0) :
-   CTextCell(line, Type::LINK), col_(col) {
-  }
-
-  uint getCol() const { return col_; }
-  void setCol(uint col) { col_ = col; }
-
-  const std::string &getLinkDest() const { return linkDest_; }
-  const std::string &getLinkName() const { return linkName_; }
-
-  void setLinkDest(const std::string &linkDest);
-  void setLinkName(const std::string &linkName);
-
- protected:
-  uint        col_ { 0 };
-  std::string linkDest_;
-  std::string linkName_;
 };
 
 #endif

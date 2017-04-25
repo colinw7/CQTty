@@ -1286,6 +1286,16 @@ DECRQLP(int n)
   return CSI_s + CStrUtil::toString(n) + "'|";
 }
 
+std::string
+CEscape::
+DECSCNM(bool b)
+{
+  if (b)
+    return DECSET(5);
+  else
+    return DECRST(5);
+}
+
 void
 CEscape::
 APC(std::ostream &os, const std::string &str)
@@ -1733,6 +1743,12 @@ stringToEscape(const std::string &str)
       return DECRQLP(i1);
     else
       return DECRQLP();
+  }
+  else if (words[0] == "DECSCNM") {
+    if (parseInteger(words, 1, &i1, true))
+      return DECSCNM(i1);
+    else
+      return DECSCNM();
   }
 
   else if (words[0] == "s") {

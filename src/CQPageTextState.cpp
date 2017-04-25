@@ -1,5 +1,6 @@
 #include <CQPageTextState.h>
 #include <CQPageText.h>
+#include <CQPageTextCanvas.h>
 #include <CPageTextEscapeNotifier.h>
 #include <CQColorChooser.h>
 #include <CQIntegerEdit.h>
@@ -43,60 +44,80 @@ CQPageTextState(CQPageText *text) :
 
   QGridLayout *grid = new QGridLayout(stateGroup);
 
-  inverseVideo_          = new QCheckBox("Inverse Video");
-  sendMousePress_        = new QCheckBox("Send Mouse Press");
-  sendMouseRelease_      = new QCheckBox("Send Mouse Release");
-  sendMouseMotion_       = new QCheckBox("Send Mouse Motion");
-  sendFocusInOut_        = new QCheckBox("Send Focus In/Out");
-  scrollBottomKey_       = new QCheckBox("Scroll Bottom Key");
-  scrollBottomTty_       = new QCheckBox("Scroll Bottom TTY");
-  applicationCursorKeys_ = new QCheckBox("Application Cursor Keys");
-  insertMode_            = new QCheckBox("Insert Mode");
-  lineWrap_              = new QCheckBox("Line Wrap");
-  ansiVt52Mode_          = new QCheckBox("ANSI VT52 Mode");
-  tek4014Mode_           = new QCheckBox("Tek 4014 Mode");
-  keyPadMode_            = new QCheckBox("Key Pad Mode");
-  lfNlMode_              = new QCheckBox("LF/NL Mode");
-  ffNpMode_              = new QCheckBox("FF/NP Mode");
-  smoothScroll_          = new QCheckBox("Smooth Scroll");
-  originMode_            = new QCheckBox("Origin Mode");
-  autoRepeat_            = new QCheckBox("Auto Repeat");
-  cursorVisible_         = new QCheckBox("Cursor Visible");
-  cursorBlink_           = new QCheckBox("Cursor Blink");
-  reverseWrap_           = new QCheckBox("Reverse Wrap");
-  allow80132_            = new QCheckBox("Allow 80/132");
-  control8Bit_           = new QCheckBox("Control 8 bit");
-  altPage_               = new QCheckBox("Alternate Page");
+  inverseVideo_     = new QCheckBox("Inverse Video");
+  sendMousePress_   = new QCheckBox("Send Mouse Press");
+  sendMouseRelease_ = new QCheckBox("Send Mouse Release");
+  sendMouseMotion_  = new QCheckBox("Send Mouse Motion");
+  sendFocusInOut_   = new QCheckBox("Send Focus In/Out");
+  scrollBottomKey_  = new QCheckBox("Scroll Bottom Key");
+  scrollBottomTty_  = new QCheckBox("Scroll Bottom TTY");
+  appCursorKeys_    = new QCheckBox("Application Cursor Keys");
+  insertMode_       = new QCheckBox("Insert Mode");
+  lineWrap_         = new QCheckBox("Line Wrap");
+  ansiVt52Mode_     = new QCheckBox("ANSI VT52 Mode");
+  tek4014Mode_      = new QCheckBox("Tek 4014 Mode");
+  keyPadMode_       = new QCheckBox("Key Pad Mode");
+  lfNlMode_         = new QCheckBox("LF/NL Mode");
+  ffNpMode_         = new QCheckBox("FF/NP Mode");
+  smoothScroll_     = new QCheckBox("Smooth Scroll");
+  originMode_       = new QCheckBox("Origin Mode");
+  autoRepeat_       = new QCheckBox("Auto Repeat");
+  cursorVisible_    = new QCheckBox("Cursor Visible");
+  cursorBlink_      = new QCheckBox("Cursor Blink");
+  reverseWrap_      = new QCheckBox("Reverse Wrap");
+  allow80132_       = new QCheckBox("Allow 80/132");
+  control8Bit_      = new QCheckBox("Control 8 bit");
+  altPage_          = new QCheckBox("Alternate Page");
 
-  connect(inverseVideo_ , SIGNAL(clicked()), this, SLOT(updateInverseVideo ()));
-  connect(cursorVisible_, SIGNAL(clicked()), this, SLOT(updateCursorVisible()));
-  connect(cursorBlink_  , SIGNAL(clicked()), this, SLOT(updateCursorBlink  ()));
-  connect(altPage_      , SIGNAL(clicked()), this, SLOT(updateAlt          ()));
+  connect(inverseVideo_    , SIGNAL(clicked()), this, SLOT(updateInverseVideo    ()));
+  connect(sendMousePress_  , SIGNAL(clicked()), this, SLOT(updateSendMousePress  ()));
+  connect(sendMouseRelease_, SIGNAL(clicked()), this, SLOT(updateSendMouseRelease()));
+  connect(sendMouseMotion_ , SIGNAL(clicked()), this, SLOT(updateSendMouseMotion ()));
+  connect(sendFocusInOut_  , SIGNAL(clicked()), this, SLOT(updateSendFocusInOut  ()));
+  connect(scrollBottomKey_ , SIGNAL(clicked()), this, SLOT(updateScrollBottomKey ()));
+  connect(scrollBottomTty_ , SIGNAL(clicked()), this, SLOT(updateScrollBottomTty ()));
+  connect(appCursorKeys_   , SIGNAL(clicked()), this, SLOT(updateAppCursorKeys   ()));
+  connect(insertMode_      , SIGNAL(clicked()), this, SLOT(updateInsertMode      ()));
+  connect(lineWrap_        , SIGNAL(clicked()), this, SLOT(updateLineWrap        ()));
+  connect(ansiVt52Mode_    , SIGNAL(clicked()), this, SLOT(updateAnsiVt52Mode    ()));
+  connect(tek4014Mode_     , SIGNAL(clicked()), this, SLOT(updateTek4014Mode     ()));
+  connect(keyPadMode_      , SIGNAL(clicked()), this, SLOT(updateKeyPadMode      ()));
+  connect(lfNlMode_        , SIGNAL(clicked()), this, SLOT(updateLfNlMode        ()));
+  connect(ffNpMode_        , SIGNAL(clicked()), this, SLOT(updateFfNpMode        ()));
+  connect(smoothScroll_    , SIGNAL(clicked()), this, SLOT(updateSmoothScroll    ()));
+  connect(originMode_      , SIGNAL(clicked()), this, SLOT(updateOriginMode      ()));
+  connect(autoRepeat_      , SIGNAL(clicked()), this, SLOT(updateAutoRepeat      ()));
+  connect(cursorVisible_   , SIGNAL(clicked()), this, SLOT(updateCursorVisible   ()));
+  connect(cursorBlink_     , SIGNAL(clicked()), this, SLOT(updateCursorBlink     ()));
+  connect(reverseWrap_     , SIGNAL(clicked()), this, SLOT(updateReverseWrap     ()));
+  connect(allow80132_      , SIGNAL(clicked()), this, SLOT(updateAllow80123      ()));
+  connect(control8Bit_     , SIGNAL(clicked()), this, SLOT(updateControl8Bit     ()));
+  connect(altPage_         , SIGNAL(clicked()), this, SLOT(updateAlt             ()));
 
-  grid->addWidget(inverseVideo_         ,  0, 0);
-  grid->addWidget(sendMousePress_       ,  1, 0);
-  grid->addWidget(sendMouseRelease_     ,  1, 1);
-  grid->addWidget(sendMouseMotion_      ,  2, 0);
-  grid->addWidget(sendFocusInOut_       ,  2, 1);
-  grid->addWidget(scrollBottomKey_      ,  3, 0);
-  grid->addWidget(scrollBottomTty_      ,  3, 1);
-  grid->addWidget(applicationCursorKeys_,  4, 0);
-  grid->addWidget(insertMode_           ,  5, 0);
-  grid->addWidget(lineWrap_             ,  6, 0);
-  grid->addWidget(ansiVt52Mode_         ,  7, 0);
-  grid->addWidget(tek4014Mode_          ,  7, 1);
-  grid->addWidget(keyPadMode_           ,  8, 0);
-  grid->addWidget(lfNlMode_             ,  9, 0);
-  grid->addWidget(ffNpMode_             ,  9, 1);
-  grid->addWidget(smoothScroll_         , 10, 0);
-  grid->addWidget(originMode_           , 10, 1);
-  grid->addWidget(autoRepeat_           , 11, 0);
-  grid->addWidget(cursorVisible_        , 12, 0);
-  grid->addWidget(cursorBlink_          , 12, 1);
-  grid->addWidget(reverseWrap_          , 13, 0);
-  grid->addWidget(allow80132_           , 14, 0);
-  grid->addWidget(control8Bit_          , 14, 1);
-  grid->addWidget(altPage_              , 15, 0);
+  grid->addWidget(inverseVideo_    ,  0, 0);
+  grid->addWidget(sendMousePress_  ,  1, 0);
+  grid->addWidget(sendMouseRelease_,  1, 1);
+  grid->addWidget(sendMouseMotion_ ,  2, 0);
+  grid->addWidget(sendFocusInOut_  ,  2, 1);
+  grid->addWidget(scrollBottomKey_ ,  3, 0);
+  grid->addWidget(scrollBottomTty_ ,  3, 1);
+  grid->addWidget(appCursorKeys_   ,  4, 0);
+  grid->addWidget(insertMode_      ,  5, 0);
+  grid->addWidget(lineWrap_        ,  6, 0);
+  grid->addWidget(ansiVt52Mode_    ,  7, 0);
+  grid->addWidget(tek4014Mode_     ,  7, 1);
+  grid->addWidget(keyPadMode_      ,  8, 0);
+  grid->addWidget(lfNlMode_        ,  9, 0);
+  grid->addWidget(ffNpMode_        ,  9, 1);
+  grid->addWidget(smoothScroll_    , 10, 0);
+  grid->addWidget(originMode_      , 10, 1);
+  grid->addWidget(autoRepeat_      , 11, 0);
+  grid->addWidget(cursorVisible_   , 12, 0);
+  grid->addWidget(cursorBlink_     , 12, 1);
+  grid->addWidget(reverseWrap_     , 13, 0);
+  grid->addWidget(allow80132_      , 14, 0);
+  grid->addWidget(control8Bit_     , 14, 1);
+  grid->addWidget(altPage_         , 15, 0);
 
   layout1->addWidget(stateGroup);
 
@@ -254,29 +275,29 @@ updateState()
 {
   CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
 
-  inverseVideo_         ->setChecked(notifier->getInverseVideo());
-  sendMousePress_       ->setChecked(notifier->getSendMousePress());
-  sendMouseRelease_     ->setChecked(notifier->getSendMouseRelease());
-  sendMouseMotion_      ->setChecked(notifier->getSendMouseMotion());
-  sendFocusInOut_       ->setChecked(notifier->getSendFocusInOut());
-  scrollBottomKey_      ->setChecked(notifier->getScrollBottomOnKey());
-  scrollBottomTty_      ->setChecked(notifier->getScrollBottomOnTty());
-  applicationCursorKeys_->setChecked(notifier->getApplicationCursorKeys());
-  insertMode_           ->setChecked(notifier->getInsertMode());
-  lineWrap_             ->setChecked(notifier->getLineWrap());
-  ansiVt52Mode_         ->setChecked(notifier->getAnsiVT52Mode());
-  tek4014Mode_          ->setChecked(notifier->getTek4014());
-  keyPadMode_           ->setChecked(notifier->getKeyPadMode());
-  lfNlMode_             ->setChecked(notifier->getLfNlMode());
-  ffNpMode_             ->setChecked(notifier->getFfNpMode());
-  smoothScroll_         ->setChecked(notifier->getSmoothScroll());
-  originMode_           ->setChecked(notifier->getOriginMode());
-  autoRepeat_           ->setChecked(notifier->getAutoRepeat());
-  cursorVisible_        ->setChecked(notifier->getCursorVisible());
-  cursorBlink_          ->setChecked(notifier->getCursorBlink());
-  reverseWrap_          ->setChecked(notifier->getReverseWrap());
-  allow80132_           ->setChecked(notifier->getAllow80To132());
-  control8Bit_          ->setChecked(notifier->getControl8Bit());
+  inverseVideo_    ->setChecked(notifier->getInverseVideo());
+  sendMousePress_  ->setChecked(notifier->getSendMousePress());
+  sendMouseRelease_->setChecked(notifier->getSendMouseRelease());
+  sendMouseMotion_ ->setChecked(notifier->getSendMouseMotion());
+  sendFocusInOut_  ->setChecked(notifier->getSendFocusInOut());
+  scrollBottomKey_ ->setChecked(notifier->getScrollBottomOnKey());
+  scrollBottomTty_ ->setChecked(notifier->getScrollBottomOnTty());
+  appCursorKeys_   ->setChecked(notifier->getApplicationCursorKeys());
+  insertMode_      ->setChecked(notifier->getInsertMode());
+  lineWrap_        ->setChecked(notifier->getLineWrap());
+  ansiVt52Mode_    ->setChecked(notifier->getAnsiVT52Mode());
+  tek4014Mode_     ->setChecked(notifier->getTek4014());
+  keyPadMode_      ->setChecked(notifier->getKeyPadMode());
+  lfNlMode_        ->setChecked(notifier->getLfNlMode());
+  ffNpMode_        ->setChecked(notifier->getFfNpMode());
+  smoothScroll_    ->setChecked(notifier->getSmoothScroll());
+  originMode_      ->setChecked(notifier->getOriginMode());
+  autoRepeat_      ->setChecked(notifier->getAutoRepeat());
+  cursorVisible_   ->setChecked(notifier->getCursorVisible());
+  cursorBlink_     ->setChecked(notifier->getCursorBlink());
+  reverseWrap_     ->setChecked(notifier->getReverseWrap());
+  allow80132_      ->setChecked(notifier->getAllow80To132());
+  control8Bit_     ->setChecked(notifier->getControl8Bit());
 
   altPage_->setChecked(text_->isAlt());
 
@@ -355,8 +376,159 @@ updateInverseVideo()
   CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
 
   notifier->setInverseVideo(inverseVideo_->isChecked());
+}
 
-  text_->update();
+void
+CQPageTextState::
+updateSendMousePress()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setSendMousePress(sendMousePress_->isChecked());
+}
+
+void
+CQPageTextState::
+updateSendMouseRelease()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setSendMouseRelease(sendMouseRelease_->isChecked());
+}
+
+void
+CQPageTextState::
+updateSendMouseMotion()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setSendMouseMotion(sendMouseMotion_->isChecked());
+}
+
+void
+CQPageTextState::
+updateSendFocusInOut()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setSendFocusInOut(sendFocusInOut_->isChecked());
+}
+
+void
+CQPageTextState::
+updateScrollBottomKey()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setScrollBottomOnKey(scrollBottomKey_->isChecked());
+}
+
+void
+CQPageTextState::
+updateScrollBottomTty()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setScrollBottomOnTty(scrollBottomTty_->isChecked());
+}
+
+void
+CQPageTextState::
+updateAppCursorKeys()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setApplicationCursorKeys(appCursorKeys_->isChecked());
+}
+
+void
+CQPageTextState::
+updateInsertMode()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setInsertMode(insertMode_->isChecked());
+}
+
+void
+CQPageTextState::
+updateLineWrap()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setLineWrap(lineWrap_->isChecked());
+}
+
+void
+CQPageTextState::
+updateAnsiVt52Mode()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setAnsiVT52Mode(ansiVt52Mode_->isChecked());
+}
+
+void
+CQPageTextState::
+updateTek4014Mode()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setTek4014(tek4014Mode_->isChecked());
+}
+
+void
+CQPageTextState::
+updateKeyPadMode()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setKeyPadMode(keyPadMode_->isChecked());
+}
+
+void
+CQPageTextState::
+updateLfNlMode()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setLfNlMode(lfNlMode_->isChecked());
+}
+
+void
+CQPageTextState::
+updateFfNpMode()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setFfNpMode(ffNpMode_->isChecked());
+}
+
+void
+CQPageTextState::
+updateSmoothScroll()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setSmoothScroll(smoothScroll_->isChecked());
+}
+
+void
+CQPageTextState::
+updateOriginMode()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setOriginMode(originMode_->isChecked());
+}
+
+void
+CQPageTextState::
+updateAutoRepeat()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setAutoRepeat(autoRepeat_->isChecked());
 }
 
 void
@@ -366,8 +538,6 @@ updateCursorVisible()
   CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
 
   notifier->setCursorVisible(cursorVisible_->isChecked());
-
-  text_->update();
 }
 
 void
@@ -377,17 +547,42 @@ updateCursorBlink()
   CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
 
   notifier->setCursorBlink(cursorBlink_->isChecked());
+}
 
-  text_->update();
+void
+CQPageTextState::
+updateReverseWrap()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setReverseWrap(reverseWrap_->isChecked());
+}
+
+void
+CQPageTextState::
+updateAllow80123()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setAllow80To132(allow80132_->isChecked());
+}
+
+void
+CQPageTextState::
+updateControl8Bit()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setControl8Bit(control8Bit_->isChecked());
 }
 
 void
 CQPageTextState::
 updateAlt()
 {
-  text_->setIsAlt(altPage_->isChecked());
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
 
-  text_->update();
+  notifier->setAlternative(altPage_->isChecked());
 }
 
 void
