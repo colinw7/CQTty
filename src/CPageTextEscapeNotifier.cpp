@@ -132,6 +132,17 @@ setCell(uint row, uint col, char c, const CCellStyle &style)
 
 void
 CPageTextEscapeNotifier::
+setUtfCell(uint row, uint col, ulong c, const CCellStyle &style)
+{
+  setDispPos(row, col);
+
+  area_->setStyle(style);
+
+  area_->setUtfChar(c);
+}
+
+void
+CPageTextEscapeNotifier::
 resetCell()
 {
   CPageTextLine *line = area_->getCurrentLine();
@@ -216,6 +227,12 @@ setStyle(const CCellStyle &style)
 void
 CPageTextEscapeNotifier::
 notifyChar(uint, uint, char)
+{
+}
+
+void
+CPageTextEscapeNotifier::
+notifyUtfChar(uint, uint, ulong)
 {
 }
 
@@ -511,10 +528,7 @@ void
 CPageTextEscapeNotifier::
 addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color, const CEscapeLineStyle &style)
 {
-  if (is4014())
-    area_->addLine(x1, y1, x2, y2, color, style);
-  else
-    area_->add4014Line(x1, y1, x2, y2, color, style);
+  area_->addLine(x1, y1, x2, y2, color, style);
 }
 
 void
@@ -527,6 +541,13 @@ addLink(const std::string &name, const std::string &path, const std::string &)
 void
 CPageTextEscapeNotifier::
 setLinkCell(uint, uint, char, const CCellStyle &, const std::string &, const std::string &)
+{
+  assert(false);
+}
+
+void
+CPageTextEscapeNotifier::
+setUtfLinkCell(uint, uint, ulong, const CCellStyle &, const std::string &, const std::string &)
 {
   assert(false);
 }
@@ -574,4 +595,96 @@ logTrace(const std::string &str) const
 {
   if (area_->getTrace())
     area_->log(str);
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014BEL()
+{
+  area_->exec4014BEL();
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014BS()
+{
+  area_->exec4014BS();
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014TAB()
+{
+  area_->exec4014TAB();
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014LF()
+{
+  area_->exec4014LF();
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014VT()
+{
+  area_->exec4014VT();
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014FF()
+{
+  area_->exec4014FF();
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014CR()
+{
+  area_->exec4014CR();
+}
+
+void
+CPageTextEscapeNotifier::
+exec4014CUF()
+{
+  area_->exec4014CUF();
+}
+
+void
+CPageTextEscapeNotifier::
+set4014CharSet(int charSet)
+{
+  area_->set4014CharSet(charSet);
+}
+
+void
+CPageTextEscapeNotifier::
+set4014GIN(bool b)
+{
+  area_->set4014GIN(b);
+}
+
+void
+CPageTextEscapeNotifier::
+clear4014()
+{
+  area_->clear4014();
+}
+
+void
+CPageTextEscapeNotifier::
+draw4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+             const CEscapeLineStyle &style)
+{
+  area_->draw4014Line(x1, y1, x2, y2, color, style);
+}
+
+void
+CPageTextEscapeNotifier::
+draw4014Char(char c)
+{
+  area_->draw4014Char(c);
 }

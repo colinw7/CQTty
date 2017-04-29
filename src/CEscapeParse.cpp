@@ -367,12 +367,27 @@ CEscapeParse::
 addOutputChars(const char *str, uint len)
 {
   static bool        locked;
-  static std::string buffer;
+  static std::string preBuffer;
+  static std::string postBuffer;
 
   if (locked) {
-    buffer += std::string(str, len);
+    postBuffer += std::string(str, len);
     return;
   }
+
+  //------
+
+  if (preBuffer.size()) {
+    std::string buffer1 = preBuffer + std::string(str, len);
+
+    preBuffer = "";
+
+    addOutputChars(buffer1.c_str(), buffer1.size());
+
+    return;
+  }
+
+  //------
 
   locked = true;
 
@@ -383,7 +398,11 @@ addOutputChars(const char *str, uint len)
   while (i < len) {
     if (! getInEscape()) {
       if      (str[i] < 32) {
-        addControlChar(str, &i);
+        if (! addControlChar(str, &i, len)) {
+          // too many characters (4014)
+          preBuffer = std::string(str, len).substr(i);
+          break;
+        }
       }
       else if (str[i] < 127) {
         addNormalChar(str[i]);
@@ -433,10 +452,10 @@ addOutputChars(const char *str, uint len)
 
   locked = false;
 
-  if (! buffer.empty()) {
-    std::string buffer1 = buffer;
+  if (! postBuffer.empty()) {
+    std::string buffer1 = postBuffer;
 
-    buffer.clear();
+    postBuffer.clear();
 
     addOutputChars(buffer1.c_str(), buffer1.size());
   }
@@ -451,7 +470,7 @@ addNormalChar(char c)
 
 bool
 CEscapeParse::
-addControlChar(const char *str, uint *pos)
+addControlChar(const char *str, uint *pos, uint len)
 {
   char c = str[(*pos)++];
 
@@ -576,6 +595,7 @@ addControlChar(const char *str, uint *pos)
     case 0x1C: { // FS ,^\ , Quit
       if (is4014()) {
         // Point Plot Mode
+        assert(false);
       }
 
       handleEscape(&FS_escape_);
@@ -584,63 +604,180 @@ addControlChar(const char *str, uint *pos)
     }
     case 0x1D: { // GS ,^]
       if (is4014()) {
+        static int last_yl = 96, last_yh = 32;
+        static int last_xl = 64, last_xh = 32;
+        static int last_x1 = 0 , last_y1 = 0;
+
         // Graph Mode
-        std::vector<int> yVals;
+        int pos1 = *pos;
 
-        int xl, xh, yl, yh;
+        typedef std::vector<char> Chars;
 
-        yh = str[(*pos)++]; // 32->63
+        CEscapeDataGS::Mode mode = CEscapeDataGS::Mode::MOVE_TO;
 
-        if (yh == 7) // pen ?
-          yh = str[(*pos)++]; // 32->63
+        if (*pos < len && str[*pos] == 7) {
+          ++(*pos);
 
-        if (yh >= 96) {
-          yl = yh;
-          yh = 32;
-        }
-        else {
-          yl = str[(*pos)++]; // 96-127
+          mode = CEscapeDataGS::Mode::LINE_TO;
         }
 
-        while (yl >= 96) {
-          assert(yh >= 32 && yh <= 63);
-          assert(yl >= 96 && yl <= 127);
+        Chars chars;
 
-          int y = 32*(yh - 32) + (yl - 96);
+        while (*pos < len && str[*pos] >= 32) {
+          char c1 = str[(*pos)++];
 
-          yVals.push_back(y);
+          chars.push_back(c1);
+        }
 
-          yh = str[(*pos)++]; // 32->63
+        if (*pos >= len) {
+          *pos = pos1 - 1;
+          return false;
+        }
 
-          if      (yh >= 96) {
-            yl = yh;
-            yh = 32;
-          }
-          else if (yh >= 64) {
-            yl = yh;
-            yh = 32;
+        //---
+
+        // Low X : 64-95   High X : 32-63
+        // Low Y : 96-127  High Y : 32-63
+        uint ic = 0;
+        uint nc = chars.size();
+
+        while (true) {
+          // read yl, yh
+          int yl = last_yl;
+          int yh = last_yh;
+
+          if (ic < nc) {
+            char c1 = chars[ic++];
+
+            // low y
+            if      (c1 >= 96) {
+              yl = c1;
+            }
+            // low x
+            else if (c1 >= 64) {
+              --ic;
+            }
+            // high x or y
+            else {
+              yh = c1;
+
+              if (ic < nc) {
+                c1 = chars[ic++];
+
+                // low y
+                if      (c1 >= 96) {
+                  yl = c1;
+                }
+                // low x
+                else if (c1 >= 64) {
+                  --ic;
+                  --ic;
+                }
+                else {
+                  assert(false);
+                }
+              }
+            }
           }
           else {
-            yl = str[(*pos)++]; // 96-127
+            break;
           }
 
-          if (yl < 96)
-            break;
-        }
+          //---
 
-        xh = yh; // 32-63
-        xl = yl; // 64-95
+          // read extra bits
+          int x1 = last_x1, y1 = last_y1;
 
-        assert(xh >= 32 && xh <= 63);
-        assert(xl >= 64 && xl <= 95);
+          if (ic < nc && chars[ic] >= 96) {
+            int xy = yl - 96;
 
-        int x = 32*(xh - 32) + (xl - 64);
+            yl = chars[ic++];
 
-        for (const auto &y : yVals) {
-          GS_escape_.x = x;
-          GS_escape_.y = y;
+            assert(yl >= 96 && yl <= 127);
 
-          handleEscape(&GS_escape_);
+            x1 =  xy & 0x03;
+            y1 = (xy & 0x0C) >> 2;
+          }
+          else {
+          }
+
+          //---
+
+          // read xl, xh
+          int xl = last_xl;
+          int xh = last_xh;
+
+          if (ic < nc) {
+            int c1 = chars[ic++];
+
+            // low y
+            if      (c1 >= 96) {
+              --ic;
+            }
+            // low x
+            else if (c1 >= 64) {
+              xl = c1;
+            }
+            // high x or y
+            else {
+              xh = c1;
+
+              if (ic < nc) {
+                c1 = chars[ic++];
+
+                // low y
+                if      (c1 >= 96) {
+                  --ic;
+                  --ic;
+                }
+                // low x
+                else if (c1 >= 64) {
+                  xl = c1;
+                }
+                else {
+                  assert(false);
+                }
+              }
+            }
+          }
+
+          //---
+
+          last_xl = xl; last_xh = xh;
+          last_yl = yl; last_yh = yh;
+          last_x1 = x1; last_y1 = y1;
+
+          //---
+
+          bool xvalid = false; int x = 0;
+          bool yvalid = false; int y = 0;
+
+          if (xh >= 32 && xh <= 63 && xl >= 64 && xl <= 95) {
+            xvalid = true;
+            x      = 128*(xh - 32) + 4*(xl - 64) + x1;
+          }
+
+          if (yh >= 32 && yh <= 63 && yl >= 96 && yl <= 127) {
+            yvalid = true;
+            y      = 128*(yh - 32) + 4*(yl - 96) + y1;
+          }
+
+          //---
+
+          if (xvalid && yvalid) {
+            GS_escape_.x    = x;
+            GS_escape_.y    = y;
+            GS_escape_.mode = mode;
+
+            handleEscape(&GS_escape_);
+          }
+          else {
+            assert(false);
+          }
+
+          //---
+
+          mode = CEscapeDataGS::Mode::LINE_TO;
         }
       }
       else {
@@ -652,6 +789,7 @@ addControlChar(const char *str, uint *pos)
     case 0x1E: { // RS ,^^
       if (is4014()) {
         // Incremental Plot Mode
+        assert(false);
       }
 
       handleEscape(&RS_escape_);
@@ -661,6 +799,9 @@ addControlChar(const char *str, uint *pos)
     case 0x1F: { // US ,^_
       if (is4014()) {
         // Alpha Mode
+        //assert(false);
+
+        UNHANDLED1("4014 Escape", c)
       }
 
       handleEscape(&US_escape_);
@@ -999,31 +1140,21 @@ bool
 CEscapeParse::
 is4014Escape(const char *str, uint *pos)
 {
-  bool flag = false;
-
-  //uint pos1 = *pos;
-
   assert(str[*pos] == '\033');
 
-  ++(*pos);
+  if (str[++(*pos)] == '\0')
+    return false;
 
-  char c = str[*pos];
+  char c = str[(*pos)++];
 
   switch (c) {
     // ESC ETX : Switch to VT100 Mode
     case '\003': {
-      static int num[1];
-
       setInEscape(false);
 
-      num[0] = 38;
+      Tek4014_escape_.mode = CEscapeDataTek4014::Mode::VT100;
 
-      DECRST_escape_.num = num;
-      DECRST_escape_.nn  = 1;
-
-      handleEscape(&DECRST_escape_);
-
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1031,26 +1162,30 @@ is4014Escape(const char *str, uint *pos)
     case '\005': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode = CEscapeDataTek4014::Mode::STATUS;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
     // ESC FF: PAGE (Clear Screen)
     case '\014': {
-      static int num[1];
-
       setInEscape(false);
 
-      num[0] = 2;
+      Tek4014_escape_.mode = CEscapeDataTek4014::Mode::CLEAR;
 
-      ED_escape_.num = num;
-      ED_escape_.nn  = 1;
+      handleEscape(&Tek4014_escape_);
 
-      handleEscape(&ED_escape_);
+      break;
+    }
+    // ESC SO : End 4015 APL mode
+    case '\015': {
+      setInEscape(false);
 
-      flag = true;
+      Tek4014_escape_.mode  = CEscapeDataTek4014::Mode::APL;
+      Tek4014_escape_.value = 0;
+
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1058,9 +1193,10 @@ is4014Escape(const char *str, uint *pos)
     case '\016': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode  = CEscapeDataTek4014::Mode::APL;
+      Tek4014_escape_.value = 1;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1068,9 +1204,9 @@ is4014Escape(const char *str, uint *pos)
     case '\027': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode = CEscapeDataTek4014::Mode::COPY;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1078,19 +1214,20 @@ is4014Escape(const char *str, uint *pos)
     case '\030': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode = CEscapeDataTek4014::Mode::BYPASS;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
     // ESC SUB : GIN mode
     case '\032': {
+      // start crosshair cursor, clears graph mode, activates bypass condition
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode = CEscapeDataTek4014::Mode::GIN;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1098,9 +1235,9 @@ is4014Escape(const char *str, uint *pos)
     case '\034': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode = CEscapeDataTek4014::Mode::POINT_PLOT;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1108,9 +1245,10 @@ is4014Escape(const char *str, uint *pos)
     case '8': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode  = CEscapeDataTek4014::Mode::CHAR_SET;
+      Tek4014_escape_.value = 1;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1118,9 +1256,10 @@ is4014Escape(const char *str, uint *pos)
     case '9': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode  = CEscapeDataTek4014::Mode::CHAR_SET;
+      Tek4014_escape_.value = 2;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1128,9 +1267,10 @@ is4014Escape(const char *str, uint *pos)
     case ':': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode  = CEscapeDataTek4014::Mode::CHAR_SET;
+      Tek4014_escape_.value = 3;
 
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1138,11 +1278,10 @@ is4014Escape(const char *str, uint *pos)
     case ';': {
       setInEscape(false);
 
-      UNHANDLED1("Escape", c)
+      Tek4014_escape_.mode  = CEscapeDataTek4014::Mode::CHAR_SET;
+      Tek4014_escape_.value = 0;
 
-      flag = true;
-
-      flag = true;
+      handleEscape(&Tek4014_escape_);
 
       break;
     }
@@ -1150,12 +1289,11 @@ is4014Escape(const char *str, uint *pos)
     case '`': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::SOLID;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1163,12 +1301,11 @@ is4014Escape(const char *str, uint *pos)
     case 'a': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::DOTTED;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1176,12 +1313,11 @@ is4014Escape(const char *str, uint *pos)
     case 'b': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::DOT_DASH;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1189,12 +1325,11 @@ is4014Escape(const char *str, uint *pos)
     case 'c': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::SHORT_DASH;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1202,12 +1337,11 @@ is4014Escape(const char *str, uint *pos)
     case 'd': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::LONG_DASH;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::NORMAL;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1215,12 +1349,11 @@ is4014Escape(const char *str, uint *pos)
     case 'h': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::SOLID;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1228,12 +1361,11 @@ is4014Escape(const char *str, uint *pos)
     case 'i': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::DOTTED;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1241,12 +1373,11 @@ is4014Escape(const char *str, uint *pos)
     case 'j': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::DOT_DASH;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1254,12 +1385,11 @@ is4014Escape(const char *str, uint *pos)
     case 'k': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::SHORT_DASH;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1267,12 +1397,11 @@ is4014Escape(const char *str, uint *pos)
     case 'l': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::LONG_DASH;
       Tek4014_escape_.zAxis     = CEscapeDataTek4014::ZAxis::DEFOCUSED;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1280,12 +1409,11 @@ is4014Escape(const char *str, uint *pos)
     case 'p': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::SOLID;
-      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+      Tek4014_escape_.writeMode = CEscapeDataTek4014::WriteMode::WRITETHRU;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1293,12 +1421,11 @@ is4014Escape(const char *str, uint *pos)
     case 'q': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::DOTTED;
-      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+      Tek4014_escape_.writeMode = CEscapeDataTek4014::WriteMode::WRITETHRU;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1306,12 +1433,11 @@ is4014Escape(const char *str, uint *pos)
     case 'r': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::DOT_DASH;
-      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+      Tek4014_escape_.writeMode = CEscapeDataTek4014::WriteMode::WRITETHRU;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1319,12 +1445,11 @@ is4014Escape(const char *str, uint *pos)
     case 's': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::SHORT_DASH;
-      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+      Tek4014_escape_.writeMode = CEscapeDataTek4014::WriteMode::WRITETHRU;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
@@ -1332,19 +1457,19 @@ is4014Escape(const char *str, uint *pos)
     case 't': {
       setInEscape(false);
 
+      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::LINE_STYLE;
       Tek4014_escape_.lineStyle = CEscapeLineStyle::LONG_DASH;
-      Tek4014_escape_.mode      = CEscapeDataTek4014::Mode::WRITETHRU;
+      Tek4014_escape_.writeMode = CEscapeDataTek4014::WriteMode::WRITETHRU;
 
       handleEscape(&Tek4014_escape_);
-
-      flag = true;
 
       break;
     }
 
     // OSC Ps ; Pt BEL
     case ']': {
-      flag = isOSCEscape(str, pos);
+      bool flag = isOSCEscape(str, pos);
+
       return flag;
     }
 
@@ -1357,7 +1482,7 @@ is4014Escape(const char *str, uint *pos)
     }
   }
 
-  return flag;
+  return true;
 }
 
 bool
@@ -1884,14 +2009,16 @@ isVT52AlphaEscape(const char *str, uint *pos)
     case 'F': {
       setInEscape(false);
 
-      // TODO
+      UNHANDLED1("VT52 Escape", c)
+
       break;
     }
     // Exit graphics mode.
     case 'G': {
       setInEscape(false);
 
-      // TODO
+      UNHANDLED1("VT52 Escape", c)
+
       break;
     }
     // Move the cursor to the home position.
@@ -1942,6 +2069,7 @@ isVT52AlphaEscape(const char *str, uint *pos)
       EL_escape_.nn  = 1;
 
       handleEscape(&EL_escape_);
+
       break;
     }
     // Move the cursor to given row and column.
@@ -1950,8 +2078,8 @@ isVT52AlphaEscape(const char *str, uint *pos)
 
       setInEscape(false);
 
-      num[0] = str[(*pos)++];
-      num[1] = str[(*pos)++];
+      num[0] = str[(*pos)++] - 0x1F;
+      num[1] = str[(*pos)++] - 0x1F;
 
       CUP_escape_.num = num;
       CUP_escape_.nn  = 2;
@@ -2083,7 +2211,7 @@ isCSIEscape(const char *str, uint *pos)
 
     uint pos = 0;
 
-    addControlChar(str, &pos);
+    addControlChar(str, &pos, 1);
   }
 
   if (cc2 > 0 && cc2 < 32) {
@@ -2091,7 +2219,7 @@ isCSIEscape(const char *str, uint *pos)
 
     uint pos = 0;
 
-    addControlChar(str, &pos);
+    addControlChar(str, &pos, 1);
   }
 
   if      (c1 != '\0') {
@@ -2161,6 +2289,11 @@ isCSIEscape(const char *str, uint *pos)
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
+          if      (nn == 1 && num[0] == 2)
+            setVT52(false);
+          else if (nn == 1 && num[0] == 38)
+            set4014(true);
+
           DECSET_escape_.num = num;
           DECSET_escape_.nn  = nn;
 
@@ -2196,6 +2329,11 @@ isCSIEscape(const char *str, uint *pos)
       case 'l': {
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
+
+          if      (nn == 1 && num[0] == 2)
+            setVT52(true);
+          else if (nn == 1 && num[0] == 38)
+            set4014(false);
 
           DECRST_escape_.num = num;
           DECRST_escape_.nn  = nn;
@@ -4332,7 +4470,12 @@ void
 CEscapeDataGS::
 print(std::ostream &os) const
 {
-  os << typeToName(type) << ";" << x << ";" << y;
+  if      (mode == Mode::NONE)
+    os << typeToName(type);
+  else if (mode == Mode::MOVE_TO)
+    os << typeToName(type) << ";0;" << x << ";" << y;
+  else if (mode == Mode::LINE_TO)
+    os << typeToName(type) << ";1;" << x << ";" << y;
 }
 
 void
@@ -4388,6 +4531,64 @@ CEscapeDataTek4014::
 print(std::ostream &os) const
 {
   os << typeToName(type) << ";";
+
+  if      (mode == Mode::STATUS) {
+    os << "STATUS";
+  }
+  else if (mode == Mode::APL) {
+    os << "APL;" << (value ? "1" : "0");
+  }
+  else if (mode == Mode::COPY) {
+    os << "COPY";
+  }
+  else if (mode == Mode::BYPASS) {
+    os << "BYPASS";
+  }
+  else if (mode == Mode::GIN) {
+    os << "GIN";
+  }
+  else if (mode == Mode::POINT_PLOT) {
+    os << "POINT_PLOT";
+  }
+  else if (mode == Mode::CHAR_SET) {
+    os << "CHAR_SET;";
+
+    if      (value == 0)
+      os << "SMALL";
+    else if (value == 1)
+      os << "LARGE";
+    else if (value == 2)
+      os << "2";
+    else if (value == 3)
+      os << "3";
+    else
+      assert(false);
+  }
+  else if (mode == Mode::LINE_STYLE) {
+    os << "LINE_STYLE;";
+
+    if (lineStyle == CEscapeLineStyle::SOLID &&
+        zAxis     == ZAxis::NORMAL &&
+        writeMode == WriteMode::NORMAL)
+      os << "NORMAL";
+
+    if (lineStyle != CEscapeLineStyle::SOLID) {
+      if      (lineStyle == CEscapeLineStyle::DOTTED)
+        os << "DOTTED";
+      else if (lineStyle == CEscapeLineStyle::DOT_DASH)
+        os << "DOT_DASH";
+      else if (lineStyle == CEscapeLineStyle::SHORT_DASH)
+        os << "SHORT_DASH";
+      else if (lineStyle == CEscapeLineStyle::LONG_DASH)
+        os << "LONG_DASH";
+    }
+
+    if (zAxis != ZAxis::NORMAL)
+      os << "DEFOCUSED";
+
+    if (writeMode != WriteMode::NORMAL)
+      os << "WRITETHRU";
+  }
 }
 
 void

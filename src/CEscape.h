@@ -216,6 +216,8 @@ namespace CEscape {
   bool parseEscape(const std::string &str, std::vector<std::string> &args);
 
   bool parseMouse(const std::string &str, int *button, int *x, int *y, bool *release);
+
+  std::string tek4014Coord(uint x, uint y);
 }
 
 #endif

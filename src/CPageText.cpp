@@ -424,15 +424,6 @@ isSelected(int row, int col) const
   return false;
 }
 
-char
-CPageText::
-getCharSet(int id) const
-{
-  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
-
-  return notifier->getCharSet(id);
-}
-
 const CCellStyle &
 CPageText::
 getStyle() const
@@ -472,7 +463,9 @@ void
 CPageText::
 setPosition(const CTextPos &pos)
 {
-  assert(pos.getRow() >= 0 && pos.getRow() < int(getPageRows()));
+  makePosValid(pos);
+
+  //assert(pos.getRow() >= 0 && pos.getRow() < int(getPageRows()));
 
   pos_ = pos;
 
@@ -610,6 +603,13 @@ CPageText::
 getCharHeight() const
 {
   return fonts_.getFont(CFONT_STYLE_NORMAL)->getCharHeight();
+}
+
+uint
+CPageText::
+getCharAscent() const
+{
+  return fonts_.getFont(CFONT_STYLE_NORMAL)->getCharAscent();
 }
 
 void
@@ -1063,6 +1063,29 @@ setChar(char c)
 
 void
 CPageText::
+setUtfChar(ulong c)
+{
+  makePosValid();
+
+  CTextCell *old_cell = getCell(getPosition());
+
+  CTextCell *new_cell = old_cell->convertTo(CTextCell::Type::UTF_CHAR);
+
+  CTextUtfCharCell *char_cell = dynamic_cast<CTextUtfCharCell *>(new_cell);
+
+  char_cell->setStyle(getStyle());
+
+  char_cell->setUtfChar(c);
+
+  if (new_cell != old_cell) {
+    old_cell->getLine()->replaceCell(old_cell, new_cell);
+
+    delete old_cell;
+  }
+}
+
+void
+CPageText::
 addLink(const std::string &linkDest, const std::string &linkName)
 {
   makePosValid();
@@ -1124,18 +1147,7 @@ void
 CPageText::
 addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color, const CEscapeLineStyle &style)
 {
-  if (is4014())
-    add4014Line(x1, y1, x2, y2, color, style);
-  else
-    pixelLines_.push_back(PixelLine(x1, y1, x2, y2, color, style));
-}
-
-void
-CPageText::
-add4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
-            const CEscapeLineStyle &style)
-{
-  pixel4014Lines_.push_back(PixelLine(x1, y1, x2, y2, color, style));
+  pixelLines_.push_back(PixelLine(x1, y1, x2, y2, color, style));
 }
 
 void
@@ -1357,7 +1369,7 @@ loadEsc(const std::string &fileName)
       while ((c = file.getC()) != EOF) {
         buffer += c;
 
-        if (buffer.size() > 512)
+        if (buffer.size() > buffer_size_)
           break;
       }
 
@@ -1374,7 +1386,7 @@ loadEsc(const std::string &fileName)
       while ((c = file.getC()) != EOF) {
         buffer += c;
 
-        if (buffer.size() > 512)
+        if (buffer.size() > buffer_size_)
           break;
       }
 
@@ -1523,6 +1535,90 @@ notifyStateChange()
 {
   update();
 }
+
+//------
+
+void
+CPageText::
+exec4014BEL()
+{
+}
+
+void
+CPageText::
+exec4014BS()
+{
+}
+
+void
+CPageText::
+exec4014TAB()
+{
+}
+
+void
+CPageText::
+exec4014LF()
+{
+}
+
+void
+CPageText::
+exec4014VT()
+{
+}
+
+void
+CPageText::
+exec4014FF()
+{
+}
+
+void
+CPageText::
+exec4014CR()
+{
+}
+
+void
+CPageText::
+exec4014CUF()
+{
+}
+
+void
+CPageText::
+set4014GIN(bool)
+{
+}
+
+void
+CPageText::
+set4014CharSet(int)
+{
+}
+
+void
+CPageText::
+clear4014()
+{
+}
+
+void
+CPageText::
+draw4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+             const CEscapeLineStyle &style)
+{
+  pixel4014Lines_.push_back(PixelLine(x1, y1, x2, y2, color, style));
+}
+
+void
+CPageText::
+draw4014Char(char)
+{
+}
+
+//------
 
 void
 CPageText::

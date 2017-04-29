@@ -11,12 +11,15 @@ class CTextCell;
 class CTextImageCell;
 class CTextLinkCell;
 class CTextCharCell;
+class CTextStyleCell;
+class CTextUtfCharCell;
 
 class CQPageTextCanvas : public CQWindow {
   Q_OBJECT
 
   Q_PROPERTY(uint charWidth  READ charWidth)
   Q_PROPERTY(uint charHeight READ charHeight)
+  Q_PROPERTY(uint charAscent READ charAscent)
   Q_PROPERTY(uint xOffset    READ xOffset)
   Q_PROPERTY(uint yOffset    READ yOffset)
 
@@ -64,6 +67,7 @@ class CQPageTextCanvas : public CQWindow {
 
   uint charWidth () const { return charWidth_ ; }
   uint charHeight() const { return charHeight_; }
+  uint charAscent() const { return charAscent_; }
 
   uint xOffset() const { return x_offset_; }
   uint yOffset() const { return y_offset_; }
@@ -90,14 +94,19 @@ class CQPageTextCanvas : public CQWindow {
 
   void drawLine(QPainter *painter, int y, const CPageTextLine *line);
 
-  void drawCharCell (QPainter *painter, int x, int y, const CTextCharCell *char_cell);
-  void drawImageCell(QPainter *painter, int x, int y, const CTextImageCell *image_cell);
-  void drawLinkCell (QPainter *painter, int x, int y, const CTextLinkCell *link_cell);
-  void drawEmptyCell(QPainter *painter, int x, int y, const CTextCell *cell);
+  void drawCharCell   (QPainter *painter, int x, int y, const CTextCharCell *char_cell);
+  void drawUtfCharCell(QPainter *painter, int x, int y, const CTextUtfCharCell *char_cell);
+  void drawImageCell  (QPainter *painter, int x, int y, const CTextImageCell *image_cell);
+  void drawLinkCell   (QPainter *painter, int x, int y, const CTextLinkCell *link_cell);
+  void drawEmptyCell  (QPainter *painter, int x, int y, const CTextCell *cell);
+
+  void drawStyleCharCell(QPainter *painter, int x, int y,
+                         const CTextStyleCell *style_cell, ulong c);
 
   void drawCursor(QPainter *painter);
 
-  void drawCharCellChar(QPainter *painter, int x, int y, const CTextCharCell *char_cell);
+  void drawStyleCharCellChar(QPainter *painter, int x, int y,
+                             const CTextStyleCell *style_cell, ulong c);
 
   void mousePressEvent  (QMouseEvent *) override;
   void mouseReleaseEvent(QMouseEvent *) override;
@@ -129,7 +138,7 @@ class CQPageTextCanvas : public CQWindow {
   LinkCellList      link_cells_;
   bool              do_blink_ { false };
   int               blink_num_ { 0 };
-  uint              charWidth_ { 0 }, charHeight_ { 0 };
+  uint              charWidth_ { 8 }, charHeight_ { 12 }, charAscent_ { 2 };
   uint              x_offset_ { 0 }, y_offset_ { 0 };
   bool              pressed_ { false };
   bool              selecting_ { false };

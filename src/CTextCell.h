@@ -14,6 +14,7 @@ class CTextCell {
   enum class Type {
     NONE,
     CHAR,
+    UTF_CHAR,
     IMAGE,
     LINK
   };
@@ -40,15 +41,11 @@ class CTextCell {
 
 //------
 
-class CTextCharCell : public CTextCell {
+class CTextStyleCell : public CTextCell {
  public:
-  CTextCharCell(CPageTextLine *line, char c='\0') :
-   CTextCell(line, Type::CHAR), c_(c) {
+  CTextStyleCell(CPageTextLine *line, Type type) :
+   CTextCell(line, type) {
   }
-
-  char getChar() const;
-
-  void setChar(char c);
 
   const CCellStyle &getStyle() const { return style_; }
   void setStyle(const CCellStyle &style);
@@ -56,8 +53,37 @@ class CTextCharCell : public CTextCell {
   void resetStyle();
 
  protected:
-  char       c_ { '\0' };
   CCellStyle style_;
+};
+
+//------
+
+class CTextCharCell : public CTextStyleCell {
+ public:
+  CTextCharCell(CPageTextLine *line, char c='\0') :
+   CTextStyleCell(line, Type::CHAR), c_(c) {
+  }
+
+  char getChar() const { return c_; }
+  void setChar(char c);
+
+ protected:
+  char c_ { '\0' };
+};
+
+//------
+
+class CTextUtfCharCell : public CTextStyleCell {
+ public:
+  CTextUtfCharCell(CPageTextLine *line, char c='\0') :
+   CTextStyleCell(line, Type::UTF_CHAR), c_(c) {
+  }
+
+  ulong getUtfChar() const { return c_; }
+  void setUtfChar(ulong c);
+
+ protected:
+  ulong c_ { '\0' };
 };
 
 //------

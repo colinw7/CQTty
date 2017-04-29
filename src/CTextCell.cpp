@@ -25,9 +25,26 @@ convertTo(Type type)
   CTextCell *cell1 = nullptr;
 
   switch (type) {
-    case Type::CHAR:
-      cell1 = new CTextCharCell(line_);
+    case Type::CHAR: {
+      CTextCharCell *charCell = new CTextCharCell(line_);
+
+      cell1 = charCell;
+
+      if (type_ == Type::UTF_CHAR)
+        charCell->setStyle(static_cast<CTextUtfCharCell *>(this)->getStyle());
+
       break;
+    }
+    case Type::UTF_CHAR: {
+      CTextUtfCharCell *utfCharCell = new CTextUtfCharCell(line_);
+
+      cell1 = utfCharCell;
+
+      if (type_ == Type::CHAR)
+        utfCharCell->setStyle(static_cast<CTextCharCell *>(this)->getStyle());
+
+      break;
+    }
     default:
       break;
   }
@@ -63,12 +80,21 @@ getBBox(int x, int y, int cw, int ch, bool doubleHeight) const
 
 //---------
 
-char
-CTextCharCell::
-getChar() const
+void
+CTextStyleCell::
+setStyle(const CCellStyle &style)
 {
-  return c_;
+  style_ = style;
 }
+
+void
+CTextStyleCell::
+resetStyle()
+{
+  style_.reset();
+}
+
+//---------
 
 void
 CTextCharCell::
@@ -77,18 +103,13 @@ setChar(char c)
   c_ = c;
 }
 
-void
-CTextCharCell::
-setStyle(const CCellStyle &style)
-{
-  style_ = style;
-}
+//---------
 
 void
-CTextCharCell::
-resetStyle()
+CTextUtfCharCell::
+setUtfChar(ulong c)
 {
-  style_.reset();
+  c_ = c;
 }
 
 //---------

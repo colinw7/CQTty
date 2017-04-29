@@ -30,6 +30,7 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
   void setLineHeightStyle(uint row, const CCellLineHeightStyle &lineStyle) override;
 
   void setCell(uint row, uint col, char c, const CCellStyle &style) override;
+  void setUtfCell(uint row, uint col, ulong c, const CCellStyle &style) override;
 
   void addSizedImageChar(const std::string &, CImageFile *file, int, int, int, int) override;
   void addImageChar(const std::string &, CImageFile *file, int, int, int, int) override;
@@ -41,8 +42,11 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
   void addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color,
                const CEscapeLineStyle &style) override;
 
-  void setLinkCell(uint, uint, char, const CCellStyle &,
-                   const std::string &, const std::string &) override;
+  void setLinkCell(uint x, uint y, char c, const CCellStyle &style,
+                   const std::string &type, const std::string &value) override;
+  void setUtfLinkCell(uint x, uint y, ulong c, const CCellStyle &style,
+                      const std::string &type, const std::string &value) override;
+
   void addLink(const std::string &name, const std::string &path,
                const std::string &) override;
 
@@ -64,6 +68,8 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
   void setStyle(const CCellStyle &style) override;
 
   void notifyChar(uint, uint, char) override;
+  void notifyUtfChar(uint, uint, ulong) override;
+
   void notifyEnter(char c) override;
 
   void notifyStateChange() override;
@@ -122,6 +128,27 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
   void logDebug(const std::string &) const override;
   void logTrace(char) const override;
   void logTrace(const std::string &) const override;
+
+  //---
+
+  // 4014
+  void exec4014BEL() override;
+  void exec4014BS() override;
+  void exec4014TAB() override;
+  void exec4014LF() override;
+  void exec4014VT() override;
+  void exec4014FF() override;
+  void exec4014CR() override;
+  void exec4014CUF() override;
+
+  void set4014GIN(bool) override;
+
+  void set4014CharSet(int) override;
+
+  void clear4014() override;
+
+  void draw4014Line(int, int, int, int, const CEscapeColor &, const CEscapeLineStyle &) override;
+  void draw4014Char(char) override;
 
  private:
   CPageText *area_ { nullptr };

@@ -219,8 +219,15 @@ struct CEscapeDataStr : public CEscapeData {
 //---
 
 struct CEscapeDataGS : public CEscapeData {
-  int x { 0 };
-  int y { 0 };
+  enum class Mode {
+    NONE,
+    MOVE_TO,
+    LINE_TO
+  };
+
+  int  x    { 0 };
+  int  y    { 0 };
+  Mode mode { Mode::NONE };
 
   CEscapeDataGS(CEscapeType type) :
    CEscapeData(type) {
@@ -298,19 +305,35 @@ struct CEscapeDataOSC : public CEscapeData {
 
 // Tek 4014
 struct CEscapeDataTek4014 : public CEscapeData {
+  enum class Mode {
+    NONE,
+    VT100,
+    STATUS,
+    CLEAR,
+    APL,
+    COPY,
+    BYPASS,
+    GIN,
+    POINT_PLOT,
+    CHAR_SET,
+    LINE_STYLE
+  };
+
   enum class ZAxis {
     NORMAL,
     DEFOCUSED
   };
 
-  enum class Mode {
+  enum class WriteMode {
     NORMAL,
     WRITETHRU
   };
 
+  Mode             mode      { Mode::NONE };
   CEscapeLineStyle lineStyle { CEscapeLineStyle::SOLID };
   ZAxis            zAxis     { ZAxis::NORMAL };
-  Mode             mode      { Mode::NORMAL };
+  WriteMode        writeMode { WriteMode::NORMAL };
+  int              value     { 0 };
 
   CEscapeDataTek4014() :
    CEscapeData(CEscapeType::TEK4014) {
@@ -464,7 +487,7 @@ class CEscapeParse : public CEscapeParseIFace {
   void addOutputChars(const char *str, uint len);
 
   void addNormalChar(char c);
-  bool addControlChar(const char *str, uint *pos);
+  bool addControlChar(const char *str, uint *pos, uint len);
   void addEscapeChars(const char *str, uint len, uint *pos);
   void addEscapeChar(char c);
   void addGraphicChar(char c);

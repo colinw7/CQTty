@@ -128,8 +128,6 @@ class CPageText {
 
   virtual bool isSelected(int row, int col) const;
 
-  virtual char getCharSet(int id) const;
-
   virtual const CCellStyle &getStyle() const;
   virtual void setStyle(const CCellStyle &style);
 
@@ -154,6 +152,7 @@ class CPageText {
 
   virtual uint getCharWidth () const;
   virtual uint getCharHeight() const;
+  virtual uint getCharAscent() const;
 
   virtual void pixelsToChars(int w, int h, int *cols, int *rows);
   virtual void charsToPixels(int cols, int rows, int *w, int *h);
@@ -220,6 +219,8 @@ class CPageText {
 
   virtual void setChar(char c);
 
+  virtual void setUtfChar(ulong c);
+
   virtual void addLink(const std::string &linkDest, const std::string &linkName);
 
   virtual void addImage(const std::string &fileName, const CImagePtr &image);
@@ -228,9 +229,6 @@ class CPageText {
 
   virtual void addLine(int x1, int y1, int x2, int y2, const CEscapeColor &color,
                        const CEscapeLineStyle &style);
-
-  virtual void add4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
-                           const CEscapeLineStyle &style);
 
   virtual void setDirName(const std::string &dirName);
 
@@ -275,6 +273,29 @@ class CPageText {
 
   //---------
 
+  // 4014
+  virtual void exec4014BEL();
+  virtual void exec4014BS();
+  virtual void exec4014TAB();
+  virtual void exec4014LF();
+  virtual void exec4014VT();
+  virtual void exec4014FF();
+  virtual void exec4014CR();
+  virtual void exec4014CUF();
+
+  virtual void set4014GIN(bool b);
+
+  virtual void set4014CharSet(int charSet);
+
+  virtual void clear4014();
+
+  virtual void draw4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+                            const CEscapeLineStyle &style);
+
+  virtual void draw4014Char(char c);
+
+  //---------
+
   // virtuals to be implemented by graphical page text
   virtual void scrollBottom() { }
 
@@ -296,6 +317,7 @@ class CPageText {
   virtual void checkLines();
 
  protected:
+  uint                     buffer_size_ { 512 };
   CFontSet                 fonts_;
   CCellStyle               style_;
   CTextPos                 pos_ { 0, 0 };

@@ -151,7 +151,7 @@ class CCellStyle {
     //---
 
     if (underscore_)
-      style = CFontStyle(uint(style) | uint(CFONT_STYLE_STRIKEOUT));
+      style = CFontStyle(uint(style) | uint(CFONT_STYLE_UNDERLINE));
 
     if (strikeout_)
       style = CFontStyle(uint(style) | uint(CFONT_STYLE_STRIKEOUT));

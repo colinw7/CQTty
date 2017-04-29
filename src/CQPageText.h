@@ -21,6 +21,7 @@ class CQPageText : public QObject, public CPageText {
   Q_PROPERTY(uint pageCols      READ getPageCols      WRITE setPageCols     )
   Q_PROPERTY(uint charWidth     READ getCharWidth)
   Q_PROPERTY(uint charHeight    READ getCharHeight)
+  Q_PROPERTY(uint charAscent    READ getCharAscent)
   Q_PROPERTY(uint pageWidth     READ getPageWidth)
   Q_PROPERTY(uint pageHeight    READ getPageHeight)
   Q_PROPERTY(bool showToolbar   READ getShowToolBar   WRITE setShowToolBar  )
@@ -35,9 +36,6 @@ class CQPageText : public QObject, public CPageText {
   void setMoveOnClick(bool b) { moveOnClick_ = b; }
 
   void set4014(bool b) override;
-
-  void add4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
-                   const CEscapeLineStyle &style) override;
 
   void scrollBottom() override;
 
@@ -57,6 +55,24 @@ class CQPageText : public QObject, public CPageText {
   void update() override;
 
   CTty *getTty() const override;
+
+  void exec4014BS() override;
+  void exec4014TAB() override;
+  void exec4014LF() override;
+  void exec4014FF() override;
+  void exec4014CR() override;
+  void exec4014CUF() override;
+
+  void set4014GIN(bool b) override;
+
+  void set4014CharSet(int charSet) override;
+
+  void clear4014() override;
+
+  void draw4014Line(int x1, int y1, int x2, int y2, const CEscapeColor &color,
+                    const CEscapeLineStyle &style) override;
+
+  void draw4014Char(char c) override;
 
  private:
   CQPageTextWidget *widget_   { nullptr };

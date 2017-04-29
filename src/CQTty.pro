@@ -35,6 +35,7 @@ CQPageTextWidget.cpp \
 CQTty.cpp \
 CTextCell.cpp \
 CTty.cpp \
+CVFont.cpp \
 main.cpp \
 
 HEADERS += \
@@ -64,6 +65,7 @@ CTextCell.h \
 CTextPos.h \
 CTextTabs.h \
 CTty.h \
+CVFont.h \
 
 DESTDIR     = ../bin
 OBJECTS_DIR = ../obj

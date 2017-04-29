@@ -45,13 +45,34 @@ class CEscapeHandler : public CEscapeParse {
   //---
 
   // char set
-  struct CharSet {
-    int  num { 0 }; // 0-3
-    char id[4];     // char set ids
-
+  class CharSet {
+   public:
     CharSet() {
-      memset(id, 'B', sizeof(id));
+      memset(id_, 'B', sizeof(id_));
     }
+
+    int getCurrentSet() const { return num_; }
+    void setCurrentSet(int i) { assert(i >= 0 && i < 4); num_ = i; }
+
+    char getSetType(int i) const {
+      assert(i >= 0 && i < 4);
+
+      return id_[i];
+    }
+
+    void setSetType(int i, char c) {
+      assert(i >= 0 && i < 4);
+
+      id_[i] = c;
+    }
+
+    char getCurrentSetType() const {
+      return getSetType(getCurrentSet());
+    }
+
+   private:
+    int  num_ { 0 }; // 0-3
+    char id_[4];     // char set ids
   };
 
   //---
@@ -224,6 +245,9 @@ class CEscapeHandler : public CEscapeParse {
   void incOutputCol();
   void decOutputCol();
 
+  void setWrapChar(bool b) { wrapChar_ = b; }
+  bool isWrapChar() const { return wrapChar_; }
+
   //------
 
  public:
@@ -297,8 +321,8 @@ class CEscapeHandler : public CEscapeParse {
   virtual bool getControl8Bit() const { return state_.getControl8Bit(); }
   virtual void setControl8Bit(bool flag);
 
-  virtual CEscapeLineStyle getLineStyle() const { return state_.getLineStyle(); }
-  virtual void setLineStyle(CEscapeLineStyle style);
+  virtual CEscapeLineStyle get4014LineStyle() const { return state_.get4014LineStyle(); }
+  virtual void set4014LineStyle(CEscapeLineStyle style);
 
   //------
 
@@ -323,20 +347,12 @@ class CEscapeHandler : public CEscapeParse {
   //------
 
   // save/restore
-
   virtual void saveCursor();
   virtual void restoreCursor();
 
   //------
 
-  // char set
-
-  virtual char getCharSet(int id) const;
-
-  //------
-
   // colors
-
   virtual const CRGBA &getColor(CEscapeColor color) const;
   virtual void         setColor(CEscapeColor color, const CRGBA &rgba);
 
@@ -346,10 +362,10 @@ class CEscapeHandler : public CEscapeParse {
   //------
 
   // mouse
-
   virtual void sendMousePress  (int button, int x, int y);
   virtual void sendMouseRelease(int button, int x, int y);
 
+  virtual void send4014MousePress(int button, int x, int y);
   //------
 
   // interface to be implemented
@@ -374,6 +390,7 @@ class CEscapeHandler : public CEscapeParse {
   virtual void setLineHeightStyle(uint row, const CCellLineHeightStyle &lineStyle) = 0;
 
   virtual void setCell(uint row, uint col, char c, const CCellStyle &style) = 0;
+  virtual void setUtfCell(uint row, uint col, ulong c, const CCellStyle &style) = 0;
 
   virtual void addSizedImageChar(const std::string &path, CImageFile *file,
                                  int x1, int y1, int x2, int y2) = 0;
@@ -388,6 +405,9 @@ class CEscapeHandler : public CEscapeParse {
 
   virtual void setLinkCell(uint row, uint col, char c, const CCellStyle &style,
                            const std::string &linkName, const std::string &linkDest) = 0;
+  virtual void setUtfLinkCell(uint row, uint col, ulong c, const CCellStyle &style,
+                              const std::string &linkName, const std::string &linkDest) = 0;
+
   virtual void addLink(const std::string &name, const std::string &path,
                        const std::string &type) = 0;
 
@@ -409,6 +429,8 @@ class CEscapeHandler : public CEscapeParse {
   virtual void setStyle(const CCellStyle &style) = 0;
 
   virtual void notifyChar(uint x, uint y, char c) = 0;
+  virtual void notifyUtfChar(uint x, uint y, ulong c) = 0;
+
   virtual void notifyEnter(char c) = 0;
 
   virtual void notifyStateChange() = 0;
@@ -488,6 +510,27 @@ class CEscapeHandler : public CEscapeParse {
   virtual void logTrace(char c) const;
   virtual void logTrace(const std::string &str) const = 0;
 
+  //---
+
+  // 4014
+  virtual void exec4014BEL() { }
+  virtual void exec4014BS() { }
+  virtual void exec4014TAB() { }
+  virtual void exec4014LF() { }
+  virtual void exec4014VT() { }
+  virtual void exec4014FF() { }
+  virtual void exec4014CR() { }
+  virtual void exec4014CUF() { }
+
+  virtual void set4014GIN(bool) { }
+
+  virtual void set4014CharSet(int) { }
+
+  virtual void clear4014() { }
+
+  virtual void draw4014Line(int, int, int, int, const CEscapeColor &, const CEscapeLineStyle &) { }
+  virtual void draw4014Char(char) { }
+
  private:
   // private data
   CEscapeState state_;
@@ -496,6 +539,7 @@ class CEscapeHandler : public CEscapeParse {
   CharSet      charset_;
   SaveCursor   save_cursor_;
   CRGBA        cursor_color_;
+  bool         wrapChar_ { false };
   bool         debug_ { false };
   bool         trace_ { false };
 };

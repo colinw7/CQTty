@@ -3,6 +3,7 @@
 #include <CCellStyle.h>
 #include <CWindow.h>
 #include <CRGBName.h>
+#include <CUtf8.h>
 #include <limits>
 #include <sstream>
 
@@ -41,49 +42,142 @@ void
 CEscapeHandler::
 handleChar(char c)
 {
-  char char_set = getCharSet(0);
+  if (is4014()) {
+    set4014CharSet(state_.get4014CharSet());
 
-  if (char_set == '0') {
-    if      (c == 95           ) c  = 127;
-    else if (c >  95 && c < 127) c -= 95;
+    draw4014Char(c);
+
+    exec4014CUF();
+
+    return;
   }
 
+  ulong utf_char { 0 };
+  bool  is_utf   { false };
+
+  char char_set = charset_.getCurrentSetType();
+
+  if (char_set == '0') {
+    //if      (c == 95           ) c  = 127;
+    //else if (c >  95 && c < 127) c -= 95;
+
+    // 0x5f Blank                              U+00A0 NO-BREAK SPACE
+    // 0x60 Diamond                    ◆       U+25C6 BLACK DIAMOND
+    // 0x61 Checkerboard               ▒       U+2592 MEDIUM SHADE
+    // 0x62 HT                         ␉       U+2409 SYMBOL FOR HORIZONTAL TABULATION
+    // 0x63 FF                         ␌       U+240C SYMBOL FOR FORM FEED
+    // 0x64 CR                         ␍       U+240D SYMBOL FOR CARRIAGE RETURN
+    // 0x65 LF                         ␊       U+240A SYMBOL FOR LINE FEED
+    // 0x66 Degree symbol              °       U+00B0 DEGREE SIGN
+    // 0x67 Plus/minus                 ±       U+00B1 PLUS-MINUS SIGN
+    // 0x68 NL                         ␤       U+2424 SYMBOL FOR NEWLINE
+    // 0x69 VT                         ␋       U+240B SYMBOL FOR VERTICAL TABULATION
+    // 0x6a Lower-right corner         ┘       U+2518 BOX DRAWINGS LIGHT UP AND LEFT
+    // 0x6b Upper-right corner         ┐       U+2510 BOX DRAWINGS LIGHT DOWN AND LEFT
+    // 0x6c Upper-left corner          ┌       U+250C BOX DRAWINGS LIGHT DOWN AND RIGHT
+    // 0x6d Lower-left corner          └       U+2514 BOX DRAWINGS LIGHT UP AND RIGHT
+    // 0x6e Crossing Lines             ┼       U+253C BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL
+    // 0x6f Horizontal line - scan 1   ⎺       U+23BA HORIZONTAL SCAN LINE-1
+    // 0x70 Horizontal line - scan 3   ⎻       U+23BB HORIZONTAL SCAN LINE-3
+    // 0x71 Horizontal line - scan 5   ─       U+2500 BOX DRAWINGS LIGHT HORIZONTAL
+    // 0x72 Horizontal line - scan 7   ⎼       U+23BC HORIZONTAL SCAN LINE-7
+    // 0x73 Horizontal line - scan 9   ⎽       U+23BD HORIZONTAL SCAN LINE-9
+    // 0x74 Left "T"                   ├       U+251C BOX DRAWINGS LIGHT VERTICAL AND RIGHT
+    // 0x75 Right "T"                  ┤       U+2524 BOX DRAWINGS LIGHT VERTICAL AND LEFT
+    // 0x76 Bottom "T"                 ┴       U+2534 BOX DRAWINGS LIGHT UP AND HORIZONTAL
+    // 0x77 Top "T"                    ┬       U+252C BOX DRAWINGS LIGHT DOWN AND HORIZONTAL
+    // 0x78 Vertical bar               │       U+2502 BOX DRAWINGS LIGHT VERTICAL
+    // 0x79 Less than or equal to      ≤       U+2264 LESS-THAN OR EQUAL TO
+    // 0x7a Greater than or equal to   ≥       U+2265 GREATER-THAN OR EQUAL TO
+    // 0x7b Pi                         π       U+03C0 GREEK SMALL LETTER PI
+    // 0x7c Not equal to               ≠       U+2260 NOT EQUAL TO
+    // 0x7d UK pound symbol            £       U+00A3 POUND SIGN
+    // 0x7e Centered dot               ·       U+00B7 MIDDLE DOT
+    if (c >= 0x5f && c <= 0x7e) {
+      static std::string utf_chars =
+        "\u00A0\u25C6\u2592\u2409\u240C\u240D\u240A\u00B0"
+        "\u00B1\u2424\u240B\u2518\u2510\u250C\u2514\u253C"
+        "\u23BA\u23BB\u2500\u23BC\u23BD\u251C\u2524\u2534"
+        "\u252C\u2502\u2264\u2265\u03C0\u2260\u00A3\u00B7";
+
+      int ind = (c - 0x5f);
+
+      int i1, i2;
+
+      if (CUtf8::indexChar(utf_chars, ind, i1, i2)) {
+        utf_char = CUtf8::readNextChar(utf_chars, i1, utf_chars.length());
+        is_utf   = true;
+      }
+    }
+  }
+
+  //---
+
+  // TODO: log utf ?
+
   logTrace(c);
+
+  //---
 
   int x = getDataPos().x;
   int y = getDataPos().y;
 
-  bool visible = true;
+  int num_cols = getNumDataCols();
+
+  //---
 
   // if at last column then:
   //  wrap mode   : move to next line
   //  no wrap mode: clipped
-  if (x >= int(getNumDataCols())) {
-    if (getLineWrap()) {
-      while (x >= int(getNumDataCols())) {
-        x -= int(getNumDataCols());
+  bool visible = true;
+
+  if (x == num_cols - 1) {
+    if (! isWrapChar()) {
+      setWrapChar(true);
+    }
+    else {
+      if (getLineWrap()) {
+        x = 0;
 
         ++y;
       }
-    }
-    else {
-      visible = false;
+      else {
+        visible = false;
+      }
     }
   }
 
-  notifyChar(x, y, c);
+  //---
+
+  if (is_utf)
+    notifyUtfChar(x, y, utf_char);
+  else
+    notifyChar(x, y, c);
+
+  //---
 
   if (getInsertMode())
     shiftRight();
 
   if (visible) {
-    if (getInAPCType())
-      setLinkCell(y, x, c, getStyle(), getAPCTypeType(), getAPCTypeValue());
-    else
-      setCell(y, x, c, getStyle());
+    if (is_utf) {
+      if (getInAPCType())
+        setUtfLinkCell(y, x, utf_char, getStyle(), getAPCTypeType(), getAPCTypeValue());
+      else
+        setUtfCell(y, x, utf_char, getStyle());
+    }
+    else {
+      if (getInAPCType())
+        setLinkCell(y, x, c, getStyle(), getAPCTypeType(), getAPCTypeValue());
+      else
+        setCell(y, x, c, getStyle());
+    }
   }
 
-  incOutputCol();
+  //---
+
+  if (x < num_cols - 1)
+    incOutputCol();
 }
 
 void
@@ -137,49 +231,44 @@ handleEscape(const CEscapeData *esc)
     }
     // Bell (Ctrl-G)
     case CEscapeType::BEL: {
-      beep();
+      if (is4014()) {
+        exec4014BEL();
+      }
+      else {
+        beep();
+      }
+
       break;
     }
     // Backspace (Ctrl-H)
     case CEscapeType::BS: {
-      decOutputCol();
+      if (is4014()) {
+        exec4014BS();
+      }
+      else {
+        decOutputCol();
+      }
+
       break;
     }
-    // Horizontal Tab (HT) (Ctrl-I).
+    // Horizontal Tab (TAB, HT) (Ctrl-I).
     case CEscapeType::HT: {
-      nextTab();
+      if (is4014()) {
+        exec4014TAB();
+      }
+      else {
+        nextTab();
+      }
+
       break;
     }
     // Line Feed or New Line (NL).
     // (LF is Ctrl-J).
     case CEscapeType::LF: {
-      incOutputRow();
-
-      if (getLfNlMode()) {
-        setDispCol(0);
-
-        notifyEnter('\n');
-      }
-
-      break;
-    }
-    // Vertical Tab (Ctrl-K).  This is treated the same as LF.
-    case CEscapeType::VT: {
-      incOutputRow();
-
-      if (getLfNlMode()) {
-        setDispCol(0);
-
-        notifyEnter('\v');
-      }
-
-      break;
-    }
-    // Form Feed or New Page (NP)
-    // (FF is Ctrl-L). FF is treated the same as LF .
-    case CEscapeType::FF: {
-      if (getFfNpMode()) {
-        clearScreen();
+      if (is4014()) {
+        // move cursor down one line, wrap to top if off bottom selecting bypass condition
+        // clear bypass condition
+        exec4014LF();
       }
       else {
         incOutputRow();
@@ -187,7 +276,47 @@ handleEscape(const CEscapeData *esc)
         if (getLfNlMode()) {
           setDispCol(0);
 
-          notifyEnter('\f');
+          notifyEnter('\n');
+        }
+      }
+
+      break;
+    }
+    // Vertical Tab (Ctrl-K).  This is treated the same as LF.
+    case CEscapeType::VT: {
+      if (is4014()) {
+        exec4014VT();
+      }
+      else {
+        incOutputRow();
+
+        if (getLfNlMode()) {
+          setDispCol(0);
+
+          notifyEnter('\v');
+        }
+      }
+
+      break;
+    }
+    // Form Feed or New Page (NP)
+    // (FF is Ctrl-L). FF is treated the same as LF .
+    case CEscapeType::FF: {
+      if (is4014()) {
+        exec4014FF();
+      }
+      else {
+        if (getFfNpMode()) {
+          clearScreen();
+        }
+        else {
+          incOutputRow();
+
+          if (getLfNlMode()) {
+            setDispCol(0);
+
+            notifyEnter('\f');
+          }
         }
       }
 
@@ -195,22 +324,29 @@ handleEscape(const CEscapeData *esc)
     }
     // Carriage Return (Ctrl-M)
     case CEscapeType::CR: {
-      setDispCol(0);
+      if (is4014()) {
+        // Carriage return, resets Terminal from Graph to Alpha Mode
+        // canceles crosshair cursor
+        exec4014CR();
+      }
+      else {
+        setDispCol(0);
 
-      notifyEnter('\r');
+        notifyEnter('\r');
+      }
 
       break;
     }
     // Shift Out (Ctrl-N) -> Switch to Alternate Character Set.
     // This invokes the G1 character set.
     case CEscapeType::SO: {
-      charset_.num = 1;
+      charset_.setCurrentSet(1);
       break;
     }
     // Shift In (Ctrl-O) -> Switch to Standard Character Set.
     // This invokes the G0 character set (the default).
     case CEscapeType::SI: {
-      charset_.num = 0;
+      charset_.setCurrentSet(0);
       break;
     }
     case CEscapeType::DLE: {
@@ -263,13 +399,15 @@ handleEscape(const CEscapeData *esc)
       const CEscapeDataGS *escg = dynamic_cast<const CEscapeDataGS *>(esc);
 
       if (is4014()) {
-        state_.addPoint(escg->x, escg->y);
+        state_.add4014Point(escg->x, escg->y);
 
-        if (state_.points().size() > 1) {
-          auto &p1 = state_.points()[state_.points().size() - 2];
-          auto &p2 = state_.points()[state_.points().size() - 1];
+        if (escg->mode == CEscapeDataGS::Mode::LINE_TO) {
+          if (state_.get4014Points().size() > 1) {
+            auto &p1 = state_.get4014Points()[state_.get4014Points().size() - 2];
+            auto &p2 = state_.get4014Points()[state_.get4014Points().size() - 1];
 
-          addLine(p1.x, p1.y, p2.x, p2.y, CEscapeColor::WHITE, getLineStyle());
+            draw4014Line(p1.x, p1.y, p2.x, p2.y, CEscapeColor::WHITE, get4014LineStyle());
+          }
         }
       }
       else {
@@ -1159,8 +1297,10 @@ escapeCUD(int num)
 
   if (num <= 0) num = 1;
 
-  if (getDataPos().y + num >= int(getNumDataRows()))
-    num = getNumDataRows() - 1 - getDataPos().y;
+  int num_rows = getNumDataRows();
+
+  if (getDataPos().y + num >= num_rows)
+    num = num_rows - 1 - getDataPos().y;
 
   for (int i = 0; i < num; ++i)
     incOutputRow();
@@ -1176,8 +1316,10 @@ escapeCUF(int num)
 
   if (num <= 0) num = 1;
 
-  if (getDataPos().x + num >= int(getNumDataCols()))
-    num = getNumDataCols() - 1 - getDataPos().x;
+  int num_cols = getNumDataCols();
+
+  if (getDataPos().x + num >= num_cols)
+    num = num_cols - 1 - getDataPos().x;
 
   for (int i = 0; i < num; ++i)
     incOutputCol();
@@ -1190,6 +1332,8 @@ CEscapeHandler::
 escapeCUB(int num)
 {
   logTrace("<CUB;" + CStrUtil::toString(num) + ">");
+
+  setWrapChar(false);
 
   if (num <= 0) num = 1;
 
@@ -1307,6 +1451,8 @@ void
 CEscapeHandler::
 escapeDispPos(int row, int col)
 {
+  setWrapChar(false);
+
   // if origin mode make sure it is in scroll region
   if (getOriginMode()) {
     int scroll_bottom = getScrollBottom();
@@ -1323,8 +1469,7 @@ escapeDispPos(int row, int col)
   getDispSize(&rows, &cols);
 
   row = std::min(std::max(row, 1), int(rows));
-//col = std::min(std::max(col, 1), int(cols));
-  col = std::max(col, 1);
+  col = std::min(std::max(col, 1), int(cols));
 
   setDispPos(row - 1, col - 1);
 }
@@ -2804,6 +2949,8 @@ escapeDECDHL(CEscapeDataDECDHL::Pos pos)
     setLineHeightStyle(y, CCellLineHeightStyle::DOUBLE_TOP);
   else
     setLineHeightStyle(y, CCellLineHeightStyle::DOUBLE_BOTTOM);
+
+  setLineWidthStyle(y, CCellLineWidthStyle::DOUBLE);
 }
 
 // DEC Single Width Line
@@ -2813,7 +2960,8 @@ escapeDECSWL()
 {
   int y = getDataPos().y;
 
-  setLineWidthStyle(y, CCellLineWidthStyle::SINGLE);
+  setLineWidthStyle (y, CCellLineWidthStyle ::SINGLE);
+  setLineHeightStyle(y, CCellLineHeightStyle::SINGLE);
 }
 
 // DEC Double Width Line
@@ -2823,7 +2971,8 @@ escapeDECDWL()
 {
   int y = getDataPos().y;
 
-  setLineWidthStyle(y, CCellLineWidthStyle::DOUBLE);
+  setLineWidthStyle (y, CCellLineWidthStyle ::DOUBLE);
+  setLineHeightStyle(y, CCellLineHeightStyle::SINGLE);
 }
 
 void
@@ -2854,7 +3003,7 @@ CEscapeHandler::
 escapeDesignateG0(char c)
 {
   // Designate G0 Character Set (ISO 2022, VT100).
-  // Final character C for designating 94-character sets. In this list, 0 , A and B
+  // Final character C for designating 94-character sets. In this list, 0, A and B
   // apply to VT100 and up, the remainder to VT220 and up. The VT220 character sets,
   // together with the Portuguese character set are activated by the National
   // Replacement Character controls. The A is a special case, since it is also
@@ -2877,28 +3026,28 @@ escapeDesignateG0(char c)
   //   C = Z  -> Spanish.
   //   C = H  or 7  -> Swedish.
   //   C = =  -> Swiss.
-  charset_.id[0] = c;
+  charset_.setSetType(0, c);
 }
 
 void
 CEscapeHandler::
 escapeDesignateG1(char c)
 {
-  charset_.id[1] = c;
+  charset_.setSetType(1, c);
 }
 
 void
 CEscapeHandler::
 escapeDesignateG2(char c)
 {
-  charset_.id[2] = c;
+  charset_.setSetType(2, c);
 }
 
 void
 CEscapeHandler::
 escapeDesignateG3(char c)
 {
-  charset_.id[3] = c;
+  charset_.setSetType(3, c);
 }
 
 // Saves cursor position, character attribute (graphic rendition),
@@ -3023,7 +3172,9 @@ void
 CEscapeHandler::
 escapeIND()
 {
-  if (getDataPos().y >= int(getNumDataRows() - 1))
+  int num_rows = getNumDataRows();
+
+  if (getDataPos().y >= num_rows - 1)
     scrollUp();
   else
     incOutputRow();
@@ -3035,7 +3186,9 @@ void
 CEscapeHandler::
 escapeNEL()
 {
-  if (getDataPos().y >= int(getNumDataRows() - 1))
+  int num_rows = getNumDataRows();
+
+  if (getDataPos().y >= num_rows - 1)
     scrollUp();
   else
     incOutputRow();
@@ -3247,7 +3400,9 @@ void
 CEscapeHandler::
 escapeDECSLPP(int num_rows)
 {
-  setDispSize(num_rows, getNumDataCols());
+  int num_cols = getNumDataCols();
+
+  setDispSize(num_rows, num_cols);
 }
 
 void
@@ -3567,15 +3722,41 @@ void
 CEscapeHandler::
 escape4014(const CEscapeDataTek4014 *esc)
 {
-  state_.clearPoints();
+  if      (esc->mode == CEscapeDataTek4014::Mode::VT100) {
+    // switch to VT100 mode
+    escapeDECTEK(false);
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::STATUS) {
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::CLEAR) {
+    // erase screen, selects alpha, move cursor home, sets margin 1, clears bypass condition
+    clear4014();
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::COPY) {
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::BYPASS) {
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::GIN) {
+    set4014GIN(true);
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::POINT_PLOT) {
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::CHAR_SET) {
+    state_.set4014CharSet(esc->value);
+  }
+  else if (esc->mode == CEscapeDataTek4014::Mode::LINE_STYLE) {
+    state_.clear4014Points();
 
-  state_.setLineStyle(esc->lineStyle);
+    state_.set4014LineStyle(esc->lineStyle);
+  }
 }
 
 void
 CEscapeHandler::
 incOutputRow()
 {
+  setWrapChar(false);
+
   int row, col;
 
   getDispPos(&row, &col);
@@ -3594,6 +3775,8 @@ void
 CEscapeHandler::
 decOutputRow()
 {
+  setWrapChar(false);
+
   int row, col;
 
   getDispPos(&row, &col);
@@ -3612,6 +3795,8 @@ void
 CEscapeHandler::
 incOutputCol()
 {
+  setWrapChar(false);
+
   int row, col;
 
   getDispPos(&row, &col);
@@ -3625,6 +3810,8 @@ void
 CEscapeHandler::
 decOutputCol()
 {
+  setWrapChar(false);
+
   int row, col;
 
   getDispPos(&row, &col);
@@ -3864,9 +4051,9 @@ setControl8Bit(bool flag)
 
 void
 CEscapeHandler::
-setLineStyle(CEscapeLineStyle style)
+set4014LineStyle(CEscapeLineStyle style)
 {
-  state_.setLineStyle(style);
+  state_.set4014LineStyle(style);
 
   notifyStateChange();
 }
@@ -3877,6 +4064,8 @@ void
 CEscapeHandler::
 nextTab()
 {
+  setWrapChar(false);
+
   uint rows, cols;
 
   getDispSize(&rows, &cols);
@@ -3899,6 +4088,8 @@ void
 CEscapeHandler::
 prevTab()
 {
+  setWrapChar(false);
+
   uint rows, cols;
 
   getDispSize(&rows, &cols);
@@ -3987,6 +4178,8 @@ void
 CEscapeHandler::
 restoreCursor()
 {
+  setWrapChar(false);
+
   setDispPos(save_cursor_.row, save_cursor_.col);
 
   setState(save_cursor_.state);
@@ -3997,13 +4190,6 @@ restoreCursor()
 }
 
 //----------
-
-char
-CEscapeHandler::
-getCharSet(int id) const
-{
-  return charset_.id[id];
-}
 
 const CRGBA &
 CEscapeHandler::
@@ -4067,6 +4253,30 @@ sendMouseRelease(int button, int x, int y)
   str[4] = char(x + 32);
   str[5] = char(y + 32);
   str[6] = '\0';
+
+  processString(str);
+}
+
+void
+CEscapeHandler::
+send4014MousePress(int button, int x, int y)
+{
+  static char str[6];
+
+  if      (button == 1)
+    str[0] = char(uchar(0x80) | uchar('l'));
+  else if (button == 2)
+    str[0] = char(uchar(0x80) | uchar('m'));
+  else if (button == 3)
+    str[0] = char(uchar(0x80) | uchar('r'));
+  else
+    str[0] = char(uchar(0x80) | uchar('?'));
+
+  str[1] = ((x >> 5) & 0x1F);
+  str[2] = ( x       & 0x1F);
+  str[3] = ((y >> 5) & 0x1F);
+  str[4] = ( y       & 0x1F);
+  str[5] = '\0';
 
   processString(str);
 }

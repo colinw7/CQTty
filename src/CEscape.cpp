@@ -2217,6 +2217,51 @@ parseMouse(const std::string &str, int *button, int *x, int *y, bool *release)
 
 //------------
 
+std::string
+CEscape::
+tek4014Coord(uint x, uint y)
+{
+  static unsigned char lloy = -1, lhix = -1, lhiy = -1, leb = -1;
+
+  if (x > 4095)
+    x = 4095;
+
+  if (y > 3071)
+    y = 3071;
+
+  uchar hiy = (y >> 7) & 0x1f;
+  uchar loy = (y >> 2) & 0x1f;
+  uchar hix = (x >> 7) & 0x1f;
+  uchar lox = (x >> 2) & 0x1f;
+
+  uchar eb = (x & 3) | ((y & 3) << 2);
+
+  std::string str;
+
+  if (hiy != lhiy)
+    str += char(hiy | 0x20);
+
+  if (eb != leb)
+    str += char(eb | 0x60);
+
+  if (eb != leb || loy != lloy || hix != lhix)
+    str += char(loy | 0x60);
+
+  if (hix != lhix)
+    str += char(hix | 0x20);
+
+  str += char(lox | 0x40);
+
+  lhiy = hiy;
+  lhix = hix;
+  lloy = loy;
+  leb  = eb;
+
+  return str;
+}
+
+//------------
+
 static bool
 parseInteger(const std::vector<std::string> &words, int pos, int *i, bool opt)
 {

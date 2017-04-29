@@ -10,6 +10,7 @@
 #include <CTextCell.h>
 #include <CEscape.h>
 #include <CEscapeColors.h>
+#include <CUtf8.h>
 
 #include <CQUtil.h>
 #include <CFileUtil.h>
@@ -86,6 +87,7 @@ paintEvent(QPaintEvent *)
 
   charWidth_  = area->getCharWidth ();
   charHeight_ = area->getCharHeight();
+  charAscent_ = area->getCharAscent();
 
   //------
 
@@ -282,6 +284,11 @@ drawLine(QPainter *painter, int y, const CPageTextLine *line)
 
       drawCharCell(painter, x, y, char_cell);
     }
+    else if (cell->getType() == CTextCell::Type::UTF_CHAR) {
+      const CTextUtfCharCell *char_cell = dynamic_cast<const CTextUtfCharCell *>(cell);
+
+      drawUtfCharCell(painter, x, y, char_cell);
+    }
     else if (cell->getType() == CTextCell::Type::NONE) {
       drawEmptyCell(painter, x, y, cell);
     }
@@ -323,7 +330,21 @@ void
 CQPageTextCanvas::
 drawCharCell(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
 {
-  const CCellStyle &style = char_cell->getStyle();
+  drawStyleCharCell(painter, x, y, char_cell, char_cell->getChar());
+}
+
+void
+CQPageTextCanvas::
+drawUtfCharCell(QPainter *painter, int x, int y, const CTextUtfCharCell *char_cell)
+{
+  drawStyleCharCell(painter, x, y, char_cell, char_cell->getUtfChar());
+}
+
+void
+CQPageTextCanvas::
+drawStyleCharCell(QPainter *painter, int x, int y, const CTextStyleCell *style_cell, ulong c)
+{
+  const CCellStyle &style = style_cell->getStyle();
 
   bool invert = false;
 
@@ -345,7 +366,7 @@ drawCharCell(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
 
   CRGBA bg = (! invert ? area->getBg(style) : area->getFg(style));
 
-  CIBBox2D bbox = char_cell->getBBox(x, y, charWidth(), charHeight(), false);
+  CIBBox2D bbox = style_cell->getBBox(x, y, charWidth(), charHeight(), false);
 
   painter->fillRect(CQUtil::toQRect(bbox), CQUtil::rgbaToColor(bg));
 
@@ -357,27 +378,26 @@ drawCharCell(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
 
   painter->setFont(font);
 
-  drawCharCellChar(painter, x, y, char_cell);
+  drawStyleCharCellChar(painter, x, y, style_cell, c);
 }
 
 void
 CQPageTextCanvas::
-drawCharCellChar(QPainter *painter, int x, int y, const CTextCharCell *char_cell)
+drawStyleCharCellChar(QPainter *painter, int x, int y, const CTextStyleCell *cell, ulong c)
 {
-  QFontMetrics fm(painter->font());
+  std::string str;
 
-  char c = char_cell->getChar();
+  if (! CUtf8::append(str, c))
+    return;
 
-  if (c == '\0') c = ' ';
+  QString text(str.c_str());
 
-  QString text(c);
-
-  CPageTextLine *line = char_cell->getLine();
+  CPageTextLine *line = cell->getLine();
 
   if (line->widthStyle () != CCellLineWidthStyle ::SINGLE ||
       line->heightStyle() != CCellLineHeightStyle::SINGLE) {
-    int tw = fm.width(text);
-    int th = fm.height();
+    int tw = charWidth ();
+    int th = charHeight();
 
     QImage qimage(QSize(tw, th), QImage::Format_ARGB32);
 
@@ -388,7 +408,7 @@ drawCharCellChar(QPainter *painter, int x, int y, const CTextCharCell *char_cell
     ipainter.setPen(painter->pen());
     ipainter.setFont(painter->font());
 
-    ipainter.drawText(QPoint(0, fm.ascent()), text);
+    ipainter.drawText(QPoint(0, charAscent()), text);
 
     if (line->heightStyle() != CCellLineHeightStyle::SINGLE) {
       int y1 = 0;
@@ -399,17 +419,36 @@ drawCharCellChar(QPainter *painter, int x, int y, const CTextCharCell *char_cell
         y2 = th - 1;
       }
 
-      for (int py = y1; py <= y2; ++py) {
-        int py1 = 2*(py - y1);
+      if (line->widthStyle() != CCellLineWidthStyle::SINGLE) {
+        for (int py = y1; py <= y2; ++py) {
+          int py1 = 2*(py - y1);
 
-        for (int px = 0; px < tw; ++px) {
-          QRgb rgb = qimage.pixel(px, py);
-          if (! rgb) continue;
+          for (int px = 0; px < tw; ++px) {
+            QRgb rgb = qimage.pixel(px, py);
+            if (! rgb) continue;
 
-          painter->setPen(rgb);
+            painter->setPen(rgb);
 
-          painter->drawPoint(x + px, y + py1 + 0);
-          painter->drawPoint(x + px, y + py1 + 1);
+            painter->drawPoint(x + 2*px + 0, y + py1 + 0);
+            painter->drawPoint(x + 2*px + 0, y + py1 + 1);
+            painter->drawPoint(x + 2*px + 1, y + py1 + 0);
+            painter->drawPoint(x + 2*px + 1, y + py1 + 1);
+          }
+        }
+      }
+      else {
+        for (int py = y1; py <= y2; ++py) {
+          int py1 = 2*(py - y1);
+
+          for (int px = 0; px < tw; ++px) {
+            QRgb rgb = qimage.pixel(px, py);
+            if (! rgb) continue;
+
+            painter->setPen(rgb);
+
+            painter->drawPoint(x + px, y + py1 + 0);
+            painter->drawPoint(x + px, y + py1 + 1);
+          }
         }
       }
     }
@@ -428,7 +467,7 @@ drawCharCellChar(QPainter *painter, int x, int y, const CTextCharCell *char_cell
     }
   }
   else {
-    painter->drawText(QPoint(x, y + fm.ascent()), text);
+    painter->drawText(QPoint(x, y + charAscent()), text);
   }
 }
 
@@ -503,7 +542,12 @@ drawCursor(QPainter *painter)
 
   const CTextCell *cell = area->getCell(pos);
 
-  const CTextCharCell *char_cell = dynamic_cast<const CTextCharCell *>(cell);
+  const CTextStyleCell *style_cell = nullptr;
+
+  if (cell->getType() == CTextCell::Type::CHAR ||
+      cell->getType() == CTextCell::Type::UTF_CHAR) {
+    style_cell = dynamic_cast<const CTextStyleCell *>(cell);
+  }
 
   int xf = (cell->getLine()->widthStyle() == CCellLineWidthStyle::DOUBLE ? 2 : 1);
 
@@ -528,8 +572,8 @@ drawCursor(QPainter *painter)
 
   //---
 
-  if (char_cell) {
-    const CCellStyle &style = char_cell->getStyle();
+  if (style_cell) {
+    const CCellStyle &style = style_cell->getStyle();
 
     if (! do_blink_ || blink_num_ == 0)
       painter->setPen(CQUtil::rgbaToColor(bg));
@@ -542,28 +586,50 @@ drawCursor(QPainter *painter)
 
     painter->setFont(font);
 
-    drawCharCellChar(painter, x, y, char_cell);
+    long c = (cell->getType() == CTextCell::Type::UTF_CHAR ?
+      dynamic_cast<const CTextUtfCharCell *>(cell)->getUtfChar() :
+      dynamic_cast<const CTextCharCell    *>(cell)->getChar());
 
-    if      (char_cell->getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_TOP) {
+    drawStyleCharCellChar(painter, x, y, style_cell, c);
+
+    if      (cell->getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_TOP) {
       CTextPos pos1(pos.getRow() + 1, pos.getCol());
 
       const CTextCell *cell1 = area->getCell(pos1);
 
-      const CTextCharCell *char_cell1 = dynamic_cast<const CTextCharCell *>(cell1);
+      const CTextStyleCell *style_cell1 = nullptr;
 
-      if (char_cell1)
-        drawCharCellChar(painter, x, y + charHeight(), char_cell1);
+      if (cell1->getType() == CTextCell::Type::CHAR ||
+          cell1->getType() == CTextCell::Type::UTF_CHAR)
+        style_cell1 = dynamic_cast<const CTextStyleCell *>(cell1);
+
+      if (style_cell1) {
+        long c1 = (cell1->getType() == CTextCell::Type::UTF_CHAR ?
+          dynamic_cast<const CTextUtfCharCell *>(cell1)->getUtfChar() :
+          dynamic_cast<const CTextCharCell    *>(cell1)->getChar());
+
+        drawStyleCharCellChar(painter, x, y + charHeight(), style_cell1, c1);
+      }
     }
-    else if (char_cell->getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM) {
+    else if (cell->getLine()->heightStyle() == CCellLineHeightStyle::DOUBLE_BOTTOM) {
       if (pos.getRow() > 0) {
         CTextPos pos1(pos.getRow() - 1, pos.getCol());
 
         const CTextCell *cell1 = area->getCell(pos1);
 
-        const CTextCharCell *char_cell1 = dynamic_cast<const CTextCharCell *>(cell1);
+        const CTextStyleCell *style_cell1 = nullptr;
 
-        if (char_cell1)
-          drawCharCellChar(painter, x, y - charHeight(), char_cell1);
+        if (cell1->getType() == CTextCell::Type::CHAR ||
+            cell1->getType() == CTextCell::Type::UTF_CHAR)
+          style_cell1 = dynamic_cast<const CTextStyleCell *>(cell1);
+
+        if (style_cell1) {
+          long c1 = (cell1->getType() == CTextCell::Type::UTF_CHAR ?
+            dynamic_cast<const CTextUtfCharCell *>(cell1)->getUtfChar() :
+            dynamic_cast<const CTextCharCell    *>(cell1)->getChar());
+
+          drawStyleCharCellChar(painter, x, y - charHeight(), style_cell1, c1);
+        }
       }
     }
   }
