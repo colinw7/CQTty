@@ -52,6 +52,8 @@ class CQPageText4014 : public QWidget {
 
   void paintEvent(QPaintEvent *);
 
+  void keyPressEvent(QKeyEvent *e);
+
   void mousePressEvent(QMouseEvent *);
   void mouseMotionEvent(QMouseEvent *);
   void mouseReleaseEvent(QMouseEvent *);

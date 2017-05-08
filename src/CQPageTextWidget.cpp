@@ -100,14 +100,14 @@ void
 CQPageTextWidget::
 hscrollSlot()
 {
-  update();
+  repaint();
 }
 
 void
 CQPageTextWidget::
 vscrollSlot()
 {
-  update();
+  repaint();
 }
 
 void
@@ -177,6 +177,13 @@ processString(const char *str)
 
 void
 CQPageTextWidget::
+pasteString(const char *str)
+{
+  area_->pasteString(str);
+}
+
+void
+CQPageTextWidget::
 flush()
 {
   area_->flush();
@@ -195,7 +202,7 @@ notifyPosition(const CTextPos &)
 {
   getStatusBar()->updateLabels();
 
-  text_->update();
+  repaint();
 }
 
 void
@@ -209,7 +216,7 @@ void
 CQPageTextWidget::
 notifyStyle(const CTextPos &)
 {
-  text_->update();
+  repaint();
 }
 
 void
@@ -366,4 +373,13 @@ rowColsToSize(int rows, int cols, int *w, int *h) const
 
   *w = cols*area_->getCharWidth () + vsize;
   *h = rows*area_->getCharHeight() + th + sh + hsize;
+}
+
+void
+CQPageTextWidget::
+repaint()
+{
+  update();
+
+  text_->repaint();
 }

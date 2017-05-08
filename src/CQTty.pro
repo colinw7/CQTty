@@ -32,6 +32,7 @@ CQPageTextState.cpp \
 CQPageTextStatus.cpp \
 CQPageTextToolBar.cpp \
 CQPageTextWidget.cpp \
+CQPageTextError.cpp \
 CQTty.cpp \
 CTextCell.cpp \
 CTty.cpp \
@@ -59,6 +60,7 @@ CQPageTextState.h \
 CQPageTextStatus.h \
 CQPageTextToolBar.h \
 CQPageTextWidget.h \
+CQPageTextError.h \
 CQTty.h \
 CQTtyPageTextWidget.h \
 CTextCell.h \

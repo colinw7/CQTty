@@ -22,6 +22,8 @@ class CQPageTextState : public QDialog {
   QLineEdit *addEdit(const std::string &name, int pos, QGridLayout *layout);
 
  public slots:
+  void saveConfig();
+
   void updateState();
 
   void updateInverseVideo();
@@ -31,6 +33,7 @@ class CQPageTextState : public QDialog {
   void updateSendFocusInOut();
   void updateScrollBottomKey();
   void updateScrollBottomTty();
+  void updateBracketedPaste();
   void updateAppCursorKeys();
   void updateInsertMode();
   void updateLineWrap();
@@ -62,6 +65,7 @@ class CQPageTextState : public QDialog {
   QCheckBox  *sendFocusInOut_   { nullptr };
   QCheckBox  *scrollBottomKey_  { nullptr };
   QCheckBox  *scrollBottomTty_  { nullptr };
+  QCheckBox  *bracketedPaste_   { nullptr };
   QCheckBox  *appCursorKeys_    { nullptr };
   QCheckBox  *insertMode_       { nullptr };
   QCheckBox  *lineWrap_         { nullptr };

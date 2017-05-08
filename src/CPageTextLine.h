@@ -29,6 +29,7 @@ class CPageTextLine {
   CTextCell *getCell(uint col);
 
   //---
+
   const CellList &cells() const { return cells_; }
 
   CellList::const_iterator beginCell() const;
@@ -58,9 +59,15 @@ class CPageTextLine {
 
   //---
 
+  void reset();
+
+  //---
+
   void eraseLeft(uint col);
   void eraseRight(uint col);
   void erase();
+
+  void resetLineStyle();
 
   //---
 

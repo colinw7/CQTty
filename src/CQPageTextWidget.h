@@ -59,6 +59,8 @@ class CQPageTextWidget : public QWidget {
 
   void processString(const char *str);
 
+  void pasteString(const char *str);
+
   void flush();
 
   void notifyPageSize(int rows, int cols);
@@ -76,6 +78,8 @@ class CQPageTextWidget : public QWidget {
 
   void sizeToRowCols(int w, int h, int *rows, int *cols) const;
   void rowColsToSize(int rows, int cols, int *w, int *h) const;
+
+  void repaint();
 
  private:
   void resizeEvent(QResizeEvent *);

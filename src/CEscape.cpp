@@ -32,9 +32,7 @@
 #define CTRL_Y_s ""
 #define CTRL_Z_s ""
 
-#define ESC_c ''
 #define ESC_s ""
-#define CSI_s "["
 #define OSC_s "]"
 #define ST_s  "\\"
 
@@ -556,7 +554,7 @@ decodeWindowOp(const std::string &str, WindowOp &op, std::string &arg1, std::str
 
   if (len < 3) return false;
 
-  if (str[0] != ESC_c || str[1] != '[' || str[len - 1] != 't')
+  if (str[0] != '\033' || str[1] != '[' || str[len - 1] != 't')
     return false;
 
   int i = 2;
@@ -708,9 +706,9 @@ CEscape::
 ICH(int n)
 {
   if (n < 0)
-    return CSI_s "@";
+    return CSI("@");
   else
-    return CSI_s + CStrUtil::toString(n) + "@";
+    return CSI(CStrUtil::toString(n) + "@");
 }
 
 std::string
@@ -718,9 +716,9 @@ CEscape::
 CUU(int n)
 {
   if (n < 0)
-    return CSI_s "A";
+    return CSI("A");
   else
-    return CSI_s + CStrUtil::toString(n) + "A";
+    return CSI(CStrUtil::toString(n) + "A");
 }
 
 std::string
@@ -728,9 +726,9 @@ CEscape::
 CUD(int n)
 {
   if (n < 0)
-    return CSI_s "B";
+    return CSI("B");
   else
-    return CSI_s + CStrUtil::toString(n) + "B";
+    return CSI(CStrUtil::toString(n) + "B");
 }
 
 std::string
@@ -738,9 +736,9 @@ CEscape::
 CUF(int n)
 {
   if (n < 0)
-    return CSI_s "C";
+    return CSI("C");
   else
-    return CSI_s + CStrUtil::toString(n) + "C";
+    return CSI(CStrUtil::toString(n) + "C");
 }
 
 std::string
@@ -748,9 +746,9 @@ CEscape::
 CUB(int n)
 {
   if (n < 0)
-    return CSI_s "D";
+    return CSI("D");
   else
-    return CSI_s + CStrUtil::toString(n) + "D";
+    return CSI(CStrUtil::toString(n) + "D");
 }
 
 std::string
@@ -758,9 +756,9 @@ CEscape::
 CNL(int n)
 {
   if (n < 0)
-    return CSI_s "E";
+    return CSI("E");
   else
-    return CSI_s + CStrUtil::toString(n) + "E";
+    return CSI(CStrUtil::toString(n) + "E");
 }
 
 std::string
@@ -768,9 +766,9 @@ CEscape::
 CPL(int n)
 {
   if (n < 0)
-    return CSI_s "F";
+    return CSI("F");
   else
-    return CSI_s + CStrUtil::toString(n) + "F";
+    return CSI(CStrUtil::toString(n) + "F");
 }
 
 std::string
@@ -778,9 +776,9 @@ CEscape::
 CHA(int n)
 {
   if (n < 0)
-    return CSI_s "G";
+    return CSI("G");
   else
-    return CSI_s + CStrUtil::toString(n) + "G";
+    return CSI(CStrUtil::toString(n) + "G");
 }
 
 std::string
@@ -788,9 +786,9 @@ CEscape::
 CUP(int row, int col)
 {
   if (row < 0 || col < 0)
-    return CSI_s "H";
+    return CSI("H");
   else
-    return CSI_s + CStrUtil::toString(row) + ";" + CStrUtil::toString(col) + "H";
+    return CSI(CStrUtil::toString(row) + ";" + CStrUtil::toString(col) + "H");
 }
 
 std::string
@@ -798,9 +796,9 @@ CEscape::
 CHT(int n)
 {
   if (n < 0)
-    return CSI_s "I";
+    return CSI("I");
   else
-    return CSI_s + CStrUtil::toString(n) + "I";
+    return CSI(CStrUtil::toString(n) + "I");
 }
 
 std::string
@@ -808,9 +806,9 @@ CEscape::
 ED(int n)
 {
   if (n < 0)
-    return CSI_s "J";
+    return CSI("J");
   else
-    return CSI_s + CStrUtil::toString(n) + "J";
+    return CSI(CStrUtil::toString(n) + "J");
 }
 
 std::string
@@ -818,9 +816,9 @@ CEscape::
 DECSED(int n)
 {
   if (n < 0)
-    return CSI_s "?J";
+    return CSI("?J");
   else
-    return CSI_s "?" + CStrUtil::toString(n) + "J";
+    return CSI("?" + CStrUtil::toString(n) + "J");
 }
 
 std::string
@@ -828,9 +826,9 @@ CEscape::
 EL(int n)
 {
   if (n < 0)
-    return CSI_s "K";
+    return CSI("K");
   else
-    return CSI_s + CStrUtil::toString(n) + "K";
+    return CSI(CStrUtil::toString(n) + "K");
 }
 
 std::string
@@ -838,9 +836,9 @@ CEscape::
 DECSEL(int n)
 {
   if (n < 0)
-    return CSI_s "?K";
+    return CSI("?K");
   else
-    return CSI_s "?" + CStrUtil::toString(n) + "K";
+    return CSI("?" + CStrUtil::toString(n) + "K");
 }
 
 std::string
@@ -848,9 +846,9 @@ CEscape::
 IL(int n)
 {
   if (n < 0)
-    return CSI_s "L";
+    return CSI("L");
   else
-    return CSI_s + CStrUtil::toString(n) + "L";
+    return CSI(CStrUtil::toString(n) + "L");
 }
 
 std::string
@@ -858,9 +856,9 @@ CEscape::
 DL(int n)
 {
   if (n < 0)
-    return CSI_s "M";
+    return CSI("M");
   else
-    return CSI_s + CStrUtil::toString(n) + "M";
+    return CSI(CStrUtil::toString(n) + "M");
 }
 
 std::string
@@ -868,9 +866,9 @@ CEscape::
 DCH(int n)
 {
   if (n < 0)
-    return CSI_s "P";
+    return CSI("P");
   else
-    return CSI_s + CStrUtil::toString(n) + "P";
+    return CSI(CStrUtil::toString(n) + "P");
 }
 
 std::string
@@ -878,9 +876,9 @@ CEscape::
 SU(int n)
 {
   if (n < 0)
-    return CSI_s "S";
+    return CSI("S");
   else
-    return CSI_s + CStrUtil::toString(n) + "S";
+    return CSI(CStrUtil::toString(n) + "S");
 }
 
 std::string
@@ -888,9 +886,9 @@ CEscape::
 SD(int n)
 {
   if (n < 0)
-    return CSI_s "T";
+    return CSI("T");
   else
-    return CSI_s + CStrUtil::toString(n) + "T";
+    return CSI(CStrUtil::toString(n) + "T");
 }
 
 std::string
@@ -898,9 +896,9 @@ CEscape::
 ECH(int n)
 {
   if (n < 0)
-    return CSI_s "X";
+    return CSI("X");
   else
-    return CSI_s + CStrUtil::toString(n) + "X";
+    return CSI(CStrUtil::toString(n) + "X");
 }
 
 std::string
@@ -908,9 +906,9 @@ CEscape::
 CBT(int n)
 {
   if (n < 0)
-    return CSI_s "Z";
+    return CSI("Z");
   else
-    return CSI_s + CStrUtil::toString(n) + "Z";
+    return CSI(CStrUtil::toString(n) + "Z");
 }
 
 std::string
@@ -918,9 +916,9 @@ CEscape::
 HPA(int n)
 {
   if (n < 0)
-    return CSI_s "`";
+    return CSI("`");
   else
-    return CSI_s + CStrUtil::toString(n) + "`";
+    return CSI(CStrUtil::toString(n) + "`");
 }
 
 std::string
@@ -928,9 +926,9 @@ CEscape::
 REP(int n)
 {
   if (n < 0)
-    return CSI_s "b";
+    return CSI("b");
   else
-    return CSI_s + CStrUtil::toString(n) + "b";
+    return CSI(CStrUtil::toString(n) + "b");
 }
 
 std::string
@@ -938,9 +936,9 @@ CEscape::
 DA1(int n)
 {
   if (n < 0)
-    return CSI_s "c";
+    return CSI("c");
   else
-    return CSI_s + CStrUtil::toString(n) + "c";
+    return CSI(CStrUtil::toString(n) + "c");
 }
 
 std::string
@@ -948,9 +946,9 @@ CEscape::
 DA2(int n)
 {
   if (n < 0)
-    return CSI_s ">c";
+    return CSI(">c");
   else
-    return CSI_s + std::string(">") + CStrUtil::toString(n) + "c";
+    return CSI(std::string(">") + CStrUtil::toString(n) + "c");
 }
 
 std::string
@@ -958,9 +956,9 @@ CEscape::
 VPA(int n)
 {
   if (n < 0)
-    return CSI_s "d";
+    return CSI("d");
   else
-    return CSI_s + CStrUtil::toString(n) + "d";
+    return CSI(CStrUtil::toString(n) + "d");
 }
 
 std::string
@@ -968,9 +966,9 @@ CEscape::
 HVP(int row, int col)
 {
   if (row == 1 && col == 1)
-    return CSI_s "f";
+    return CSI("f");
   else
-    return CSI_s + CStrUtil::toString(row) + ";" + CStrUtil::toString(col) + "f";
+    return CSI(CStrUtil::toString(row) + ";" + CStrUtil::toString(col) + "f");
 }
 
 std::string
@@ -978,9 +976,9 @@ CEscape::
 TBC(int n)
 {
   if (n < 0)
-    return CSI_s "g";
+    return CSI("g");
   else
-    return CSI_s + CStrUtil::toString(n) + "g";
+    return CSI(CStrUtil::toString(n) + "g");
 }
 
 std::string
@@ -988,9 +986,9 @@ CEscape::
 SM(int n)
 {
   if (n < 0)
-    return CSI_s "h";
+    return CSI("h");
   else
-    return CSI_s + CStrUtil::toString(n) + "h";
+    return CSI(CStrUtil::toString(n) + "h");
 }
 
 std::string
@@ -998,16 +996,16 @@ CEscape::
 DECSET(int n)
 {
   if (n < 0)
-    return CSI_s "?h";
+    return CSI("?h");
   else
-    return CSI_s "?" + CStrUtil::toString(n) + "h";
+    return CSI("?" + CStrUtil::toString(n) + "h");
 }
 
 std::string
 CEscape::
 DECSET(int n1, int n2)
 {
-  return CSI_s "?" + CStrUtil::toString(n1) + ";" + CStrUtil::toString(n2) + "h";
+  return CSI("?" + CStrUtil::toString(n1) + ";" + CStrUtil::toString(n2) + "h");
 }
 
 std::string
@@ -1015,9 +1013,9 @@ CEscape::
 MC(int n)
 {
   if (n < 0)
-    return CSI_s "i";
+    return CSI("i");
   else
-    return CSI_s + CStrUtil::toString(n) + "i";
+    return CSI(CStrUtil::toString(n) + "i");
 }
 
 std::string
@@ -1025,9 +1023,9 @@ CEscape::
 DECMC(int n)
 {
   if (n < 0)
-    return CSI_s "?i";
+    return CSI("?i");
   else
-    return CSI_s "?" + CStrUtil::toString(n) + "i";
+    return CSI("?" + CStrUtil::toString(n) + "i");
 }
 
 std::string
@@ -1035,9 +1033,9 @@ CEscape::
 RM(int n)
 {
   if (n < 0)
-    return CSI_s "l";
+    return CSI("l");
   else
-    return CSI_s + CStrUtil::toString(n) + "l";
+    return CSI(CStrUtil::toString(n) + "l");
 }
 
 std::string
@@ -1045,16 +1043,16 @@ CEscape::
 DECRST(int n)
 {
   if (n < 0)
-    return CSI_s "?l";
+    return CSI("?l");
   else
-    return CSI_s "?" + CStrUtil::toString(n) + "l";
+    return CSI("?" + CStrUtil::toString(n) + "l");
 }
 
 std::string
 CEscape::
 DECRST(int n1, int n2)
 {
-  return CSI_s "?" + CStrUtil::toString(n1) + ";" + CStrUtil::toString(n2) + "l";
+  return CSI("?" + CStrUtil::toString(n1) + ";" + CStrUtil::toString(n2) + "l");
 }
 
 std::string
@@ -1062,17 +1060,17 @@ CEscape::
 SGR(int n)
 {
   if (n < 0)
-    return CSI_s "m";
+    return CSI("m");
   else
-    return CSI_s + CStrUtil::toString(n) + "m";
+    return CSI(CStrUtil::toString(n) + "m");
 }
 
 std::string
 CEscape::
 SGR(int n, int r, int g, int b)
 {
-  return CSI_s + CStrUtil::toString(n) + ";" + CStrUtil::toString(r) + ";" +
-                 CStrUtil::toString(g) + ";" + CStrUtil::toString(b) + "m";
+  return CSI(CStrUtil::toString(n) + ";" + CStrUtil::toString(r) + ";" +
+             CStrUtil::toString(g) + ";" + CStrUtil::toString(b) + "m");
 }
 
 std::string
@@ -1082,7 +1080,7 @@ DSR(int n)
   if (n < 0)
     n = 0;
 
-  return CSI_s + CStrUtil::toString(n) + "n";
+  return CSI(CStrUtil::toString(n) + "n");
 }
 
 std::string
@@ -1092,14 +1090,14 @@ DECDSR(int n)
   if (n < 0)
     n = 0;
 
-  return CSI_s "?" + CStrUtil::toString(n) + "n";
+  return CSI("?" + CStrUtil::toString(n) + "n");
 }
 
 std::string
 CEscape::
 DECSTR()
 {
-  return CSI_s "!p";
+  return CSI("!p");
 }
 
 std::string
@@ -1109,7 +1107,7 @@ DECSCL(int n, int m)
   if (n < 0)
     n = 0;
 
-  return CSI_s + CStrUtil::toString(n) + ";" + CStrUtil::toString(m) + "\"p";
+  return CSI(CStrUtil::toString(n) + ";" + CStrUtil::toString(m) + "\"p");
 }
 
 std::string
@@ -1117,9 +1115,9 @@ CEscape::
 DECSTBM(int top, int bottom)
 {
   if (top < 0 || bottom < 0)
-    return CSI_s "r";
+    return CSI("r");
   else
-    return CSI_s + CStrUtil::toString(top) + ";" + CStrUtil::toString(bottom) + "r";
+    return CSI(CStrUtil::toString(top) + ";" + CStrUtil::toString(bottom) + "r");
 }
 
 std::string
@@ -1132,16 +1130,16 @@ DECCARA(int top, int left, int bottom, int right, int attr)
   if (right  < 0) right  = 0;
   if (attr   < 0) attr   = 0;
 
-  return CSI_s + CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
-                 CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + ";" +
-                 CStrUtil::toString(attr  ) + "$r";
+  return CSI(CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
+             CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + ";" +
+             CStrUtil::toString(attr  ) + "$r");
 }
 
 std::string
 CEscape::
 SC()
 {
-  return CSI_s "s";
+  return CSI("s");
 }
 
 std::string
@@ -1154,16 +1152,16 @@ DECRARA(int top, int left, int bottom, int right, int attr)
   if (right  < 0) right  = 0;
   if (attr   < 0) attr   = 0;
 
-  return CSI_s + CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
-                 CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + ";" +
-                 CStrUtil::toString(attr  ) + "$t";
+  return CSI(CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
+             CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + ";" +
+             CStrUtil::toString(attr  ) + "$t");
 }
 
 std::string
 CEscape::
 SC1()
 {
-  return CSI_s "u";
+  return CSI("u");
 }
 
 std::string
@@ -1180,10 +1178,10 @@ DECCRA(int src_top, int src_left, int src_bottom, int src_right, int src,
   if (dst_left   < 0) src_left   = 0;
   if (dst        < 0) dst        = 0;
 
-  return CSI_s + CStrUtil::toString(src_top   ) + ";" + CStrUtil::toString(src_left  ) + ";" +
-                 CStrUtil::toString(src_bottom) + ";" + CStrUtil::toString(src_right ) + ";" +
-                 CStrUtil::toString(src       ) + ";" + CStrUtil::toString(dst_top   ) + ";" +
-                 CStrUtil::toString(dst_left  ) + ";" + CStrUtil::toString(dst       ) + "$v";
+  return CSI(CStrUtil::toString(src_top   ) + ";" + CStrUtil::toString(src_left  ) + ";" +
+             CStrUtil::toString(src_bottom) + ";" + CStrUtil::toString(src_right ) + ";" +
+             CStrUtil::toString(src       ) + ";" + CStrUtil::toString(dst_top   ) + ";" +
+             CStrUtil::toString(dst_left  ) + ";" + CStrUtil::toString(dst       ) + "$v");
 }
 
 std::string
@@ -1195,8 +1193,8 @@ DECEFR(int top, int left, int bottom, int right)
   if (bottom < 0) bottom = 0;
   if (right  < 0) right  = 0;
 
-  return CSI_s + CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
-                 CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + "'w";
+  return CSI(CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
+             CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + "'w");
 }
 
 std::string
@@ -1205,7 +1203,7 @@ DECREQTPARM(int n)
 {
   if (n < 0) n = 0;
 
-  return CSI_s + CStrUtil::toString(n) + "x";
+  return CSI(CStrUtil::toString(n) + "x");
 }
 
 std::string
@@ -1214,7 +1212,7 @@ DECSACE(int n)
 {
   if (n < 0) n = 0;
 
-  return CSI_s + CStrUtil::toString(n) + "*x";
+  return CSI(CStrUtil::toString(n) + "*x");
 }
 
 std::string
@@ -1227,9 +1225,9 @@ DECFRA(int c, int top, int left, int bottom, int right)
   if (bottom < 0) bottom = 0;
   if (right  < 0) right  = 0;
 
-  return CSI_s + CStrUtil::toString(c     ) + ";" + CStrUtil::toString(top   ) + ";" +
-                 CStrUtil::toString(left  ) + ";" + CStrUtil::toString(bottom) + ";" +
-                 CStrUtil::toString(right ) + "$x";
+  return CSI(CStrUtil::toString(c     ) + ";" + CStrUtil::toString(top   ) + ";" +
+             CStrUtil::toString(left  ) + ";" + CStrUtil::toString(bottom) + ";" +
+             CStrUtil::toString(right ) + "$x");
 }
 
 std::string
@@ -1239,7 +1237,7 @@ DECELR(int n1, int n2)
   if (n1 < 0) n1 = 0;
   if (n2 < 0) n2 = 0;
 
-  return CSI_s + CStrUtil::toString(n1 ) + ";" + CStrUtil::toString(n2) + "'z";
+  return CSI(CStrUtil::toString(n1 ) + ";" + CStrUtil::toString(n2) + "'z");
 }
 
 std::string
@@ -1251,8 +1249,8 @@ DECERA(int top, int left, int bottom, int right)
   if (bottom < 0) bottom = 0;
   if (right  < 0) right  = 0;
 
-  return CSI_s + CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
-                 CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + "$z";
+  return CSI(CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
+             CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + "$z");
 }
 
 std::string
@@ -1261,7 +1259,7 @@ DECSLE(int n)
 {
   if (n < 0) n = 0;
 
-  return CSI_s + CStrUtil::toString(n) + "'{";
+  return CSI(CStrUtil::toString(n) + "'{");
 }
 
 std::string
@@ -1273,8 +1271,8 @@ DECSERA(int top, int left, int bottom, int right)
   if (bottom < 0) bottom = 0;
   if (right  < 0) right  = 0;
 
-  return CSI_s + CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
-                 CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + "${";
+  return CSI(CStrUtil::toString(top   ) + ";" + CStrUtil::toString(left  ) + ";" +
+             CStrUtil::toString(bottom) + ";" + CStrUtil::toString(right ) + "${");
 }
 
 std::string
@@ -1283,7 +1281,7 @@ DECRQLP(int n)
 {
   if (n < 0) n = 0;
 
-  return CSI_s + CStrUtil::toString(n) + "'|";
+  return CSI(CStrUtil::toString(n) + "'|");
 }
 
 std::string
@@ -1294,6 +1292,16 @@ DECSCNM(bool b)
     return DECSET(5);
   else
     return DECRST(5);
+}
+
+std::string
+CEscape::
+DECTEK(bool b)
+{
+  if (b)
+    return DECSET(38);
+  else
+    return DECRST(38);
 }
 
 void
@@ -1314,16 +1322,19 @@ APC(const std::string &str)
 //
 void
 CEscape::
-CSI(std::ostream &os, const std::string &str)
+CSI(std::ostream &os, const std::string &str, bool bit8)
 {
-  os << CSI(str);
+  os << CSI(str, bit8);
 }
 
 std::string
 CEscape::
-CSI(const std::string &str)
+CSI(const std::string &str, bool bit8)
 {
-  return ESC_s "[" + str;
+  if (! bit8)
+    return ESC_s "[" + str;
+  else
+    return "\x9b" + str;
 }
 
 //-------------
@@ -1336,6 +1347,34 @@ static bool checkNumArgs
 std::string
 CEscape::
 stringToEscape(const std::string &str)
+{
+  OptString ostr = stringToOptEscape(str);
+
+  if (! ostr.valid) {
+    std::cerr << "Invalid command: " <<  str << std::endl;
+    return "";
+  }
+
+  return ostr.str;
+}
+
+bool
+CEscape::
+stringToEscape(const std::string &str, std::string &escapeStr)
+{
+  OptString ostr = stringToOptEscape(str);
+
+  if (! ostr.valid)
+    return false;
+
+  escapeStr = ostr.str;
+
+  return true;
+}
+
+CEscape::OptString
+CEscape::
+stringToOptEscape(const std::string &str)
 {
   int i1, i2, i3, i4, i5;
 
@@ -1382,6 +1421,8 @@ stringToEscape(const std::string &str)
   else if (words[0] == "DEL") return DEL();
 
   else if (words[0] == "SP" ) return SP();
+
+  else if (words[0] == "ESC") return ESC();
 
   else if (words[0] == "IND") return IND();
   else if (words[0] == "NEL") return NEL();
@@ -1745,10 +1786,16 @@ stringToEscape(const std::string &str)
       return DECRQLP();
   }
   else if (words[0] == "DECSCNM") {
-    if (parseInteger(words, 1, &i1, true))
-      return DECSCNM(i1);
-    else
-      return DECSCNM();
+    if (! parseInteger(words, 1, &i1, true))
+      i1 = 1;
+
+    return DECSCNM(i1);
+  }
+  else if (words[0] == "DECTEK") {
+    if (! parseInteger(words, 1, &i1, true))
+      i1 = 1;
+
+    return DECTEK(i1);
   }
 
   else if (words[0] == "s") {
@@ -1796,18 +1843,17 @@ stringToEscape(const std::string &str)
       return APC("<pixel x=\"" + words[1] + "\" y=\"" + words[2] + "\" color=\"" +
                  words[3] + "\"/>");
     else
-      return "";
+      return OptString();
   }
   else if (words[0] == "line") {
     if (num_words > 5)
       return APC("<line x1=\"" + words[1] + "\" y1=\"" + words[2] + "\" "
                  "x2=\"" + words[3] + "\" y2=\"" + words[4] + "\" color=\"" + words[5] + "\"/>");
     else
-      return "";
+      return OptString();
   }
   else {
-    std::cerr << "Invalid command: " <<  words[0] << std::endl;
-    return "";
+    return OptString();
   }
 }
 
@@ -1914,9 +1960,9 @@ stringCSIOpToEscape(const std::vector<std::string> &words)
   uint num_words = words.size();
 
   if (num_words == 1)
-    return CSI_s;
+    return CSI();
 
-  std::string str = CSI_s;
+  std::string str = CSI();
 
   for (uint i = 1; i < num_words; ++i)
     str += words[i];

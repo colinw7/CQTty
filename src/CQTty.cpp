@@ -123,7 +123,9 @@ CQTty(QWidget *parent) :
 
   //------
 
-  loadConfig();
+  text_->getArea()->setConfig(&config_);
+
+  text_->getArea()->loadConfig();
 
   //------
 
@@ -132,23 +134,6 @@ CQTty(QWidget *parent) :
   connect(timer_, SIGNAL(timeout()), this, SLOT(flush()));
 
   timer_->start(75);
-}
-
-void
-CQTty::
-loadConfig()
-{
-  std::string fontFamily;
-
-  if (! config_.getValue("fontFamily", "", fontFamily))
-    fontFamily = "courier";
-
-  int fontSize;
-
-  if (! config_.getValue("fontSize", "", &fontSize))
-    fontSize = 12;
-
-  text_->getArea()->setFontSet(fontFamily, fontSize);
 }
 
 CQPageTextWidget *

@@ -19,8 +19,6 @@ class CQTty : public QWidget {
  public:
   CQTty(QWidget *parent=nullptr);
 
-  void loadConfig();
-
   CQPageTextWidget *getText() const;
 
   CTty *getTty() const { return tty_; }

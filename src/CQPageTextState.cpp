@@ -1,6 +1,7 @@
 #include <CQPageTextState.h>
 #include <CQPageText.h>
 #include <CQPageTextCanvas.h>
+#include <CQPageTextWidget.h>
 #include <CPageTextEscapeNotifier.h>
 #include <CQColorChooser.h>
 #include <CQIntegerEdit.h>
@@ -22,7 +23,7 @@
 
 CQPageTextState::
 CQPageTextState(CQPageText *text) :
- text_(text)
+ QDialog(text->widget()), text_(text)
 {
   setObjectName("state");
 
@@ -51,6 +52,7 @@ CQPageTextState(CQPageText *text) :
   sendFocusInOut_   = new QCheckBox("Send Focus In/Out");
   scrollBottomKey_  = new QCheckBox("Scroll Bottom Key");
   scrollBottomTty_  = new QCheckBox("Scroll Bottom TTY");
+  bracketedPaste_   = new QCheckBox("Bracketed Paste");
   appCursorKeys_    = new QCheckBox("Application Cursor Keys");
   insertMode_       = new QCheckBox("Insert Mode");
   lineWrap_         = new QCheckBox("Line Wrap");
@@ -76,6 +78,7 @@ CQPageTextState(CQPageText *text) :
   connect(sendFocusInOut_  , SIGNAL(clicked()), this, SLOT(updateSendFocusInOut  ()));
   connect(scrollBottomKey_ , SIGNAL(clicked()), this, SLOT(updateScrollBottomKey ()));
   connect(scrollBottomTty_ , SIGNAL(clicked()), this, SLOT(updateScrollBottomTty ()));
+  connect(bracketedPaste_  , SIGNAL(clicked()), this, SLOT(updateBracketedPaste  ()));
   connect(appCursorKeys_   , SIGNAL(clicked()), this, SLOT(updateAppCursorKeys   ()));
   connect(insertMode_      , SIGNAL(clicked()), this, SLOT(updateInsertMode      ()));
   connect(lineWrap_        , SIGNAL(clicked()), this, SLOT(updateLineWrap        ()));
@@ -101,7 +104,8 @@ CQPageTextState(CQPageText *text) :
   grid->addWidget(sendFocusInOut_  ,  2, 1);
   grid->addWidget(scrollBottomKey_ ,  3, 0);
   grid->addWidget(scrollBottomTty_ ,  3, 1);
-  grid->addWidget(appCursorKeys_   ,  4, 0);
+  grid->addWidget(bracketedPaste_  ,  4, 0);
+  grid->addWidget(appCursorKeys_   ,  4, 1);
   grid->addWidget(insertMode_      ,  5, 0);
   grid->addWidget(lineWrap_        ,  6, 0);
   grid->addWidget(ansiVt52Mode_    ,  7, 0);
@@ -214,12 +218,15 @@ CQPageTextState(CQPageText *text) :
 
   QHBoxLayout *buttonLayout = new QHBoxLayout;
 
+  QPushButton *saveButton   = new QPushButton("Save");
   QPushButton *updateButton = new QPushButton("Update");
   QPushButton *doneButton   = new QPushButton("Done");
 
+  connect(saveButton  , SIGNAL(clicked()), this, SLOT(saveConfig()));
   connect(updateButton, SIGNAL(clicked()), this, SLOT(updateState()));
   connect(doneButton  , SIGNAL(clicked()), this, SLOT(hide()));
 
+  buttonLayout->addWidget(saveButton);
   buttonLayout->addWidget(updateButton);
   buttonLayout->addWidget(doneButton);
   buttonLayout->addStretch();
@@ -271,6 +278,13 @@ addEdit(const std::string &name, int pos, QGridLayout *layout)
 
 void
 CQPageTextState::
+saveConfig()
+{
+  text_->saveConfig();
+}
+
+void
+CQPageTextState::
 updateState()
 {
   CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
@@ -282,6 +296,7 @@ updateState()
   sendFocusInOut_  ->setChecked(notifier->getSendFocusInOut());
   scrollBottomKey_ ->setChecked(notifier->getScrollBottomOnKey());
   scrollBottomTty_ ->setChecked(notifier->getScrollBottomOnTty());
+  bracketedPaste_  ->setChecked(notifier->getBracketedPasteMode());
   appCursorKeys_   ->setChecked(notifier->getApplicationCursorKeys());
   insertMode_      ->setChecked(notifier->getInsertMode());
   lineWrap_        ->setChecked(notifier->getLineWrap());
@@ -430,6 +445,15 @@ updateScrollBottomTty()
   CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
 
   notifier->setScrollBottomOnTty(scrollBottomTty_->isChecked());
+}
+
+void
+CQPageTextState::
+updateBracketedPaste()
+{
+  CPageTextEscapeNotifier *notifier = text_->getEscapeNotifier();
+
+  notifier->setBracketedPasteMode(bracketedPaste_->isChecked());
 }
 
 void

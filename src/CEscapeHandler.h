@@ -48,7 +48,7 @@ class CEscapeHandler : public CEscapeParse {
   class CharSet {
    public:
     CharSet() {
-      memset(id_, 'B', sizeof(id_));
+      reset();
     }
 
     int getCurrentSet() const { return num_; }
@@ -68,6 +68,10 @@ class CEscapeHandler : public CEscapeParse {
 
     char getCurrentSetType() const {
       return getSetType(getCurrentSet());
+    }
+
+    void reset() {
+      memset(id_, 'B', sizeof(id_));
     }
 
    private:
@@ -272,6 +276,9 @@ class CEscapeHandler : public CEscapeParse {
 
   virtual bool getScrollBottomOnTty() const { return state_.getScrollBottomOnTty(); }
   virtual void setScrollBottomOnTty(bool flag);
+
+  virtual bool getBracketedPasteMode() const { return state_.getBracketedPasteMode(); }
+  virtual void setBracketedPasteMode(bool flag);
 
   virtual bool getApplicationCursorKeys() const { return state_.getApplicationCursorKeys(); }
   virtual void setApplicationCursorKeys(bool flag);
@@ -504,10 +511,11 @@ class CEscapeHandler : public CEscapeParse {
   virtual void previewFile(const std::string &fileName) = 0;
   virtual void setDirName(const std::string &dirName) = 0;
 
+  virtual void processString(const std::string &str) { return processString(str.c_str()); }
   virtual void processString(const char *str) = 0;
 
   virtual void logDebug(const std::string &str) const = 0;
-  virtual void logTrace(char c) const;
+  virtual void logError(const std::string &str) const = 0;
   virtual void logTrace(const std::string &str) const = 0;
 
   //---
@@ -530,6 +538,15 @@ class CEscapeHandler : public CEscapeParse {
 
   virtual void draw4014Line(int, int, int, int, const CEscapeColor &, const CEscapeLineStyle &) { }
   virtual void draw4014Char(char) { }
+
+  virtual CIPoint2D get4014DataPos() const { return CIPoint2D(); }
+
+  virtual int get4014NumDataRows() const { return 0; }
+  virtual int get4014NumDataCols() const { return 0; }
+
+  //---
+
+  std::string CSI(const std::string &str) const;
 
  private:
   // private data

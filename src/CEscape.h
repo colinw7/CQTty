@@ -28,6 +28,19 @@ namespace CEscape {
     // ...
   };
 
+  struct OptString {
+    OptString() :
+     valid(false) {
+    }
+
+    OptString(const std::string &str) :
+     valid(true), str(str) {
+    }
+
+    bool        valid { false };
+    std::string str   { "" };
+  };
+
   std::string NUL();
   std::string SOH();
   std::string STX();
@@ -183,14 +196,18 @@ namespace CEscape {
   std::string DECRQLP(int n=-1);
 
   std::string DECSCNM(bool b=true);
+  std::string DECTEK(bool b=true);
 
   void        APC(std::ostream &os, const std::string &str);
   std::string APC(const std::string &str);
 
-  void        CSI(std::ostream &os, const std::string &str);
-  std::string CSI(const std::string &str);
+  void        CSI(std::ostream &os, const std::string &str, bool bit8=false);
+  std::string CSI(const std::string &str=0, bool bit8=false);
 
   std::string stringToEscape(const std::string &str);
+  bool stringToEscape(const std::string &str, std::string &escapeStr);
+
+  OptString stringToOptEscape(const std::string &str);
 
   std::string stringWinOpToEscape(const std::vector<std::string> &words);
   std::string stringOSCOpToEscape(const std::vector<std::string> &words);

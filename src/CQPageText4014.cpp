@@ -19,6 +19,8 @@ CQPageText4014(CQPageText *area) :
 {
   setFixedSize(tek_width_/scale_, tek_height_/scale_);
 
+  setFocusPolicy(Qt::StrongFocus);
+
   setMouseTracking(true);
 }
 
@@ -75,28 +77,37 @@ void
 CQPageText4014::
 cursorLeft(int n)
 {
-  col_ = std::max(col_ - n, 0);
+  col_ -= n;
+
+  if (col_ > 0)
+    col_ = 0;
 }
 
 void
 CQPageText4014::
 cursorRight(int n)
 {
-  col_ = std::min(col_ + n, numCols() - 1);
+  col_ += n;
 }
 
 void
 CQPageText4014::
 cursorUp(int n)
 {
-  row_ = std::max(row_ - n, 0);
+  row_ -= n;
+
+  while (row_ < 0)
+    row_ += numRows();
 }
 
 void
 CQPageText4014::
 cursorDown(int n)
 {
-  row_ = std::min(row_ + n, numRows() - 1);
+  row_ += n;
+
+  while (row_ >= numRows())
+    row_ -= numRows();
 }
 
 void
@@ -227,6 +238,56 @@ drawChar(QPainter *painter, const Char &c) const
 
 void
 CQPageText4014::
+keyPressEvent(QKeyEvent *e)
+{
+  CKeyEvent *ke = CQUtil::convertEvent(e);
+
+  // handle special pasted key sequence
+  if (ke->getType() == CKEY_TYPE_Insert && ke->isShiftKey()) {
+    std::string str = "^[_<paste/>^[\\";
+
+    area_->addEscapeChars(str.c_str(), str.size());
+
+    return;
+  }
+
+  const std::string &str = area_->getEventText(ke);
+
+  if (! str.empty())
+    area_->processString(str.c_str());
+}
+
+void
+CQPageText4014::
+mousePressEvent(QMouseEvent *e)
+{
+  update();
+
+  if (gin_) {
+    double wx, wy;
+
+    pixelToWindow(e->x(), e->y(), &wx, &wy, /*flipY*/true);
+
+    area_->getEscapeNotifier()->send4014MousePress(e->button(), wx, wy);
+
+    gin_ = false;
+  }
+}
+
+void
+CQPageText4014::
+mouseMotionEvent(QMouseEvent *)
+{
+}
+
+void
+CQPageText4014::
+mouseReleaseEvent(QMouseEvent *)
+{
+}
+
+void
+CQPageText4014::
 windowToPixel(double wx, double wy, double *px, double *py, bool flipY) const
 {
   *px = wx/scale_;
@@ -286,33 +347,4 @@ CQPageText4014::
 charHeight(int charSet) const
 {
   return tek_height_/numRows(charSet);
-}
-
-void
-CQPageText4014::
-mousePressEvent(QMouseEvent *e)
-{
-  update();
-
-  if (gin_) {
-    double wx, wy;
-
-    pixelToWindow(e->x(), e->y(), &wx, &wy, /*flipY*/true);
-
-    area_->getEscapeNotifier()->send4014MousePress(e->button(), wx, wy);
-
-    gin_ = false;
-  }
-}
-
-void
-CQPageText4014::
-mouseMotionEvent(QMouseEvent *)
-{
-}
-
-void
-CQPageText4014::
-mouseReleaseEvent(QMouseEvent *)
-{
 }

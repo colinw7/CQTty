@@ -74,24 +74,9 @@ CQPageTextTest() :
 
   //---
 
-  loadConfig();
-}
+  area_->getArea()->setConfig(&config_);
 
-void
-CQPageTextTest::
-loadConfig()
-{
-  std::string fontFamily;
-
-  if (! config_.getValue("fontFamily", "", fontFamily))
-    fontFamily = "courier";
-
-  int fontSize;
-
-  if (! config_.getValue("fontSize", "", &fontSize))
-    fontSize = 12;
-
-  area_->getArea()->setFontSet(fontFamily, fontSize);
+  area_->getArea()->loadConfig();
 }
 
 void

@@ -126,8 +126,8 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
   void processString(const char *) override;
 
   void logDebug(const std::string &) const override;
-  void logTrace(char) const override;
   void logTrace(const std::string &) const override;
+  void logError(const std::string &) const override;
 
   //---
 
@@ -149,6 +149,11 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
 
   void draw4014Line(int, int, int, int, const CEscapeColor &, const CEscapeLineStyle &) override;
   void draw4014Char(char) override;
+
+  CIPoint2D get4014DataPos() const override;
+
+  int get4014NumDataRows() const override;
+  int get4014NumDataCols() const override;
 
  private:
   CPageText *area_ { nullptr };

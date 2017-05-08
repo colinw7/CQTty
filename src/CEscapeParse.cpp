@@ -9,25 +9,25 @@
 #define UNHANDLED(m) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 #define UNHANDLED1(m,a) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 #define UNHANDLED2(m,a,b) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 #define UNHANDLED3(m,a,b,c) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "" << c << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 //------
@@ -993,6 +993,7 @@ isEscape(const char *str, uint *pos)
       // Enter alternate keypad mode
       if (isVT52()) {
         // TODO
+        UNHANDLED1("VT52: DECKPAM", '=');
       }
       // DECKPAM, Application Keypad
       else {
@@ -1012,6 +1013,7 @@ isEscape(const char *str, uint *pos)
 
       if (isVT52()) {
         // TODO
+        UNHANDLED1("VT52: DECKPAM", '>');
       }
       else {
         handleEscape(&DECPNM_escape_);
@@ -2115,6 +2117,7 @@ isDigitEscape(const char *str, uint *pos)
     // Back Index (DECBI), VT420 and up
     case '6': {
       // TODO
+      UNHANDLED1("Digit", c);
 
       break;
     }
@@ -2137,6 +2140,7 @@ isDigitEscape(const char *str, uint *pos)
     // Forward Index (DECFI), VT420 and up
     case '9': {
       // TODO
+      UNHANDLED1("Digit", c);
 
       break;
     }
@@ -2289,10 +2293,13 @@ isCSIEscape(const char *str, uint *pos)
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
+          // update parser for escape codes that change parse
           if      (nn == 1 && num[0] == 2)
             setVT52(false);
           else if (nn == 1 && num[0] == 38)
             set4014(true);
+
+          //---
 
           DECSET_escape_.num = num;
           DECSET_escape_.nn  = nn;
@@ -2330,10 +2337,13 @@ isCSIEscape(const char *str, uint *pos)
         if (c1 == '?' && c2 == '\0') {
           setInEscape(false);
 
+          // update parser for escape codes that change parse
           if      (nn == 1 && num[0] == 2)
             setVT52(true);
           else if (nn == 1 && num[0] == 38)
             set4014(false);
+
+          //---
 
           DECRST_escape_.num = num;
           DECRST_escape_.nn  = nn;
@@ -3537,7 +3547,7 @@ isDCSEscape(const char *str, uint *pos)
   // xterm responds with DCS 1 $ r Pt ST for valid requests, replacing the Pt with the
   // corresponding CSI string, or DCS 0 $ r Pt ST for invalid requests.
   if      (value_len >= 2 && value[0] == '$' && value[1] == 'q') {
-    // UNHANDLED1("DECRQSS", value)
+    UNHANDLED1("DECRQSS", value)
   }
   // DCS + p Pt ST
   //   Set Termcap/Terminfo Data (xterm, experimental). The string following the "p" is a
@@ -3545,7 +3555,7 @@ isDCSEscape(const char *str, uint *pos)
   //   for the "tcap" keyboard configuration's function- and special-keys, as well as by
   //   the Request Termcap/Terminfo String control.
   else if (value_len >= 2 && value[0] == '+' && value[1] == 'p') {
-    // UNHANDLED2("DCS", c, value)
+    UNHANDLED1("DCS", value)
   }
   // DCS + q Pt ST
   //   Request Termcap/Terminfo String (xterm, experimental). The string following the "q"
@@ -3794,6 +3804,8 @@ isDCSEscape(const char *str, uint *pos)
     else if (key == "kN") ekey = CKEY_TYPE_Next;
 
     else if (key == "kb") ekey = CKEY_TYPE_BackSpace;
+    else if (key == "kB") ekey = CKEY_TYPE_Backtab;
+
     else if (key == "kI") ekey = CKEY_TYPE_Insert;
     else if (key == "kD") ekey = CKEY_TYPE_DEL;
     else if (key == "kh") ekey = CKEY_TYPE_Home;

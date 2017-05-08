@@ -89,6 +89,10 @@ main(int argc, char **argv)
         do_test4 = true;
       else if (arg1 == "colors")
         do_colors = true;
+      else {
+        std::cerr << "Missing option '" << arg << "'" << std::endl;
+        exit(1);
+      }
     }
     else {
       words.push_back(arg);
@@ -139,7 +143,12 @@ main(int argc, char **argv)
   if (do_test4) test4();
 
   for (const auto &word : words) {
-    std::string str = CEscape::stringToEscape(word);
+    std::string str;
+
+    if (! CEscape::stringToEscape(word, str)) {
+      std::cout << word;
+      continue;
+    }
 
     if (run_cmd) {
       std::string res = test.runCommand(str);

@@ -78,6 +78,8 @@ class CQPageTextCanvas : public CQWindow {
 
   void doBlink();
 
+  void repaint();
+
   void paintEvent(QPaintEvent *);
 
   void resize(uint width, uint height) override;
@@ -127,21 +129,38 @@ class CQPageTextCanvas : public CQWindow {
   void toggleToolBar();
   void toggleStatusBar();
   void toggleScrollBar();
+  void toggleLinks();
 
   void displayStatus();
 
  private:
+  struct MouseState {
+    bool pressed   { false };
+    int  pressRow  { -1 };
+    int  pressCol  { -1 };
+    bool select    { false };
+    bool selecting { false };
+
+    void reset() {
+      pressed   = false;
+      pressRow  = -1;
+      pressCol  = -1;
+      select    = false;
+      selecting = false;
+    }
+  };
+
   CQPageTextWidget* area_ { nullptr };
   QImage            qimage_;
   RegionList        regions_;
   ImageCellList     image_cells_;
   LinkCellList      link_cells_;
+  bool              dirty_ { false };
   bool              do_blink_ { false };
   int               blink_num_ { 0 };
   uint              charWidth_ { 8 }, charHeight_ { 12 }, charAscent_ { 2 };
   uint              x_offset_ { 0 }, y_offset_ { 0 };
-  bool              pressed_ { false };
-  bool              selecting_ { false };
+  MouseState        mouseState_;
   bool              focus_ { false };
   CQPageTextState*  stateDialog_ { nullptr };
 };

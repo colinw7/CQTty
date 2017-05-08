@@ -34,9 +34,6 @@ CQPageTextCanvas(CQPageTextWidget *area) :
   setFocusPolicy(Qt::StrongFocus);
 
   setMouseTracking(true);
-
-  do_blink_  = false;
-  blink_num_ = 0;
 }
 
 void
@@ -58,16 +55,25 @@ doBlink()
 
 void
 CQPageTextCanvas::
+repaint()
+{
+  dirty_ = true;
+
+  update();
+}
+
+void
+CQPageTextCanvas::
 paintEvent(QPaintEvent *)
 {
   QPainter painter(this);
 
-  if (! do_blink_)
+  if (dirty_ || ! do_blink_)
     updateScrollBars();
 
   //------
 
-  if (do_blink_)
+  if (! dirty_ && do_blink_)
     painter.drawImage(QPoint(0, 0), qimage_);
 
   //------
@@ -76,9 +82,11 @@ paintEvent(QPaintEvent *)
 
   //------
 
-  bool clear = ! do_blink_;
+  bool clear = dirty_ || ! do_blink_;
 
-  QPainter ipainter(&qimage_);
+  QPainter ipainter;
+
+  ipainter.begin(&qimage_);
 
   if (clear)
     ipainter.fillRect(rect(), QBrush(CQUtil::rgbaToColor(area->getBg())));
@@ -91,7 +99,7 @@ paintEvent(QPaintEvent *)
 
   //------
 
-  if (! do_blink_)
+  if (dirty_ || ! do_blink_)
     drawGraphics(&ipainter);
 
   //------
@@ -107,6 +115,8 @@ paintEvent(QPaintEvent *)
 
   //------
 
+  ipainter.end();
+
   painter.drawImage(QPoint(0, 0), qimage_);
 
   //------
@@ -116,6 +126,8 @@ paintEvent(QPaintEvent *)
 
     do_blink_ = false;
   }
+
+  dirty_ = false;
 }
 
 void
@@ -217,7 +229,7 @@ void
 CQPageTextCanvas::
 drawCells(QPainter *painter)
 {
-  if (! do_blink_) {
+  if (dirty_ || ! do_blink_) {
     regions_.clear();
 
     image_cells_.clear();
@@ -253,7 +265,7 @@ drawCells(QPainter *painter)
 
   //------
 
-  if (! do_blink_) {
+  if (dirty_ || ! do_blink_) {
     uint num_image_cells = image_cells_.size();
 
     for (uint i = 0; i < num_image_cells; ++i) {
@@ -299,7 +311,7 @@ drawLine(QPainter *painter, int y, const CPageTextLine *line)
       x += charWidth();
   }
 
-  if (! do_blink_) {
+  if (dirty_ || ! do_blink_) {
     for (const auto &idCell : line->links()) {
       const CTextLinkCell *link_cell = idCell.second;
 
@@ -348,7 +360,7 @@ drawStyleCharCell(QPainter *painter, int x, int y, const CTextStyleCell *style_c
 
   bool invert = false;
 
-  if (do_blink_) {
+  if (! dirty_ && do_blink_) {
     if (! style.getBlink())
       return;
 
@@ -475,7 +487,8 @@ void
 CQPageTextCanvas::
 drawImageCell(QPainter *painter, int x, int y, const CTextImageCell *image_cell)
 {
-  if (do_blink_) return;
+  if (! dirty_ && do_blink_)
+    return;
 
   CImagePtr image = image_cell->getImage();
 
@@ -501,7 +514,8 @@ void
 CQPageTextCanvas::
 drawLinkCell(QPainter *, int x, int y, const CTextLinkCell *link_cell)
 {
-  if (do_blink_) return;
+  if (! dirty_ && do_blink_)
+    return;
 
   const std::string &str = link_cell->getLinkName();
 
@@ -565,7 +579,7 @@ drawCursor(QPainter *painter)
   CRGBA fg = (notifier ? notifier->getCursorColor() : CRGBA(1,1,1));
   CRGBA bg = area->getBg();
 
-  if (! do_blink_ || blink_num_ == 0)
+  if (dirty_ || (! do_blink_ || blink_num_ == 0))
     painter->fillRect(CQUtil::toQRect(bbox), QBrush(CQUtil::rgbaToColor(fg)));
   else
     painter->fillRect(CQUtil::toQRect(bbox), QBrush(CQUtil::rgbaToColor(bg)));
@@ -575,7 +589,7 @@ drawCursor(QPainter *painter)
   if (style_cell) {
     const CCellStyle &style = style_cell->getStyle();
 
-    if (! do_blink_ || blink_num_ == 0)
+    if (dirty_ || (! do_blink_ || blink_num_ == 0))
       painter->setPen(CQUtil::rgbaToColor(bg));
     else
       painter->setPen(CQUtil::rgbaToColor(area->getFg(style)));
@@ -639,40 +653,45 @@ void
 CQPageTextCanvas::
 mousePressEvent(QMouseEvent *e)
 {
-  pressed_ = true;
+  mouseState_.reset();
+
+  mouseState_.pressed = true;
+
+  //---
 
   CQPageText *area = area_->getArea();
 
   int x = e->x() + x_offset_;
   int y = e->y() + y_offset_;
 
+  area->pixelToPos(x, y, &mouseState_.pressRow, &mouseState_.pressCol);
+
+  //----
+
   CPageTextEscapeNotifier *notifier = area->getEscapeNotifier();
 
   if (notifier && notifier->getSendMousePress()) {
     int button = e->button() - 1;
 
-    int row, col;
-
-    area->pixelToPos(x, y, &row, &col);
-
-    notifier->sendMousePress(button, col + 1, row + 1);
+    notifier->sendMousePress(button, mouseState_.pressCol + 1, mouseState_.pressRow + 1);
   }
 
+  //----
+
   if      (e->button() == Qt::LeftButton) {
-    int row, col;
-
-    area->pixelToPos(x, y, &row, &col);
-
-    area->setSelectionStart(CTextPos(row, col));
-
-    update();
-
-    selecting_ = true;
+    mouseState_.select    = true;
+    mouseState_.selecting = false;
 
     if (area->isMoveOnClick()) {
-      std::string str = CEscape::CUP(row + 1, col + 1);
+      std::string str = CEscape::CUP(mouseState_.pressRow + 1, mouseState_.pressCol + 1);
 
       area_->processString(str.c_str());
+    }
+
+    if (area->hasSelection()) {
+      area->clearSelection();
+
+      update();
     }
   }
   else if (e->button() == Qt::MidButton) {
@@ -680,7 +699,7 @@ mousePressEvent(QMouseEvent *e)
 
     std::string str = area->getSelectionText();
 
-    area_->processString(str.c_str());
+    area_->pasteString(str.c_str());
   }
 }
 
@@ -688,69 +707,81 @@ void
 CQPageTextCanvas::
 mouseReleaseEvent(QMouseEvent *e)
 {
-  pressed_ = false;
-
   CQPageText *area = area_->getArea();
 
   int x = e->x() + x_offset_;
   int y = e->y() + y_offset_;
+
+  int releaseRow, releaseCol;
+
+  area->pixelToPos(x, y, &releaseRow, &releaseCol);
+
+  //----
 
   CPageTextEscapeNotifier *notifier = area->getEscapeNotifier();
 
   if (notifier && notifier->getSendMousePress()) {
     int button = e->button() - 1;
 
-    int row, col;
-
-    area->pixelToPos(x, y, &row, &col);
-
-    notifier->sendMouseRelease(button, col + 1, row + 1);
+    notifier->sendMouseRelease(button, releaseCol + 1, releaseRow + 1);
   }
 
-  if (selecting_) {
-    selecting_ = false;
+  //----
 
-    int row, col;
+  if (mouseState_.selecting) {
+    mouseState_.selecting = false;
 
-    area->pixelToPos(x, y, &row, &col);
-
-    area->setSelectionEnd(CTextPos(row, col));
+    area->setSelectionEnd(CTextPos(releaseRow, releaseCol));
 
     update();
   }
+
+  //----
+
+  mouseState_.reset();
 }
 
 void
 CQPageTextCanvas::
 mouseMoveEvent(QMouseEvent *e)
 {
-  if (pressed_) {
-    if (selecting_) {
-      int x = e->x() + x_offset_;
-      int y = e->y() + y_offset_;
+  CQPageText *area = area_->getArea();
 
-      CQPageText *area = area_->getArea();
+  int x = e->x();
+  int y = e->y();
 
-      int row, col;
+  int xo = x + x_offset_;
+  int yo = y + y_offset_;
 
-      area->pixelToPos(x, y, &row, &col);
+  int moveRow, moveCol;
 
-      area->setSelectionEnd(CTextPos(row, col));
+  area->pixelToPos(xo, yo, &moveRow, &moveCol);
+
+  //---
+
+  if (mouseState_.pressed) {
+    if (mouseState_.select && ! mouseState_.selecting) {
+      area->setSelectionStart(CTextPos(mouseState_.pressRow, mouseState_.pressCol));
+
+      mouseState_.selecting = true;
+    }
+
+    if (mouseState_.selecting) {
+      area->setSelectionEnd(CTextPos(moveRow, moveCol));
 
       update();
     }
   }
   else {
-    int x = e->x();
-    int y = e->y();
+    if (area->getShowLinks()) {
+      Region *region = getRegionAtPoint(x, y);
 
-    Region *region = getRegionAtPoint(x, y);
+      if (region) {
+        QPoint p1 = mapToGlobal(QPoint(region->bbox.getUL().x, region->bbox.getUL().y));
+        QPoint p2 = mapToGlobal(QPoint(region->bbox.getLR().x, region->bbox.getLR().y));
 
-    if (region) {
-      QPoint p1 = mapToGlobal(QPoint(region->bbox.getUL().x, region->bbox.getUL().y));
-      QPoint p2 = mapToGlobal(QPoint(region->bbox.getLR().x, region->bbox.getLR().y));
-
-      QToolTip::showText((p1 + p2)/2, region->text.c_str(), this, QRect(p1, p2));
+        QToolTip::showText((p1 + p2)/2, region->text.c_str(), this, QRect(p1, p2));
+      }
     }
   }
 }
@@ -759,53 +790,62 @@ void
 CQPageTextCanvas::
 mouseDoubleClickEvent(QMouseEvent *e)
 {
+  CQPageText *area = area_->getArea();
+
+  int x = e->x();
+  int y = e->y();
+
+  int xo = x + x_offset_;
+  int yo = y + y_offset_;
+
+  int clickRow, clickCol;
+
+  area->pixelToPos(xo, yo, &clickRow, &clickCol);
+
+  //---
+
   if      (e->button() == Qt::LeftButton) {
-    int x = e->x();
-    int y = e->y();
+    if (area->getShowLinks()) {
+      Region *region = getRegionAtPoint(x, y);
 
-    Region *region = getRegionAtPoint(x, y);
+      if (region) {
+        const CTextCell *cell = region->cell;
 
-    if (region) {
-      const CTextCell *cell = region->cell;
+        const CTextLinkCell  *link_cell  = nullptr;
+        const CTextImageCell *image_cell = nullptr;
 
-      const CTextLinkCell  *link_cell  = nullptr;
-      const CTextImageCell *image_cell = nullptr;
+        if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != nullptr) {
+          CFileType type = CFileUtil::getType(link_cell->getLinkDest());
 
-      if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != nullptr) {
-        CFileType type = CFileUtil::getType(link_cell->getLinkDest());
+          if      (type & CFILE_TYPE_IMAGE) {
+            area_->emitDisplayImage(link_cell->getLinkDest());
 
-        if      (type & CFILE_TYPE_IMAGE) {
-          area_->emitDisplayImage(link_cell->getLinkDest());
+            return;
+          }
+          else if (type & CFILE_TYPE_INODE_DIR) {
+            std::string cmd = "cd " + link_cell->getLinkDest() + "\n";
+
+            area_->processString(cmd.c_str());
+
+            return;
+          }
+          else {
+            area_->emitDisplayFile(link_cell->getLinkDest());
+
+            return;
+          }
+        }
+        else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != nullptr) {
+          area_->emitDisplayImage(image_cell->getFileName());
 
           return;
         }
-        else if (type & CFILE_TYPE_INODE_DIR) {
-          std::string cmd = "cd " + link_cell->getLinkDest() + "\n";
-
-          area_->processString(cmd.c_str());
-
-          return;
-        }
-        else {
-          area_->emitDisplayFile(link_cell->getLinkDest());
-
-          return;
-        }
-      }
-      else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != nullptr) {
-        area_->emitDisplayImage(image_cell->getFileName());
-
-        return;
       }
     }
 
     CQPageText *area = area_->getArea();
 
-    int row, col;
-
-    area->pixelToPos(x + x_offset_, y + y_offset_, &row, &col);
-
-    if (area->selectWord(row, col))
+    if (area->selectWord(clickRow, clickCol))
       update();
   }
 }
@@ -851,85 +891,107 @@ void
 CQPageTextCanvas::
 contextMenuEvent(QContextMenuEvent *e)
 {
-  int x = e->x();
-  int y = e->y();
-
-  Region *region = getRegionAtPoint(x, y);
+  CQPageText *area = area_->getArea();
 
   QMenu *menu = new QMenu;
 
-  const CTextCell *cell = nullptr;
+  bool linkFound = false;
 
-  if (region)
-    cell = region->cell;
+  if (area->getShowLinks()) {
+    int x = e->x();
+    int y = e->y();
 
-  const CTextLinkCell  *link_cell  = nullptr;
-  const CTextImageCell *image_cell = nullptr;
+    Region *region = getRegionAtPoint(x, y);
 
-  if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != nullptr) {
-    CFileType type = CFileUtil::getType(link_cell->getLinkDest());
+    const CTextCell *cell = nullptr;
 
-    if      (type & CFILE_TYPE_IMAGE) {
+    if (region)
+      cell = region->cell;
+
+    const CTextLinkCell  *link_cell  = nullptr;
+    const CTextImageCell *image_cell = nullptr;
+
+    if      ((link_cell = dynamic_cast<const CTextLinkCell *>(cell)) != nullptr) {
+      CFileType type = CFileUtil::getType(link_cell->getLinkDest());
+
+      if      (type & CFILE_TYPE_IMAGE) {
+        QAction *viewAction = new QAction("View", this);
+
+        menu->addAction(viewAction);
+
+        //connect(editAction, SIGNAL(triggered()), this, SLOT(menuEditSlot()));
+
+        QAction *editAction = new QAction("Edit", this);
+
+        menu->addAction(editAction);
+
+        linkFound = true;
+      }
+      else if (type & CFILE_TYPE_INODE_DIR) {
+        QAction *cdAction = new QAction("Change Directiory", this);
+
+        menu->addAction(cdAction);
+
+        linkFound = true;
+      }
+      else {
+        QAction *viewAction = new QAction("View", this);
+
+        menu->addAction(viewAction);
+
+        QAction *editAction = new QAction("Edit", this);
+
+        menu->addAction(editAction);
+
+        linkFound = true;
+      }
+    }
+    else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != nullptr) {
       QAction *viewAction = new QAction("View", this);
 
       menu->addAction(viewAction);
 
-      //connect(editAction, SIGNAL(triggered()), this, SLOT(menuEditSlot()));
-
       QAction *editAction = new QAction("Edit", this);
 
       menu->addAction(editAction);
-    }
-    else if (type & CFILE_TYPE_INODE_DIR) {
-      QAction *cdAction = new QAction("Change Directiory", this);
 
-      menu->addAction(cdAction);
-    }
-    else {
-      QAction *viewAction = new QAction("View", this);
-
-      menu->addAction(viewAction);
-
-      QAction *editAction = new QAction("Edit", this);
-
-      menu->addAction(editAction);
+      linkFound = true;
     }
   }
-  else if ((image_cell = dynamic_cast<const CTextImageCell *>(cell)) != nullptr) {
-    QAction *viewAction = new QAction("View", this);
 
-    menu->addAction(viewAction);
+  //---
 
-    QAction *editAction = new QAction("Edit", this);
-
-    menu->addAction(editAction);
-  }
-  else {
-    CQPageText *area = area_->getArea();
-
+  if (! linkFound) {
     QAction *toolBarAction   = new QAction("Show ToolBar", this);
     QAction *statusBarAction = new QAction("Show Status Bar", this);
     QAction *scrollBarAction = new QAction("Show Scroll Bar", this);
+    QAction *linksAction     = new QAction("Enable Links", this);
     QAction *statusAction    = new QAction("Status", this);
 
     toolBarAction  ->setCheckable(true);
     statusBarAction->setCheckable(true);
     scrollBarAction->setCheckable(true);
+    linksAction    ->setCheckable(true);
 
     toolBarAction  ->setChecked(area_->getToolBar  ()->isVisible());
     statusBarAction->setChecked(area_->getStatusBar()->isVisible());
     scrollBarAction->setChecked(area->getShowScrollBar());
+    linksAction    ->setChecked(area->getShowLinks());
 
     menu->addAction(toolBarAction);
     menu->addAction(statusBarAction);
     menu->addAction(scrollBarAction);
+    menu->addAction(linksAction);
     menu->addAction(statusAction);
 
     connect(toolBarAction  , SIGNAL(triggered()), this, SLOT(toggleToolBar  ()));
     connect(statusBarAction, SIGNAL(triggered()), this, SLOT(toggleStatusBar()));
     connect(scrollBarAction, SIGNAL(triggered()), this, SLOT(toggleScrollBar()));
+    connect(linksAction    , SIGNAL(triggered()), this, SLOT(toggleLinks    ()));
     connect(statusAction   , SIGNAL(triggered()), this, SLOT(displayStatus  ()));
   }
+
+  //---
 
   menu->popup(e->globalPos());
 }
@@ -973,6 +1035,15 @@ toggleScrollBar()
   CQPageText *area = area_->getArea();
 
   area->setShowScrollBar(! area->getShowScrollBar());
+}
+
+void
+CQPageTextCanvas::
+toggleLinks()
+{
+  CQPageText *area = area_->getArea();
+
+  area->setShowLinks(! area->getShowLinks());
 }
 
 void

@@ -80,8 +80,9 @@ class CPageText {
 
   //---
 
-  virtual void log(char c);
-  virtual void log(const std::string &str);
+  virtual void logDebug(const std::string &str);
+  virtual void logTrace(const std::string &str);
+  virtual void logError(const std::string &str);
 
   //---
 
@@ -110,7 +111,7 @@ class CPageText {
 
   virtual Page &getCurrentPage();
 
-  virtual bool isAlt() const { return is_alt_; }
+  virtual bool isAlt() const { return isAlt_; }
   virtual void setIsAlt(bool alt);
 
   virtual bool hasSelection() const { return selection_.set; }
@@ -198,10 +199,14 @@ class CPageText {
   virtual PixelLines::const_iterator beginPixelLines() const;
   virtual PixelLines::const_iterator endPixelLines  () const;
 
+  //---
+
   virtual void clear();
   virtual void clearAbove();
   virtual void clearBelow();
   virtual void clearSaved();
+
+  //---
 
   virtual void dumpScreen(CFile &file);
 
@@ -248,9 +253,13 @@ class CPageText {
 
   virtual void processString(const char *str);
 
+  virtual void pasteString(const char *str);
+
   virtual bool flush();
 
   virtual void paste(const std::string &str);
+
+  //---
 
   virtual bool getShowToolBar() const { return showToolBar_; }
   virtual void setShowToolBar(bool show);
@@ -260,6 +269,8 @@ class CPageText {
 
   virtual bool getShowStatusBar() const { return showStatusBar_; }
   virtual void setShowStatusBar(bool show);
+
+  //---
 
   virtual void notifyPageSize(int, int) { }
   virtual void notifyPosition(const CTextPos &) { }
@@ -271,7 +282,7 @@ class CPageText {
 
   virtual CTty *getTty() const { return nullptr; }
 
-  //---------
+  //---
 
   // 4014
   virtual void exec4014BEL();
@@ -294,7 +305,12 @@ class CPageText {
 
   virtual void draw4014Char(char c);
 
-  //---------
+  virtual CIPoint2D get4014DataPos() const;
+
+  virtual int get4014NumDataRows() const;
+  virtual int get4014NumDataCols() const;
+
+  //---
 
   // virtuals to be implemented by graphical page text
   virtual void scrollBottom() { }
@@ -307,7 +323,7 @@ class CPageText {
 
   virtual void update() { }
 
-  //---------
+  //---
 
  protected:
   virtual void makePosValid();
@@ -317,16 +333,16 @@ class CPageText {
   virtual void checkLines();
 
  protected:
-  uint                     buffer_size_ { 512 };
+  uint                     bufferSize_ { 512 };
   CFontSet                 fonts_;
   CCellStyle               style_;
   CTextPos                 pos_ { 0, 0 };
-  uint                     page_rows_ { 0 };
-  uint                     page_cols_ { 0 };
-  Page                     cur_page_;  // current page
-  Page                     alt_page_;  // alternative page
-  LineList                 old_lines_; // lines scrolled off-screen
-  bool                     is_alt_ { false };
+  uint                     pageRows_ { 0 };
+  uint                     pageCols_ { 0 };
+  Page                     currentPage_;  // current page
+  Page                     altPage_;  // alternative page
+  LineList                 oldLines_; // lines scrolled off-screen
+  bool                     isAlt_ { false };
   bool                     is4014_ { false };
   Selection                selection_;
   PixelPoints              pixelPoints_;

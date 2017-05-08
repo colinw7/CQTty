@@ -1,5 +1,6 @@
 #include <CEscapeHandler.h>
 #include <CEscapeColors.h>
+#include <CEscape.h>
 #include <CCellStyle.h>
 #include <CWindow.h>
 #include <CRGBName.h>
@@ -10,25 +11,25 @@
 #define UNHANDLED(m) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 #define UNHANDLED1(m,a) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 #define UNHANDLED2(m,a,b) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 #define UNHANDLED3(m,a,b,c) { \
   std::ostringstream ostr; \
   ostr << "Unhandled Esc: " << m << " " << a << " " << b << "" << c << "\n"; \
-  log(ostr.str()); \
+  logError(ostr.str()); \
 }
 
 CEscapeHandler::
@@ -45,12 +46,27 @@ handleChar(char c)
   if (is4014()) {
     set4014CharSet(state_.get4014CharSet());
 
+    int x = get4014DataPos().x;
+
+    int num_cols = get4014NumDataCols();
+
+    bool at_end = (x == num_cols);
+
+    if (at_end) {
+      exec4014CR();
+      exec4014FF();
+
+      x = get4014DataPos().x;
+    }
+
     draw4014Char(c);
 
     exec4014CUF();
 
     return;
   }
+
+  //---
 
   ulong utf_char { 0 };
   bool  is_utf   { false };
@@ -115,7 +131,7 @@ handleChar(char c)
 
   // TODO: log utf ?
 
-  logTrace(c);
+  logTrace(std::string(&c, 1));
 
   //---
 
@@ -137,9 +153,10 @@ handleChar(char c)
     }
     else {
       if (getLineWrap()) {
-        x = 0;
+        escapeNEL();
 
-        ++y;
+        x = getDataPos().x;
+        y = getDataPos().y;
       }
       else {
         visible = false;
@@ -184,7 +201,7 @@ void
 CEscapeHandler::
 handleGraphic(char c)
 {
-  logTrace(c);
+  logTrace(std::string(&c, 1));
 }
 
 void
@@ -326,7 +343,7 @@ handleEscape(const CEscapeData *esc)
     case CEscapeType::CR: {
       if (is4014()) {
         // Carriage return, resets Terminal from Graph to Alpha Mode
-        // canceles crosshair cursor
+        // cancels crosshair cursor
         exec4014CR();
       }
       else {
@@ -705,7 +722,7 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
-    // Soft terminal reset (DECSTR)
+    // Printer Status Request (DECDSR)
     case CEscapeType::DECDSR: {
       const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
@@ -713,6 +730,7 @@ handleEscape(const CEscapeData *esc)
 
       break;
     }
+    // Soft terminal reset (DECSTR)
     case CEscapeType::DECSTR: {
       escapeDECSTR();
 
@@ -1727,13 +1745,16 @@ escapeMC(int num)
   // HTML screen dump.
   else if (num == 10) {
     // TODO
+    UNHANDLED1("MC", 12);
   }
   // SVG screen dump.
   else if (num == 11) {
     // TODO
+    UNHANDLED1("MC", 11);
   }
-  else
+  else {
     UNHANDLED1("MC", num)
+  }
 }
 
 void
@@ -1757,6 +1778,14 @@ escapeDECMC(int num)
   else if (num == 5) {
     startPrintLog();
   }
+  // Stop print to host session
+  else if (num == 8) {
+    UNHANDLED1("DECMC", num)
+  }
+  // Start print to host session
+  else if (num == 9) {
+    UNHANDLED1("DECMC", num)
+  }
   // Print composed display, ignores DECPEX
   else if (num == 10) {
     printComposedScreen();
@@ -1765,8 +1794,17 @@ escapeDECMC(int num)
   else if (num == 11) {
     printAllPages();
   }
-  else
+  // Assign printer
+  else if (num == 18) {
     UNHANDLED1("DECMC", num)
+  }
+  // Release printer
+  else if (num == 19) {
+    UNHANDLED1("DECMC", num)
+  }
+  else {
+    UNHANDLED1("DECMC", num)
+  }
 }
 
 void
@@ -1854,6 +1892,7 @@ escapeDECSET(int num)
     // Enable font-shifting functions - rxvt
     case 35: {
       // TODO
+      UNHANDLED1("DECSET", 35);
       break;
     }
     // Enter Tektronix Mode (DECTEK)
@@ -1869,6 +1908,7 @@ escapeDECSET(int num)
     // enable more fix
     case 41: {
       // TODO
+      UNHANDLED1("DECSET", 41);
       break;
     }
     // Enable National Replacement Character sets
@@ -1879,6 +1919,7 @@ escapeDECSET(int num)
     // Turn on Margin Bell
     case 44: {
       // TODO
+      UNHANDLED1("DECSET", 44);
       break;
     }
     // Reverse-wraparound Mode
@@ -1889,6 +1930,7 @@ escapeDECSET(int num)
     // Start Logging
     case 46: {
       // TODO
+      UNHANDLED1("DECSET", 46);
       break;
     }
     // Use Alternate Screen Buffer
@@ -1906,14 +1948,28 @@ escapeDECSET(int num)
       escapeDECBKM(true);
       break;
     }
+    // VT400: Keyboard Usage (data processing)
+    case 68: {
+      // TODO
+      UNHANDLED1("DECSET", 68);
+      break;
+    }
     // Enable left and right margin mode (DECLRMM), VT420 and up
     case 69: {
       // TODO
+      UNHANDLED1("DECSET", 69);
+      break;
+    }
+    // VT400: Keyboard Position (position reports)
+    case 81: {
+      // TODO
+      UNHANDLED1("DECSET", 81);
       break;
     }
     // Do not clear screen when DECCOLM is set/reset (DECNCSM), VT510 and up.
     case 95: {
       // TODO
+      UNHANDLED1("DECSET", 95);
       break;
     }
     // Send Mouse X & Y on button press and release. This is the X11 xterm mouse protocol
@@ -1925,6 +1981,7 @@ escapeDECSET(int num)
     // Use Hilite Mouse Tracking
     case 1001: {
       // TODO
+      UNHANDLED1("DECSET", 1001);
       break;
     }
     // Use Cell Motion Mouse Tracking.
@@ -1948,16 +2005,19 @@ escapeDECSET(int num)
     // Enable UTF-8 Mouse Mode.
     case 1005: {
       // TODO
+      UNHANDLED1("DECSET", 1005);
       break;
     }
     // Enable SGR Mouse Mode.
     case 1006: {
       // TODO
+      UNHANDLED1("DECSET", 1006);
       break;
     }
     // Enable Alternate Scroll Mode
     case 1007: {
       // TODO
+      UNHANDLED1("DECSET", 1007);
       break;
     }
     // Scroll to bottom on tty output (rxvt)
@@ -1973,56 +2033,67 @@ escapeDECSET(int num)
     // Enable urxvt Mouse Mode
     case 1015: {
       // TODO
+      UNHANDLED1("DECSET", 1015);
       break;
     }
     // Interpret "meta" key, sets eighth bit.
     case 1034: {
       // TODO
+      UNHANDLED1("DECSET", 1034);
       break;
     }
     // Enable special modifiers for Alt and NumLock keys
     case 1035: {
       // TODO
+      UNHANDLED1("DECSET", 1035);
       break;
     }
     // Send ESC when Meta modifies a key
     case 1036: {
       // TODO
+      UNHANDLED1("DECSET", 1036);
       break;
     }
     // Send DEL from the editing-keypad Delete key
     case 1037: {
       // TODO
+      UNHANDLED1("DECSET", 1037);
       break;
     }
-    // Send ESC  when Alt modifies a key.
+    // Send ESC when Alt modifies a key.
     case 1039: {
       // TODO
+      UNHANDLED1("DECSET", 1039);
       break;
     }
     // Keep selection even if not highlighted.
     case 1040: {
       // TODO
+      UNHANDLED1("DECSET", 1040);
       break;
     }
     // Use the CLIPBOARD selection.
     case 1041: {
       // TODO
+      UNHANDLED1("DECSET", 1041);
       break;
     }
     // Enable Urgency window manager hint when Control-G is received
     case 1042: {
       // TODO
+      UNHANDLED1("DECSET", 1042);
       break;
     }
     // Enable raising of the window when Control-G is received.
     case 1043: {
       // TODO
+      UNHANDLED1("DECSET", 1043);
       break;
     }
     // Reuse the most recent data copied to CLIPBOARD
     case 1044: {
       // TODO
+      UNHANDLED1("DECSET", 1044);
       break;
     }
     // Use Alternate Screen Buffer.
@@ -2045,36 +2116,42 @@ escapeDECSET(int num)
     // Set terminfo/termcap function-key mode.
     case 1050: {
       // TODO
+      UNHANDLED1("DECSET", 1050);
       break;
     }
     // Set Sun function-key mode
     case 1051: {
       // TODO
+      UNHANDLED1("DECSET", 1051);
       break;
     }
     // Set HP function-key mode
     case 1052: {
       // TODO
+      UNHANDLED1("DECSET", 1052);
       break;
     }
-    // et SCO function-key mode.
+    // Set SCO function-key mode.
     case 1053: {
       // TODO
+      UNHANDLED1("DECSET", 1053);
       break;
     }
     // Set legacy keyboard emulation (X11R6)
     case 1060: {
       // TODO
+      UNHANDLED1("DECSET", 1060);
       break;
     }
     // Set VT220 keyboard emulation
     case 1061: {
       // TODO
+      UNHANDLED1("DECSET", 1061);
       break;
     }
     // Set bracketed paste mode
     case 2004: {
-      // TODO
+      setBracketedPasteMode(true);
       break;
     }
     default: {
@@ -2099,25 +2176,27 @@ escapeSM(int num)
       escapeIRM(true);
       break;
     }
+    // VT400: Send/Receive Mode (SRM) (local echo off)
     case 12: {
       escapeSRM(true);
       break;
     }
+    // Normal Linefeed (LNM) (on)
     case 20: {
       escapeLNM(true);
       break;
     }
-    // Ps = 8 0  -> Sixel scrolling
+    // Sixel scrolling (on)
     case 80: {
       UNHANDLED1("SM", num)
       break;
     }
-    // Ps = 1 0 7 0  -> use private color registers for each graphic
+    // Use private color registers for each graphic (on)
     case 1070: {
       UNHANDLED1("SM", num)
       break;
     }
-    // Sixel scrolling leaves cursor to right of graphic
+    // Sixel scrolling leaves cursor to right of graphic (on)
     case 8452: {
       UNHANDLED1("SM", num)
       break;
@@ -2214,6 +2293,7 @@ escapeDECRST(int num)
     // Disable font-shifting functions (rxvt)
     case 35: {
       // TODO
+      UNHANDLED1("DECRST", 35);
       break;
     }
     // Leave Tektronix Mode (DECTEK)
@@ -2229,6 +2309,7 @@ escapeDECRST(int num)
     // No more(1) fix
     case 41: {
       // TODO
+      UNHANDLED1("DECRST", 41);
       break;
     }
     // Disable National Replacement Character sets (DECNRCM)
@@ -2239,6 +2320,7 @@ escapeDECRST(int num)
     // Turn Off Margin Bell
     case 44: {
       // TODO
+      UNHANDLED1("DECRST", 44);
       break;
     }
     // No Reverse-wraparound Mode
@@ -2249,6 +2331,7 @@ escapeDECRST(int num)
     // Stop Logging
     case 46: {
       // TODO
+      UNHANDLED1("DECRST", 46);
       break;
     }
     // Use Normal Screen Buffer
@@ -2266,9 +2349,28 @@ escapeDECRST(int num)
       escapeDECBKM(false);
       break;
     }
+    // VT400: Keyboard Usage (typewriter)
+    case 68: {
+      // TODO
+      UNHANDLED1("DECRST", 68);
+      break;
+    }
+    // Disable left and right margin mode (DECLRMM), VT420 and up
+    case 69: {
+      // TODO
+      UNHANDLED1("DECRST", 69);
+      break;
+    }
+    // VT400: Keyboard Position (character codes)
+    case 81: {
+      // TODO
+      UNHANDLED1("DECRST", 81);
+      break;
+    }
     // Disable left and right margin mode (DECLRMM), VT420 and up
     case 95: {
       // TODO
+      UNHANDLED1("DECRST", 95);
       break;
     }
     // Don't send Mouse X & Y on button press and release
@@ -2280,6 +2382,7 @@ escapeDECRST(int num)
     // Don't use Hilite Mouse Tracking
     case 1001: {
       // TODO
+      UNHANDLED1("DECRST", 1001);
       break;
     }
     // Don't use Cell Motion Mouse Tracking
@@ -2303,16 +2406,19 @@ escapeDECRST(int num)
     // Disable UTF-8 Mouse Mode
     case 1005: {
       // TODO
+      UNHANDLED1("DECRST", 1005);
       break;
     }
     // Disable SGR Mouse Mode
     case 1006: {
       // TODO
+      UNHANDLED1("DECRST", 1006);
       break;
     }
     // Disable Alternate Scroll Mode
     case 1007: {
       // TODO
+      UNHANDLED1("DECRST", 1007);
       break;
     }
     // Don't scroll to bottom on tty output (rxvt)
@@ -2328,51 +2434,61 @@ escapeDECRST(int num)
     // Disable urxvt Mouse Mode
     case 1015: {
       // TODO
+      UNHANDLED1("DECRST", 1015);
       break;
     }
     // Don't interpret "meta" key
     case 1034: {
       // TODO
+      UNHANDLED1("DECRST", 1034);
       break;
     }
     // Disable special modifiers for Alt and NumLock keys
     case 1035: {
       // TODO
+      UNHANDLED1("DECRST", 1035);
       break;
     }
     // Don't send ESC  when Meta modifies a key
     case 1036: {
       // TODO
+      UNHANDLED1("DECRST", 1036);
       break;
     }
     // Send VT220 Remove from the editing-keypad Delete key
     case 1037: {
       // TODO
+      UNHANDLED1("DECRST", 1037);
       break;
     }
     // Don't send ESC  when Alt modifies a key.
     case 1039: {
       // TODO
+      UNHANDLED1("DECRST", 1039);
       break;
     }
     // Do not keep selection when not highlighted.
     case 1040: {
       // TODO
+      UNHANDLED1("DECRST", 1040);
       break;
     }
     // Use the PRIMARY selection
     case 1041: {
       // TODO
+      UNHANDLED1("DECRST", 1041);
       break;
     }
     // Disable Urgency window manager hint when Control-G is received
     case 1042: {
       // TODO
+      UNHANDLED1("DECRST", 1042);
       break;
     }
     // Disable raising of the window when Control-G is received
     case 1043: {
       // TODO
+      UNHANDLED1("DECRST", 1043);
       break;
     }
     // Use Normal Screen Buffer, clearing screen first if in the Alternate Screen
@@ -2394,36 +2510,42 @@ escapeDECRST(int num)
     // Reset terminfo/termcap function-key mode
     case 1050: {
       // TODO
+      UNHANDLED1("DECRST", 1050);
       break;
     }
     // Reset Sun function-key mode
     case 1051: {
       // TODO
+      UNHANDLED1("DECRST", 1051);
       break;
     }
     // Reset HP function-key mode
     case 1052: {
       // TODO
+      UNHANDLED1("DECRST", 1052);
       break;
     }
     // Reset SCO function-key mode
     case 1053: {
       // TODO
+      UNHANDLED1("DECRST", 1053);
       break;
     }
     // Reset legacy keyboard emulation (X11R6)
     case 1060: {
       // TODO
+      UNHANDLED1("DECRST", 1060);
       break;
     }
     // Reset keyboard emulation to Sun/PC style
     case 1061: {
       // TODO
+      UNHANDLED1("DECRST", 1061);
       break;
     }
     // Reset bracketed paste mode
     case 2004: {
-      // TODO
+      setBracketedPasteMode(true);
       break;
     }
     default: {
@@ -2450,14 +2572,29 @@ escapeRM(int num)
       escapeIRM(false);
       break;
     }
-    // Send/receive (SRM)
+    // VT400: Send/Receive Mode (SRM) (local echo on)
     case 12: {
       escapeSRM(false);
       break;
     }
-    // Normal Linefeed (LNM)
+    // Normal Linefeed (LNM) (off)
     case 20: {
       escapeLNM(false);
+      break;
+    }
+    // Sixel scrolling (off)
+    case 80: {
+      UNHANDLED1("RM", num)
+      break;
+    }
+    // Use private color registers for each graphic (off)
+    case 1070: {
+      UNHANDLED1("RM", num)
+      break;
+    }
+    // Sixel scrolling leaves cursor to right of graphic (off)
+    case 8452: {
+      UNHANDLED1("RM", num)
       break;
     }
     default: {
@@ -2520,7 +2657,7 @@ escapeDECID()
 {
   logTrace("<DECID>");
 
-  processString("\033[?1;2c");
+  processString(CSI("?1;2c"));
 }
 
 void
@@ -2529,8 +2666,12 @@ escapeDA1(int *, int nn)
 {
   logTrace("<DA1>");
 
-  if (nn == 0 || nn == 1)
-    processString("\033[?1;2c");
+  if (nn == 0 || nn == 1) {
+    processString(CSI("?1;2c"));
+  }
+  else {
+    UNHANDLED1("DA1", nn);
+  }
 }
 
 void
@@ -2540,11 +2681,14 @@ escapeDA2(int *, int nn)
   logTrace("<DA2>");
 
   // vt220=1,ver=1000,rom_ver=0
-  if (nn == 0 || nn == 1)
-    processString("\033[>0;241;0c");
-
-  // TODO: Ps = 3 -> ReGIS graphics
-  // TODO: Ps = 4 -> Sixel graphics
+  if (nn == 0 || nn == 1) {
+    processString(CSI(">1;241;0c"));
+  }
+  else {
+    // TODO: Ps = 3 -> ReGIS graphics
+    // TODO: Ps = 4 -> Sixel graphics
+    UNHANDLED1("DA2", nn);
+  }
 }
 
 void
@@ -2554,26 +2698,28 @@ escapeDECDSR(int mode)
   logTrace("<DECDSR;" + CStrUtil::toString(mode) + ">");
 
   if      (mode == 5) {
-    processString("\033[?0n");
+    processString(CSI("?0n"));
   }
   else if (mode == 6) {
     int row, col;
 
     getDispPos(&row, &col);
 
-    std::string str = "\033[?" + CStrUtil::toString(row + 1) + ";" +
+    std::string str = CSI("?") + CStrUtil::toString(row + 1) + ";" +
                                  CStrUtil::toString(col + 1) + "R";
 
     processString(str.c_str());
   }
   else if (mode == 15)
-    processString("\033[?10n");
+    processString(CSI("?10n"));
   else if (mode == 25)
-    processString("\033[?20n");
+    processString(CSI("?20n"));
   else if (mode == 26)
-    processString("\033[?27;1;0;0n");
+    processString(CSI("?27;1;0;0n"));
   else if (mode == 53)
-    processString("\033[?53n");
+    processString(CSI("?53n"));
+  else
+    UNHANDLED1("DECDSR", mode);
 }
 
 void
@@ -2583,17 +2729,19 @@ escapeDSR(int num)
   logTrace("<DSR;" + CStrUtil::toString(num) + ">");
 
   if      (num == 5)
-    processString("\033[0n");
+    processString(CSI("0n"));
   else if (num == 6) {
     int row, col;
 
     getDispPos(&row, &col);
 
-    std::string str = "\033[" + CStrUtil::toString(row + 1) + ";" +
+    std::string str = CSI("") + CStrUtil::toString(row + 1) + ";" +
                                 CStrUtil::toString(col + 1) + "R";
 
     processString(str.c_str());
   }
+  else
+    UNHANDLED1("DSR", num);
 }
 
 void
@@ -2607,6 +2755,8 @@ escapeWindowManip(int *num)
 
   switch (num[0]) {
     case 0: {
+      UNHANDLED1("WindowManip", num[0]);
+
       break;
     }
     // De-iconify window
@@ -2712,12 +2862,18 @@ escapeWindowManip(int *num)
     case 10: {
       // Undo full-screen mode.
       if      (num[1] == 0) {
+        UNHANDLED2("WindowManip", num[0], num[1]);
       }
       // Change to full-screen.
       else if (num[1] == 1) {
+        UNHANDLED2("WindowManip", num[0], num[1]);
       }
       // Toggle full-screen.
       else if (num[1] == 2) {
+        UNHANDLED2("WindowManip", num[0], num[1]);
+      }
+      else {
+        UNHANDLED2("WindowManip", num[0], num[1]);
       }
 
       break;
@@ -2728,7 +2884,7 @@ escapeWindowManip(int *num)
     case 11: {
       bool mapped = (window ? window->isMapped() : isWindowMapped());
 
-      processString(mapped ? "\033[1t" : "\033[2t");
+      processString(mapped ? CSI("1t") : CSI("2t"));
 
       break;
     }
@@ -2744,7 +2900,8 @@ escapeWindowManip(int *num)
       else
         getWindowPosition(&x, &y);
 
-      std::string str = "\033[3;" + CStrUtil::toString(x) + ";" + CStrUtil::toString(y) + "t";
+      std::string str = CSI("3;") + CStrUtil::toString(x) + ";" +
+                                    CStrUtil::toString(y) + "t";
 
       processString(str.c_str());
 
@@ -2759,7 +2916,7 @@ escapeWindowManip(int *num)
       else
         getWindowSize(&width, &height);
 
-      std::string str = "\033[4;" + CStrUtil::toString(height) + ";" +
+      std::string str = CSI("4;") + CStrUtil::toString(height) + ";" +
                                     CStrUtil::toString(width ) + "t";
 
       processString(str.c_str());
@@ -2767,17 +2924,23 @@ escapeWindowManip(int *num)
       break;
     }
     case 15: {
+      UNHANDLED1("WindowManip", num[0]);
+
       break;
     }
     case 16: {
+      UNHANDLED1("WindowManip", num[0]);
+
       break;
     }
     case 17: {
+      UNHANDLED1("WindowManip", num[0]);
+
       break;
     }
     // Report the size of the text area in characters
     case 18: {
-      std::string str = "\033[8;" + CStrUtil::toString(getNumDispRows()) + ";" +
+      std::string str = CSI("8;") + CStrUtil::toString(getNumDispRows()) + ";" +
                                     CStrUtil::toString(getNumDispCols()) + "t";
 
       processString(str.c_str());
@@ -2797,7 +2960,8 @@ escapeWindowManip(int *num)
 
       pixelsToChars(width, height, &cols, &rows);
 
-      std::string str = "\033[9;" + CStrUtil::toString(rows) + ";" + CStrUtil::toString(cols) + "t";
+      std::string str = CSI("9;") + CStrUtil::toString(rows) + ";" +
+                                    CStrUtil::toString(cols) + "t";
 
       processString(str.c_str());
 
@@ -2835,10 +2999,14 @@ escapeWindowManip(int *num)
     }
     // Save icon and window title on stack
     case 22: {
+      UNHANDLED1("WindowManip", num[0]);
+
       break;
     }
     // Restore icon and window title from stack
     case 23: {
+      UNHANDLED1("WindowManip", num[0]);
+
       break;
     }
     // Resize to Ps lines (DECSLPP)
@@ -2905,9 +3073,11 @@ CEscapeHandler::
 escapeDECREQTPARM(int num)
 {
   if      (num == 0)
-    processString("\033[2;1;1;128;128;1;0x");
+    processString(CSI("2;1;1;128;128;1;0x"));
   else if (num == 1)
-    processString("\033[3;1;1;128;128;1;0x");
+    processString(CSI("3;1;1;128;128;1;0x"));
+  else
+    UNHANDLED1("DECREQTPARM", num);
 }
 
 void
@@ -3282,7 +3452,46 @@ void
 CEscapeHandler::
 escapeDECSTR()
 {
-  UNHANDLED("DECSTR")
+  // Reset to defaults settings
+  // --------------------------
+
+  // Text cursor enable              DECTCEM       Cursor enabled.
+  setCursorVisible(true);
+  // Insert/replace                  IRM           Replace mode.
+  setInsertMode   (false);
+  // Origin                          DECOM         Absolute (cursor origin at top-left of screen)
+  setOriginMode   (false);
+  escapeDispPos   (0, 0);
+  // Autowrap                        DECAWM        No autowrap.
+  // TODO
+  // National replacement char set   DECNRCM       Multinational set.
+  // TODO
+  // Keyboard action                 KAM           Unlocked.
+  // TODO
+  // Numeric keypad                  DECNKM        Numeric characters.
+  // TODO
+  // Cursor keys                     DECCKM        Normal (arrow keys).
+  setApplicationCursorKeys(false);
+  // Set top and bottom margins      DECSTBM       Top margin = 1; bottom margin = page length.
+  resetScrollArea();
+  // All character sets              G0-3, GL, GR  Default settings.
+  charset_.reset();
+  // Select graphic rendition        SGR           Normal rendition.
+  setStyle(CCellStyle());
+  // Select character attribute      DECSCA        Normal (erasable by DECSEL and DECSED).
+  // TODO
+  // Save cursor state               DECSC         Home position.
+  saveCursor();
+  // Assign user pref supplement set DECAUPSS      Set selected in Set-Up.
+  // TODO
+  // Select active status display    DECSASD       Main display.
+  // TODO
+  // Keyboard position mode          DECKPM        Character codes.
+  // TODO
+  // Cursor direction                DECRLM        Reset (Left-to-right), regardless of NVR setting.
+  // TODO
+  // PC Term mode                    DECPCTERM     Always reset.
+  // TODO
 }
 
 void
@@ -3657,6 +3866,7 @@ escapeOSC(int num, const std::string &str1)
     }
     case 4:  // Change Color Number
       UNHANDLED1("OSC Escape", num)
+
       break;
     case 10:   // Change Text Foreground Color
     case 11:   // Change Text Background Color
@@ -3704,17 +3914,26 @@ escapeOSC(int num, const std::string &str1)
 
       break;
     }
-    case 18: // Change Cursor Color
+    case 18: { // Change Cursor Color
       UNHANDLED1("OSC Escape", num)
+
       break;
-    case 46: // Change Log File
+    }
+    case 46: { // Change Log File
       UNHANDLED1("OSC Escape", num)
+
       break;
-    case 50: // Change Font
+    }
+    case 50: { // Change Font
       UNHANDLED1("OSC Escape", num)
+
       break;
-    default:
+    }
+    default: {
+      UNHANDLED1("OSC Escape", num)
+
       break;
+    }
   }
 }
 
@@ -3727,19 +3946,23 @@ escape4014(const CEscapeDataTek4014 *esc)
     escapeDECTEK(false);
   }
   else if (esc->mode == CEscapeDataTek4014::Mode::STATUS) {
+    UNHANDLED1("4014 Escape", int(esc->mode))
   }
   else if (esc->mode == CEscapeDataTek4014::Mode::CLEAR) {
     // erase screen, selects alpha, move cursor home, sets margin 1, clears bypass condition
     clear4014();
   }
   else if (esc->mode == CEscapeDataTek4014::Mode::COPY) {
+    UNHANDLED1("4014 Escape", int(esc->mode))
   }
   else if (esc->mode == CEscapeDataTek4014::Mode::BYPASS) {
+    UNHANDLED1("4014 Escape", int(esc->mode))
   }
   else if (esc->mode == CEscapeDataTek4014::Mode::GIN) {
     set4014GIN(true);
   }
   else if (esc->mode == CEscapeDataTek4014::Mode::POINT_PLOT) {
+    UNHANDLED1("4014 Escape", int(esc->mode))
   }
   else if (esc->mode == CEscapeDataTek4014::Mode::CHAR_SET) {
     state_.set4014CharSet(esc->value);
@@ -3748,6 +3971,9 @@ escape4014(const CEscapeDataTek4014 *esc)
     state_.clear4014Points();
 
     state_.set4014LineStyle(esc->lineStyle);
+  }
+  else {
+    assert(false);
   }
 }
 
@@ -3901,6 +4127,15 @@ CEscapeHandler::
 setScrollBottomOnTty(bool flag)
 {
   state_.setScrollBottomOnTty(flag);
+
+  notifyStateChange();
+}
+
+void
+CEscapeHandler::
+setBracketedPasteMode(bool flag)
+{
+  state_.setBracketedPasteMode(flag);
 
   notifyStateChange();
 }
@@ -4281,9 +4516,9 @@ send4014MousePress(int button, int x, int y)
   processString(str);
 }
 
-void
+std::string
 CEscapeHandler::
-logTrace(char c) const
+CSI(const std::string &str) const
 {
-  logTrace(std::string(&c, 1));
+  return CEscape::CSI(str, getControl8Bit());
 }

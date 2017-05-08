@@ -442,6 +442,9 @@ class CEscapeParseIFace {
   // log information
   virtual void log(const std::string &str) const = 0;
 
+  // log information
+  virtual void logError(const std::string &str) const = 0;
+
   // handle state
   virtual bool isVT52() const { return is_vt52_; }
   virtual void setVT52(bool b) { is_vt52_ = b; }
@@ -535,6 +538,8 @@ class CEscapeParse : public CEscapeParseIFace {
   virtual void handleEscape (const CEscapeData *esc) = 0;
 
   virtual void log(const std::string &str) const = 0;
+
+  virtual void logError(const std::string &str) const = 0;
 
  private:
   // private data
@@ -739,6 +744,10 @@ class CEscapeDebugParse : public CEscapeParse {
   void log(const std::string &str) const override {
     if (isLogging())
       std::cerr << str;
+  }
+
+  void logError(const std::string &str) const override {
+    std::cerr << str;
   }
 
  private:

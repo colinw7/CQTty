@@ -409,6 +409,7 @@ CPageTextEscapeNotifier::
 startPrintLog()
 {
   // TODO
+  logError("startPrintLog");
 }
 
 void
@@ -416,6 +417,7 @@ CPageTextEscapeNotifier::
 stopPrintLog()
 {
   // TODO
+  logError("stopPrintLog");
 }
 
 void
@@ -443,7 +445,7 @@ CPageTextEscapeNotifier::
 printComposedScreen()
 {
   // TODO
-  printScreen();
+  logError("printComposedScreen");
 }
 
 void
@@ -451,7 +453,7 @@ CPageTextEscapeNotifier::
 printAllPages()
 {
   // TODO
-  printScreen();
+  logError("printAllPages");
 }
 
 CWindow *
@@ -578,15 +580,7 @@ CPageTextEscapeNotifier::
 logDebug(const std::string &str) const
 {
   if (area_->getDebug())
-    area_->log(str);
-}
-
-void
-CPageTextEscapeNotifier::
-logTrace(char c) const
-{
-  if (area_->getTrace())
-    area_->log(c);
+    area_->logDebug(str);
 }
 
 void
@@ -594,7 +588,14 @@ CPageTextEscapeNotifier::
 logTrace(const std::string &str) const
 {
   if (area_->getTrace())
-    area_->log(str);
+    area_->logTrace(str);
+}
+
+void
+CPageTextEscapeNotifier::
+logError(const std::string &str) const
+{
+  area_->logError(str);
 }
 
 void
@@ -687,4 +688,25 @@ CPageTextEscapeNotifier::
 draw4014Char(char c)
 {
   area_->draw4014Char(c);
+}
+
+CIPoint2D
+CPageTextEscapeNotifier::
+get4014DataPos() const
+{
+  return area_->get4014DataPos();
+}
+
+int
+CPageTextEscapeNotifier::
+get4014NumDataRows() const
+{
+  return area_->get4014NumDataRows();
+}
+
+int
+CPageTextEscapeNotifier::
+get4014NumDataCols() const
+{
+  return area_->get4014NumDataCols();
 }

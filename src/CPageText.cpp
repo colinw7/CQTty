@@ -15,13 +15,13 @@ CPageText::
 CPageText() :
  log_(".page_text.log")
 {
-  page_rows_ = 60;
-  page_cols_ = 100;
+  pageRows_ = 60;
+  pageCols_ = 100;
 
   setFontSet("courier", 12);
 
-  CEnvInst.set("LINES"  , page_rows_);
-  CEnvInst.set("COLUMNS", page_cols_);
+  CEnvInst.set("LINES"  , pageRows_);
+  CEnvInst.set("COLUMNS", pageCols_);
 
   dirName_ = CDir::getCurrent();
 }
@@ -29,7 +29,7 @@ CPageText() :
 CPageText::
 ~CPageText()
 {
-  for (auto &old_line : old_lines_)
+  for (auto &old_line : oldLines_)
     delete old_line;
 }
 
@@ -55,14 +55,21 @@ setTrace(bool trace)
 
 void
 CPageText::
-log(char c)
+logDebug(const std::string &str)
 {
-  log_.write(c);
+  log_.write(str);
 }
 
 void
 CPageText::
-log(const std::string &str)
+logTrace(const std::string &str)
+{
+  log_.write(str);
+}
+
+void
+CPageText::
+logError(const std::string &str)
 {
   log_.write(str);
 }
@@ -235,29 +242,27 @@ const CPageText::Page &
 CPageText::
 getCurrentPage() const
 {
-  if (is_alt_)
-    return cur_page_;
+  if (! isAlt_)
+    return currentPage_;
   else
-    return alt_page_;
+    return altPage_;
 }
 
 CPageText::Page &
 CPageText::
 getCurrentPage()
 {
-  if (is_alt_)
-    return cur_page_;
+  if (! isAlt_)
+    return currentPage_;
   else
-    return alt_page_;
+    return altPage_;
 }
 
 void
 CPageText::
 setIsAlt(bool alt)
 {
-  is_alt_ = alt;
-
-  update();
+  isAlt_ = alt;
 }
 
 void
@@ -490,7 +495,7 @@ uint
 CPageText::
 getPageRows() const
 {
-  return page_rows_;
+  return pageRows_;
 }
 
 void
@@ -504,7 +509,7 @@ uint
 CPageText::
 getPageCols() const
 {
-  return page_cols_;
+  return pageCols_;
 }
 
 void
@@ -558,10 +563,10 @@ setPageSize(uint rows, uint cols)
     if (! isAlt()) {
       uint num_extra = rows - getPageRows();
 
-      while (num_extra > 0 && ! old_lines_.empty()) {
-        CPageTextLine *old_line = old_lines_.back();
+      while (num_extra > 0 && ! oldLines_.empty()) {
+        CPageTextLine *old_line = oldLines_.back();
 
-        old_lines_.pop_back();
+        oldLines_.pop_back();
 
         uint num_lines = lines.size();
 
@@ -577,8 +582,8 @@ setPageSize(uint rows, uint cols)
     }
   }
 
-  page_rows_ = rows;
-  page_cols_ = cols;
+  pageRows_ = rows;
+  pageCols_ = cols;
 
   CEnvInst.set("LINES"  , rows);
   CEnvInst.set("COLUMNS", cols);
@@ -664,7 +669,7 @@ CPageText::
 getNumOldLines() const
 {
   if (! isAlt())
-    return old_lines_.size();
+    return oldLines_.size();
   else
     return 0;
 }
@@ -674,7 +679,7 @@ CPageText::
 getOldLine(uint i) const
 {
   if (! isAlt())
-    return old_lines_[i];
+    return oldLines_[i];
   else
     return nullptr;
 }
@@ -684,7 +689,7 @@ CPageText::
 addOldLine(CPageTextLine *line)
 {
   if (! isAlt()) {
-    old_lines_.push_back(line);
+    oldLines_.push_back(line);
 
     return true;
   }
@@ -731,16 +736,16 @@ CPageText::
 beginOldLine() const
 {
   if (! isAlt())
-    return old_lines_.begin();
+    return oldLines_.begin();
   else
-    return old_lines_.end();
+    return oldLines_.end();
 }
 
 CPageText::LineList::const_iterator
 CPageText::
 endOldLine() const
 {
-  return old_lines_.end();
+  return oldLines_.end();
 }
 
 const CPageText::LineList &
@@ -821,13 +826,13 @@ void
 CPageText::
 clear()
 {
+  // Scroll Up
+
   for (auto &line : lines())
-    line->erase();
+    line->reset();
 
   pixelPoints_.clear();
   pixelLines_ .clear();
-
-  update();
 }
 
 void
@@ -839,8 +844,6 @@ clearAbove()
 
   for (uint i = 0; i < uint(getRow()) && i < num_lines; ++i)
     lines[i]->erase();
-
-  update();
 }
 
 void
@@ -852,20 +855,16 @@ clearBelow()
 
   for (uint i = getRow() + 1; i < num_lines; ++i)
     lines[i]->erase();
-
-  update();
 }
 
 void
 CPageText::
 clearSaved()
 {
-  for (auto &old_line : old_lines_)
+  for (auto &old_line : oldLines_)
     delete old_line;
 
-  old_lines_.clear();
-
-  update();
+  oldLines_.clear();
 }
 
 void
@@ -980,7 +979,7 @@ scrollUp()
   lines[bottom_line] = new CPageTextLine(this);
 
   if (! notifier->hasScrollArea())
-    old_lines_.push_back(old_line);
+    oldLines_.push_back(old_line);
   else
     delete old_line;
 
@@ -1369,7 +1368,7 @@ loadEsc(const std::string &fileName)
       while ((c = file.getC()) != EOF) {
         buffer += c;
 
-        if (buffer.size() > buffer_size_)
+        if (buffer.size() > bufferSize_)
           break;
       }
 
@@ -1386,7 +1385,7 @@ loadEsc(const std::string &fileName)
       while ((c = file.getC()) != EOF) {
         buffer += c;
 
-        if (buffer.size() > buffer_size_)
+        if (buffer.size() > bufferSize_)
           break;
       }
 
@@ -1466,6 +1465,21 @@ processString(const char *str)
   flush();
 }
 
+void
+CPageText::
+pasteString(const char *str)
+{
+  CPageTextEscapeNotifier *notifier = getEscapeNotifier();
+
+  if (notifier->getBracketedPasteMode()) {
+    std::string str1 = "[200~" + std::string(&str[0]) + "[201~";
+
+    processString(str1.c_str());
+  }
+  else
+    processString(str);
+}
+
 bool
 CPageText::
 flush()
@@ -1497,9 +1511,9 @@ CPageText::
 paste(const std::string &str)
 {
   if (! str.empty())
-    processString(str.c_str());
+    pasteString(str.c_str());
   else
-    processString(getSelectionText().c_str());
+    pasteString(getSelectionText().c_str());
 }
 
 void
@@ -1533,7 +1547,6 @@ void
 CPageText::
 notifyStateChange()
 {
-  update();
 }
 
 //------
@@ -1616,6 +1629,27 @@ void
 CPageText::
 draw4014Char(char)
 {
+}
+
+CIPoint2D
+CPageText::
+get4014DataPos() const
+{
+  return CIPoint2D();
+}
+
+int
+CPageText::
+get4014NumDataRows() const
+{
+  return 0;
+}
+
+int
+CPageText::
+get4014NumDataCols() const
+{
+  return 0;
 }
 
 //------

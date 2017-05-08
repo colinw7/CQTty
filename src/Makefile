@@ -64,6 +64,7 @@ SOURCES       = CEscapeColors.cpp \
 		CQPageTextStatus.cpp \
 		CQPageTextToolBar.cpp \
 		CQPageTextWidget.cpp \
+		CQPageTextError.cpp \
 		CQTty.cpp \
 		CTextCell.cpp \
 		CTty.cpp \
@@ -76,6 +77,7 @@ SOURCES       = CEscapeColors.cpp \
 		.moc/moc_CQPageTextStatus.cpp \
 		.moc/moc_CQPageTextToolBar.cpp \
 		.moc/moc_CQPageTextWidget.cpp \
+		.moc/moc_CQPageTextError.cpp \
 		.moc/moc_CQTty.cpp
 OBJECTS       = ../obj/CEscapeColors.o \
 		../obj/CEscape.o \
@@ -93,6 +95,7 @@ OBJECTS       = ../obj/CEscapeColors.o \
 		../obj/CQPageTextStatus.o \
 		../obj/CQPageTextToolBar.o \
 		../obj/CQPageTextWidget.o \
+		../obj/CQPageTextError.o \
 		../obj/CQTty.o \
 		../obj/CTextCell.o \
 		../obj/CTty.o \
@@ -106,6 +109,7 @@ OBJECTS       = ../obj/CEscapeColors.o \
 		../obj/moc_CQPageTextStatus.o \
 		../obj/moc_CQPageTextToolBar.o \
 		../obj/moc_CQPageTextWidget.o \
+		../obj/moc_CQPageTextError.o \
 		../obj/moc_CQTty.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
@@ -191,6 +195,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		CQPageTextStatus.h \
 		CQPageTextToolBar.h \
 		CQPageTextWidget.h \
+		CQPageTextError.h \
 		CQTty.h \
 		CQTtyPageTextWidget.h \
 		CTextCell.h \
@@ -213,6 +218,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		CQPageTextStatus.cpp \
 		CQPageTextToolBar.cpp \
 		CQPageTextWidget.cpp \
+		CQPageTextError.cpp \
 		CQTty.cpp \
 		CTextCell.cpp \
 		CTty.cpp \
@@ -400,8 +406,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents CCellStyle.h CCharBuf.h CEscapeColors.h CEscape.h CEscapeHandler.h CEscapeParse.h CEscapeState.h CEscapeType.h CLogFile.h CPageTextEscapeNotifier.h CPageText.h CPageTextLine.h CQPageText4014.h CQPageTextButton.h CQPageTextCanvas.h CQPageText.h CQPageTextState.h CQPageTextStatus.h CQPageTextToolBar.h CQPageTextWidget.h CQTty.h CQTtyPageTextWidget.h CTextCell.h CTextPos.h CTextTabs.h CTty.h CVFont.h $(DISTDIR)/
-	$(COPY_FILE) --parents CEscapeColors.cpp CEscape.cpp CEscapeHandler.cpp CEscapeParse.cpp CLogFile.cpp CPageText.cpp CPageTextEscapeNotifier.cpp CPageTextLine.cpp CQPageText4014.cpp CQPageTextButton.cpp CQPageTextCanvas.cpp CQPageText.cpp CQPageTextState.cpp CQPageTextStatus.cpp CQPageTextToolBar.cpp CQPageTextWidget.cpp CQTty.cpp CTextCell.cpp CTty.cpp CVFont.cpp main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents CCellStyle.h CCharBuf.h CEscapeColors.h CEscape.h CEscapeHandler.h CEscapeParse.h CEscapeState.h CEscapeType.h CLogFile.h CPageTextEscapeNotifier.h CPageText.h CPageTextLine.h CQPageText4014.h CQPageTextButton.h CQPageTextCanvas.h CQPageText.h CQPageTextState.h CQPageTextStatus.h CQPageTextToolBar.h CQPageTextWidget.h CQPageTextError.h CQTty.h CQTtyPageTextWidget.h CTextCell.h CTextPos.h CTextTabs.h CTty.h CVFont.h $(DISTDIR)/
+	$(COPY_FILE) --parents CEscapeColors.cpp CEscape.cpp CEscapeHandler.cpp CEscapeParse.cpp CLogFile.cpp CPageText.cpp CPageTextEscapeNotifier.cpp CPageTextLine.cpp CQPageText4014.cpp CQPageTextButton.cpp CQPageTextCanvas.cpp CQPageText.cpp CQPageTextState.cpp CQPageTextStatus.cpp CQPageTextToolBar.cpp CQPageTextWidget.cpp CQPageTextError.cpp CQTty.cpp CTextCell.cpp CTty.cpp CVFont.cpp main.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -424,9 +430,9 @@ check: first
 
 compiler_rcc_make_all:
 compiler_rcc_clean:
-compiler_moc_header_make_all: .moc/moc_CQPageText4014.cpp .moc/moc_CQPageTextButton.cpp .moc/moc_CQPageTextCanvas.cpp .moc/moc_CQPageText.cpp .moc/moc_CQPageTextState.cpp .moc/moc_CQPageTextStatus.cpp .moc/moc_CQPageTextToolBar.cpp .moc/moc_CQPageTextWidget.cpp .moc/moc_CQTty.cpp
+compiler_moc_header_make_all: .moc/moc_CQPageText4014.cpp .moc/moc_CQPageTextButton.cpp .moc/moc_CQPageTextCanvas.cpp .moc/moc_CQPageText.cpp .moc/moc_CQPageTextState.cpp .moc/moc_CQPageTextStatus.cpp .moc/moc_CQPageTextToolBar.cpp .moc/moc_CQPageTextWidget.cpp .moc/moc_CQPageTextError.cpp .moc/moc_CQTty.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) .moc/moc_CQPageText4014.cpp .moc/moc_CQPageTextButton.cpp .moc/moc_CQPageTextCanvas.cpp .moc/moc_CQPageText.cpp .moc/moc_CQPageTextState.cpp .moc/moc_CQPageTextStatus.cpp .moc/moc_CQPageTextToolBar.cpp .moc/moc_CQPageTextWidget.cpp .moc/moc_CQTty.cpp
+	-$(DEL_FILE) .moc/moc_CQPageText4014.cpp .moc/moc_CQPageTextButton.cpp .moc/moc_CQPageTextCanvas.cpp .moc/moc_CQPageText.cpp .moc/moc_CQPageTextState.cpp .moc/moc_CQPageTextStatus.cpp .moc/moc_CQPageTextToolBar.cpp .moc/moc_CQPageTextWidget.cpp .moc/moc_CQPageTextError.cpp .moc/moc_CQTty.cpp
 .moc/moc_CQPageText4014.cpp: CQPageText.h \
 		CPageText.h \
 		../../CUtil/include/CRGBA.h \
@@ -544,6 +550,9 @@ compiler_moc_header_clean:
 		CQPageTextWidget.h
 	/usr/lib/x86_64-linux-gnu/qt5/bin/moc $(DEFINES) -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64 -I/home/colinw/git/CQTty/src -I/home/colinw/git/CQTty/src -I/home/colinw/git/CQTty/include -I/home/colinw/git/CQTty/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CFileUtil/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CRegExp/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/CRGBName/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/5 -I/usr/include/x86_64-linux-gnu/c++/5 -I/usr/include/c++/5/backward -I/usr/lib/gcc/x86_64-linux-gnu/5/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include CQPageTextWidget.h -o .moc/moc_CQPageTextWidget.cpp
 
+.moc/moc_CQPageTextError.cpp: CQPageTextError.h
+	/usr/lib/x86_64-linux-gnu/qt5/bin/moc $(DEFINES) -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64 -I/home/colinw/git/CQTty/src -I/home/colinw/git/CQTty/src -I/home/colinw/git/CQTty/include -I/home/colinw/git/CQTty/include -I/home/colinw/git/CQUtil/include -I/home/colinw/git/CImageLib/include -I/home/colinw/git/CFont/include -I/home/colinw/git/CConfig/include -I/home/colinw/git/CFileUtil/include -I/home/colinw/git/CFile/include -I/home/colinw/git/CMath/include -I/home/colinw/git/CRegExp/include -I/home/colinw/git/CStrUtil/include -I/home/colinw/git/CUtil/include -I/home/colinw/git/CRGBName/include -I/home/colinw/git/COS/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/5 -I/usr/include/x86_64-linux-gnu/c++/5 -I/usr/include/c++/5/backward -I/usr/lib/gcc/x86_64-linux-gnu/5/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include CQPageTextError.h -o .moc/moc_CQPageTextError.cpp
+
 .moc/moc_CQTty.cpp: ../../CConfig/include/CConfig.h \
 		../../CUtil/include/CAutoPtr.h \
 		CQTty.h
@@ -633,6 +642,7 @@ compiler_clean: compiler_moc_header_clean
 		CEscapeState.h \
 		CTextTabs.h \
 		CEscapeColors.h \
+		CEscape.h \
 		../../CUtil/include/CWindow.h \
 		../../CUtil/include/CUtf8.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CEscapeHandler.o CEscapeHandler.cpp
@@ -1089,6 +1099,7 @@ compiler_clean: compiler_moc_header_clean
 		CQPageTextWidget.h \
 		CQPageText4014.h \
 		CEscapeColors.h \
+		CQPageTextError.h \
 		CQPageTextState.h \
 		CPageTextEscapeNotifier.h \
 		CEscapeHandler.h \
@@ -1100,7 +1111,8 @@ compiler_clean: compiler_moc_header_clean
 		CTextTabs.h \
 		CPageTextLine.h \
 		CTextCell.h \
-		CEscape.h
+		CEscape.h \
+		../../CConfig/include/CConfig.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CQPageText.o CQPageText.cpp
 
 ../obj/CQPageTextState.o: CQPageTextState.cpp CQPageTextState.h \
@@ -1150,6 +1162,7 @@ compiler_clean: compiler_moc_header_clean
 		../../CUtil/include/CWindow.h \
 		../../CUtil/include/CEvent.h \
 		../../CUtil/include/CKeyType.h \
+		CQPageTextWidget.h \
 		CPageTextEscapeNotifier.h \
 		CEscapeHandler.h \
 		CEscapeParse.h \
@@ -1281,6 +1294,51 @@ compiler_clean: compiler_moc_header_clean
 		CQPageTextStatus.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CQPageTextWidget.o CQPageTextWidget.cpp
 
+../obj/CQPageTextError.o: CQPageTextError.cpp CQPageTextError.h \
+		CQPageText.h \
+		CPageText.h \
+		../../CUtil/include/CRGBA.h \
+		../../CUtil/include/CRGB.h \
+		../../CRGBName/include/CRGBName.h \
+		../../CUtil/include/CRGBUtil.h \
+		../../CUtil/include/CCMYK.h \
+		../../CUtil/include/CHSL.h \
+		../../CUtil/include/CHSV.h \
+		../../CUtil/include/CHSB.h \
+		../../CUtil/include/CHSI.h \
+		../../CMath/include/CMathGen.h \
+		../../COS/include/NaN.h \
+		../../CMath/include/CIPoint2D.h \
+		../../CUtil/include/CColorComponent.h \
+		../../CFont/include/CFont.h \
+		../../CUtil/include/CRefPtr.h \
+		../../CFont/include/CFontStyle.h \
+		../../CUtil/include/CFlags.h \
+		../../CImageLib/include/CImageLib.h \
+		../../CFile/include/CFile.h \
+		../../CFile/include/CFileBase.h \
+		../../CFile/include/CFileType.h \
+		../../CUtil/include/CAlignType.h \
+		../../CImageLib/include/CImageState.h \
+		../../CImageLib/include/CImage.h \
+		../../CUtil/include/CRGBACombineDef.h \
+		../../CMath/include/CISize2D.h \
+		../../CMath/include/CIBBox2D.h \
+		../../CMath/include/CIVector2D.h \
+		../../CUtil/include/COptVal.h \
+		../../CImageLib/include/CImagePtr.h \
+		../../CImageLib/include/CImageMgr.h \
+		../../CStrUtil/include/CStrUtil.h \
+		../../CImageLib/include/CImageAnim.h \
+		../../CImageLib/include/CImageFile.h \
+		CCellStyle.h \
+		CEscapeType.h \
+		CTextPos.h \
+		CLogFile.h \
+		../../CUtil/include/CAutoPtr.h \
+		CQPageTextWidget.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CQPageTextError.o CQPageTextError.cpp
+
 ../obj/CQTty.o: CQTty.cpp CQTty.h \
 		../../CConfig/include/CConfig.h \
 		../../CUtil/include/CAutoPtr.h \
@@ -1384,7 +1442,8 @@ compiler_clean: compiler_moc_header_clean
 		../../CUtil/include/CRefPtr.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CTty.o CTty.cpp
 
-../obj/CVFont.o: CVFont.cpp CVFont.h
+../obj/CVFont.o: CVFont.cpp CVFont.h \
+		CVFontDef.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CVFont.o CVFont.cpp
 
 ../obj/main.o: main.cpp CQTty.h \
@@ -1458,6 +1517,9 @@ compiler_clean: compiler_moc_header_clean
 
 ../obj/moc_CQPageTextWidget.o: .moc/moc_CQPageTextWidget.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/moc_CQPageTextWidget.o .moc/moc_CQPageTextWidget.cpp
+
+../obj/moc_CQPageTextError.o: .moc/moc_CQPageTextError.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/moc_CQPageTextError.o .moc/moc_CQPageTextError.cpp
 
 ../obj/moc_CQTty.o: .moc/moc_CQTty.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/moc_CQTty.o .moc/moc_CQTty.cpp

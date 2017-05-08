@@ -87,6 +87,9 @@ eraseLeft(uint col)
 
   for (uint i = 0; i <= col && i < num_cells; ++i)
     clearCell(i, '\0');
+
+  if (col >= num_cells - 1)
+    resetLineStyle();
 }
 
 void
@@ -97,6 +100,9 @@ eraseRight(uint col)
 
   for (uint i = col; i < num_cells; ++i)
     clearCell(i, '\0');
+
+  if (col == 0)
+    resetLineStyle();
 }
 
 void
@@ -104,6 +110,24 @@ CPageTextLine::
 erase()
 {
   eraseRight(0);
+}
+
+void
+CPageTextLine::
+reset()
+{
+  eraseRight(0);
+
+  assert(links_ .empty());
+  assert(images_.empty());
+}
+
+void
+CPageTextLine::
+resetLineStyle()
+{
+  widthStyle_  = CCellLineWidthStyle::SINGLE;
+  heightStyle_ = CCellLineHeightStyle::SINGLE;
 }
 
 void

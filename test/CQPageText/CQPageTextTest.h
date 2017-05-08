@@ -18,9 +18,6 @@ class CQPageTextTest : public QWidget {
 
   QSize sizeHint() const;
 
- private:
-  void loadConfig();
-
  private slots:
   void fitAreaSlot();
 

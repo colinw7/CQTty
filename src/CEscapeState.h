@@ -21,12 +21,13 @@ class CEscapeState {
   }
 
   void reset() {
-    scrollBottomKey_ = true;
-    scrollBottomTty_ = true;
-    lineWrap_        = true;
-    cursorVisible_   = true;
-    cursorBlink_     = true;
-    allow80132_      = true;
+    scrollBottomKey_    = true;
+    scrollBottomTty_    = true;
+    bracketedPasteMode_ = false;
+    lineWrap_           = true;
+    cursorVisible_      = true;
+    cursorBlink_        = true;
+    allow80132_         = true;
   }
 
   bool getInverseVideo() const { return inverseVideo_; }
@@ -49,6 +50,9 @@ class CEscapeState {
 
   bool getScrollBottomOnTty() const { return scrollBottomTty_; }
   void setScrollBottomOnTty(bool flag) { scrollBottomTty_ = flag; }
+
+  bool getBracketedPasteMode() const { return bracketedPasteMode_; }
+  void setBracketedPasteMode(bool flag) { bracketedPasteMode_ = flag; }
 
   bool getApplicationCursorKeys() const { return appCursorKeys_; }
   void setApplicationCursorKeys(bool flag) { appCursorKeys_ = flag; }
@@ -121,30 +125,31 @@ class CEscapeState {
     Points           points;
   };
 
-  bool     inverseVideo_     { false };
-  bool     sendMousePress_   { false };
-  bool     sendMouseRelease_ { false };
-  bool     sendMouseMotion_  { false };
-  bool     sendFocus_        { false };
-  bool     scrollBottomKey_  { false };
-  bool     scrollBottomTty_  { false };
-  bool     appCursorKeys_    { false };
-  bool     insertMode_       { false };
-  bool     lineWrap_         { false };
-  bool     ansiVt52Mode_     { false };
-  bool     tek4014_          { false };
-  bool     keyPadMode_       { false };
-  bool     lfNlMode_         { false };
-  bool     ffNpMode_         { false };
-  bool     smoothScroll_     { false };
-  bool     originMode_       { false }; // origin is top of scroll area (true)
-                                          // or (0,0) false
-  bool     autoRepeat_       { false };
-  bool     cursorVisible_    { false };
-  bool     cursorBlink_      { false };
-  bool     reverseWrap_      { false };
-  bool     allow80132_       { false };
-  bool     control8_         { false };
+  bool     inverseVideo_       { false };
+  bool     sendMousePress_     { false };
+  bool     sendMouseRelease_   { false };
+  bool     sendMouseMotion_    { false };
+  bool     sendFocus_          { false };
+  bool     scrollBottomKey_    { false };
+  bool     scrollBottomTty_    { false };
+  bool     bracketedPasteMode_ { false };
+  bool     appCursorKeys_      { false };
+  bool     insertMode_         { false };
+  bool     lineWrap_           { false };
+  bool     ansiVt52Mode_       { false };
+  bool     tek4014_            { false };
+  bool     keyPadMode_         { false };
+  bool     lfNlMode_           { false };
+  bool     ffNpMode_           { false };
+  bool     smoothScroll_       { false };
+  bool     originMode_         { false }; // origin is top of scroll area (true)
+                                        // or (0,0) false
+  bool     autoRepeat_         { false };
+  bool     cursorVisible_      { true  };
+  bool     cursorBlink_        { false };
+  bool     reverseWrap_        { false };
+  bool     allow80132_         { false };
+  bool     control8_           { false };
   Data4014 data4014_;
 };
 
