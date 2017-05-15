@@ -178,8 +178,8 @@ updateScrollBars()
 {
   CQPageText *area = area_->getArea();
 
-  QScrollBar *hscroll = area_->getHScroll();
-  QScrollBar *vscroll = area_->getVScroll();
+  QScrollBar *hbar = area_->getHScroll();
+  QScrollBar *vbar = area_->getVScroll();
 
   int w = width ();
   int h = height();
@@ -190,16 +190,17 @@ updateScrollBars()
   int hs = std::min(w, aw);
   int vs = std::min(h, ah);
 
-  hscroll->setMinimum(0);
-  hscroll->setMaximum(aw - hs);
-  hscroll->setPageStep(hs);
+  hbar->setMinimum(0);
+  hbar->setMaximum(aw - hs);
+  hbar->setPageStep(hs);
 
-  vscroll->setMinimum(0);
-  vscroll->setMaximum(ah - vs);
-  vscroll->setPageStep(vs);
+  vbar->setMinimum(0);
+  vbar->setMaximum(ah - vs);
+  vbar->setPageStep(vs);
+  vbar->setSingleStep(charHeight_);
 
-  x_offset_ = hscroll->value();
-  y_offset_ = vscroll->value();
+  x_offset_ = hbar->value();
+  y_offset_ = vbar->value();
 }
 
 void
@@ -847,6 +848,32 @@ mouseDoubleClickEvent(QMouseEvent *e)
 
     if (area->selectWord(clickRow, clickCol))
       update();
+  }
+}
+
+void
+CQPageTextCanvas::
+wheelEvent(QWheelEvent *event)
+{
+  CQPageText *area = area_->getArea();
+
+  if (area->getShowScrollBar()) {
+    QScrollBar *vbar = area_->getVScroll();
+
+    double num = -(1.0*event->delta())/vbar->singleStep();
+
+    int value = vbar->value();
+
+    if (num > 0)
+      value += std::round(num)*vbar->singleStep();
+    else
+      value -= std::round(-num)*vbar->singleStep();
+
+    int value1 = std::min(std::max(value, vbar->minimum()), vbar->maximum());
+
+    vbar->setValue(value1);
+
+    event->accept();
   }
 }
 

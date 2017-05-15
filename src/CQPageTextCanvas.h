@@ -116,6 +116,8 @@ class CQPageTextCanvas : public CQWindow {
 
   void mouseDoubleClickEvent(QMouseEvent *) override;
 
+  void wheelEvent(QWheelEvent *event);
+
   void keyPressEvent(QKeyEvent *e) override;
 
   void contextMenuEvent(QContextMenuEvent *event);

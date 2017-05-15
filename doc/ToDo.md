@@ -8,5 +8,4 @@
  . Show Tab Stops (Ruler)
  . 4014 font size/line spacing
  . 4014 support normal input ?
- . Mouse wheel
  . 4014 wrap text

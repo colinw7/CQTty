@@ -189,50 +189,46 @@ drawChar(QPainter *painter, const Char &c) const
   double cw = charWidth (c.charSet);
   double ch = charHeight(c.charSet);
 
+  auto mapFontPoint = [&](const CPoint2D &p) -> QPointF {
+    QPointF p1(wx + cw*p.x, wy + ch*(1.0 - p.y)/CVFont::charHeight);
+
+    double px, py;
+
+    windowToPixel(p1.x(), p1.y(), &px, &py, /*flipY*/false);
+
+    return QPointF(px, py);
+  };
+
   const CVFontDef &fontDef = CVFont::getFontDef(c.c);
 
   QPen pen(Qt::white);
 
   painter->setPen(pen);
 
-  for (uint i = 0; i < fontDef.num_lines; ++i) {
-    double x1 = wx + cw*       fontDef.lines[i].start.x;
-    double y1 = wy + ch*(1.0 - fontDef.lines[i].start.y);
-    double x2 = wx + cw*       fontDef.lines[i].end  .x;
-    double y2 = wy + ch*(1.0 - fontDef.lines[i].end  .y);
+  for (const auto &shape : fontDef.shapes()) {
+    if      (shape->type() == CVFontShape::Type::LINE) {
+      const CVFontLine *line = dynamic_cast<const CVFontLine *>(shape);
 
-    double px1, py1, px2, py2;
+      QPointF p1 = mapFontPoint(line->start());
+      QPointF p2 = mapFontPoint(line->end  ());
 
-    windowToPixel(x1, y1, &px1, &py1, /*flipY*/false);
-    windowToPixel(x2, y2, &px2, &py2, /*flipY*/false);
+      painter->drawLine(p1, p2);
+    }
+    else if (shape->type() == CVFontShape::Type::CURVE) {
+      const CVFontCurve *curve = dynamic_cast<const CVFontCurve *>(shape);
 
-    painter->drawLine(QPointF(px1, py1), QPointF(px2, py2));
-  }
+      QPainterPath path;
 
-  QPainterPath path;
+      QPointF p1 = mapFontPoint(curve->p1());
+      QPointF p2 = mapFontPoint(curve->p2());
+      QPointF p3 = mapFontPoint(curve->p3());
+      QPointF p4 = mapFontPoint(curve->p4());
 
-  for (uint i = 0; i < fontDef.num_curves; ++i) {
-    double x1 = wx + cw*       fontDef.curves[i].x1;
-    double y1 = wy + ch*(1.0 - fontDef.curves[i].y1);
-    double x2 = wx + cw*       fontDef.curves[i].x2;
-    double y2 = wy + ch*(1.0 - fontDef.curves[i].y2);
-    double x3 = wx + cw*       fontDef.curves[i].x3;
-    double y3 = wy + ch*(1.0 - fontDef.curves[i].y3);
-    double x4 = wx + cw*       fontDef.curves[i].x4;
-    double y4 = wy + ch*(1.0 - fontDef.curves[i].y4);
+      path.moveTo (p1);
+      path.cubicTo(p2, p3, p4);
 
-    double px1, py1, px2, py2, px3, py3, px4, py4;
-
-    windowToPixel(x1, y1, &px1, &py1, /*flipY*/false);
-    windowToPixel(x2, y2, &px2, &py2, /*flipY*/false);
-    windowToPixel(x3, y3, &px3, &py3, /*flipY*/false);
-    windowToPixel(x4, y4, &px4, &py4, /*flipY*/false);
-
-    path.moveTo(QPointF(px1, py1));
-
-    path.cubicTo(QPointF(px2, py2), QPointF(px3, py3), QPointF(px4, py4));
-
-    painter->strokePath(path, pen);
+      painter->strokePath(path, pen);
+    }
   }
 }
 
