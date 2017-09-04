@@ -28,6 +28,9 @@ class CEscapeColors {
   CEscapeColor encode(const CRGBA &c) const;
   CRGBA decode(const CEscapeColor &c) const;
 
+  std::string colorFgStr(const CRGBA &c, bool rgba=false) const;
+  std::string colorBgStr(const CRGBA &c, bool rgba=false) const;
+
  private:
   CEscapeColors();
 

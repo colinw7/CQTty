@@ -140,3 +140,39 @@ decode(const CEscapeColor &c) const
 
   return rgba;
 }
+
+std::string
+CEscapeColors::
+colorFgStr(const CRGBA &c, bool rgb) const
+{
+  if (rgb) {
+    return "[38;" + std::to_string(c.getRedI  ()) + ";" +
+                      std::to_string(c.getGreenI()) + ";" +
+                      std::to_string(c.getRedI  ()) + "m";
+  }
+  else {
+    int ind = (c.getBlue () >= 0.5 ? 4 : 0) |
+              (c.getGreen() >= 0.5 ? 2 : 0) |
+              (c.getRed  () >= 0.5 ? 1 : 0);
+
+    return "[" + std::to_string(30 + ind) + "m";
+  }
+}
+
+std::string
+CEscapeColors::
+colorBgStr(const CRGBA &c, bool rgb) const
+{
+  if (rgb) {
+    return "[48;" + std::to_string(c.getRedI  ()) + ";" +
+                      std::to_string(c.getGreenI()) + ";" +
+                      std::to_string(c.getRedI  ()) + "m";
+  }
+  else {
+    int ind = (c.getBlue () >= 0.5 ? 4 : 0) |
+              (c.getGreen() >= 0.5 ? 2 : 0) |
+              (c.getRed  () >= 0.5 ? 1 : 0);
+
+    return "[" + std::to_string(40 + ind) + "m";
+  }
+}
