@@ -2,7 +2,7 @@
 #define CLOG_FILE
 
 #include <CFile.h>
-#include <CAutoPtr.h>
+#include <memory>
 
 class CLogFile {
  public:
@@ -15,8 +15,10 @@ class CLogFile {
   void write(char c);
 
  private:
-  CAutoPtr<CFile> file_;
-  std::string     fileName_;
+  using FileP = std::unique_ptr<CFile>;
+
+  FileP       file_;
+  std::string fileName_;
 };
 
 #endif

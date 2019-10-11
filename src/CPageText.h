@@ -8,6 +8,7 @@
 #include <CTextPos.h>
 #include <CLogFile.h>
 #include <CImagePtr.h>
+#include <CIPoint2D.h>
 
 class CPageTextLine;
 class CPageTextEscapeNotifier;

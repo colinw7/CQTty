@@ -2,7 +2,7 @@
 
 CLogFile::
 CLogFile(const char *fileName) :
- file_(nullptr), fileName_(fileName)
+ fileName_(fileName)
 {
 }
 
@@ -18,7 +18,7 @@ init()
   if (CFile::exists(fileName_))
     CFile::remove(fileName_);
 
-  file_ = new CFile(fileName_);
+  file_ = std::make_unique<CFile>(fileName_);
 
   file_->open(CFileBase::Mode::APPEND);
 }

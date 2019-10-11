@@ -53,14 +53,14 @@ class CQPageText : public QObject, public CPageText {
 
   //---
 
-  void setIsAlt(bool alt);
+  void setIsAlt(bool alt) override;
 
   //---
 
-  virtual void clear();
-  virtual void clearAbove();
-  virtual void clearBelow();
-  virtual void clearSaved();
+  void clear() override;
+  void clearAbove() override;
+  void clearBelow() override;
+  void clearSaved() override;
 
   //---
 

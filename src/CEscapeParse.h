@@ -5,7 +5,6 @@
 #include <CImageLib.h>
 #include <CEvent.h>
 #include <CCellStyle.h>
-#include <CAutoPtr.h>
 
 class CImageFile;
 

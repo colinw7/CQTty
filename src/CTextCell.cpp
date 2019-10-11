@@ -1,6 +1,7 @@
 #include <CTextCell.h>
 #include <CPageText.h>
 #include <CPageTextLine.h>
+#include <CImageLib.h>
 
 CTextCell::
 CTextCell(CPageTextLine *line, Type type) :

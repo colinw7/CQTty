@@ -13,6 +13,8 @@
 #include <CUtf8.h>
 
 #include <CQUtil.h>
+#include <CQFontUtil.h>
+#include <CQImageUtil.h>
 #include <CFileUtil.h>
 
 #include <QPainter>
@@ -387,7 +389,7 @@ drawStyleCharCell(QPainter *painter, int x, int y, const CTextStyleCell *style_c
 
   painter->setPen(CQUtil::rgbaToColor(fg));
 
-  QFont font = CQUtil::toQFont(area->getFont(style));
+  QFont font = CQFontUtil::toQFont(area->getFont(style));
 
   painter->setFont(font);
 
@@ -502,7 +504,7 @@ drawImageCell(QPainter *painter, int x, int y, const CTextImageCell *image_cell)
   int dx = (cols*charWidth () - w)/2;
   int dy = (rows*charHeight() - h)/2;
 
-  painter->drawImage(QPoint(x + dx, y + dy), CQUtil::toQImage(image));
+  painter->drawImage(QPoint(x + dx, y + dy), CQImageUtil::toQImage(image));
 
   const std::string &str = image_cell->getFileName();
 
@@ -597,7 +599,7 @@ drawCursor(QPainter *painter)
 
     //painter->setBackground((blink_num_ == 0 ? fg : bg);
 
-    QFont font = CQUtil::toQFont(area->getFont(style));
+    QFont font = CQFontUtil::toQFont(area->getFont(style));
 
     painter->setFont(font);
 

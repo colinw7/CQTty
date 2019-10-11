@@ -80,11 +80,11 @@ class CQPageTextCanvas : public CQWindow {
 
   void repaint();
 
-  void paintEvent(QPaintEvent *);
+  void paintEvent(QPaintEvent *) override;
 
   void resize(uint width, uint height) override;
 
-  void resizeEvent(QResizeEvent *);
+  void resizeEvent(QResizeEvent *) override;
 
   void updateScrollBars();
 
@@ -116,14 +116,14 @@ class CQPageTextCanvas : public CQWindow {
 
   void mouseDoubleClickEvent(QMouseEvent *) override;
 
-  void wheelEvent(QWheelEvent *event);
+  void wheelEvent(QWheelEvent *event) override;
 
   void keyPressEvent(QKeyEvent *e) override;
 
-  void contextMenuEvent(QContextMenuEvent *event);
+  void contextMenuEvent(QContextMenuEvent *event) override;
 
-  void focusInEvent (QFocusEvent *event);
-  void focusOutEvent(QFocusEvent *event);
+  void focusInEvent (QFocusEvent *event) override;
+  void focusOutEvent(QFocusEvent *event) override;
 
   Region *getRegionAtPoint(int x, int y);
 

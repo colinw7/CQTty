@@ -1,4 +1,5 @@
 #include <CEscapeColors.h>
+#include <CRGBUtil.h>
 
 CEscapeColors *
 CEscapeColors::
