@@ -433,6 +433,8 @@ struct CEscapeDataCmd : public CEscapeData {
 // Interface for handling normal characters, graphic, characters and escape codes
 class CEscapeParseIFace {
  public:
+  virtual ~CEscapeParseIFace() { }
+
   // handle character data
   virtual void handleChar   (char c) = 0;
   virtual void handleGraphic(char c) = 0;

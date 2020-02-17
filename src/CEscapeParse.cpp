@@ -432,11 +432,11 @@ addOutputChars(const char *str, uint len)
         pos = 0;
 
         while (i < len && getInEscape() && isEscape(escape_buf_.getChars(), &pos)) {
-          int len1 = escape_buf_.getLen() - pos;
+          int len2 = escape_buf_.getLen() - pos;
 
-          assert(len1 >= 0 && len1 <= int(len));
+          assert(len2 >= 0 && len2 <= int(len));
 
-          i = len - len1;
+          i = len - len2;
 
           escape_buf_.shiftTo(pos);
 
@@ -2211,19 +2211,19 @@ isCSIEscape(const char *str, uint *pos)
   //-------
 
   if (cc1 > 0 && cc1 < 32) {
-    char str[2] = { cc1, 0 };
+    char str1[2] = { cc1, 0 };
 
-    uint pos = 0;
+    uint pos1 = 0;
 
-    addControlChar(str, &pos, 1);
+    addControlChar(str1, &pos1, 1);
   }
 
   if (cc2 > 0 && cc2 < 32) {
-    char str[2] = { cc2, 0 };
+    char str1[2] = { cc2, 0 };
 
-    uint pos = 0;
+    uint pos1 = 0;
 
-    addControlChar(str, &pos, 1);
+    addControlChar(str1, &pos1, 1);
   }
 
   if      (c1 != '\0') {
@@ -3232,7 +3232,7 @@ isAPCEscape(const char *str, uint *pos)
 
       // <image filename="name" size="size" x1="x1" y1="y1" x2="x2" y2="y2"/>
       else if (name == "image") {
-        std::string name;
+        std::string iname;
         int         size = -1;
         int         x1   = -1, y1 = -1;
         int         x2   = -1, y2 = -1;
@@ -3242,7 +3242,7 @@ isAPCEscape(const char *str, uint *pos)
           const std::string &opt_value = name_value.second;
 
           if      (opt_name == "filename")
-            name = opt_value;
+            iname = opt_value;
           else if (opt_name == "size")
             size = CStrUtil::toInteger(opt_value);
           else if (opt_name == "x1")
@@ -3258,9 +3258,9 @@ isAPCEscape(const char *str, uint *pos)
         setInEscape(false);
 
         if (size > 0) {
-          CImageFile *image = lookupFileImage(name, size, size, true);
+          CImageFile *image = lookupFileImage(iname, size, size, true);
 
-          sized_image_escape_.name  = name;
+          sized_image_escape_.name  = iname;
           sized_image_escape_.image = image;
           sized_image_escape_.x1    = x1;
           sized_image_escape_.y1    = y1;
@@ -3270,9 +3270,9 @@ isAPCEscape(const char *str, uint *pos)
           handleEscape(&sized_image_escape_);
         }
         else {
-          CImageFile *image = lookupFileImage(name);
+          CImageFile *image = lookupFileImage(iname);
 
-          file_image_escape_.name  = name;
+          file_image_escape_.name  = iname;
           file_image_escape_.image = image;
           file_image_escape_.x1    = x1;
           file_image_escape_.y1    = y1;
@@ -3321,9 +3321,9 @@ isAPCEscape(const char *str, uint *pos)
 
             std::string color = colorNames.substr(p1, p2 - p1);
 
-            CRGBA c = CRGBName::toRGBA(color);
+            CRGBA ec = CRGBName::toRGBA(color);
 
-            colors.push_back(CEscapeColorsInst->encode(c));
+            colors.push_back(CEscapeColorsInst->encode(ec));
           }
           else if (opt_name == "x")
             x = CStrUtil::toInteger(opt_value);
@@ -3380,7 +3380,7 @@ isAPCEscape(const char *str, uint *pos)
       else if (name == "link") {
         std::string type = "text";
         std::string dir;
-        std::string name;
+        std::string lname;
 
         for (const auto &name_value : name_values) {
           const std::string &opt_name  = name_value.first;
@@ -3391,12 +3391,12 @@ isAPCEscape(const char *str, uint *pos)
           else if (opt_name == "dir")
             dir  = opt_value;
           else if (opt_name == "name")
-            name = opt_value;
+            lname = opt_value;
         }
 
         setInEscape(false);
 
-        link_escape_.name = name;
+        link_escape_.name = lname;
         link_escape_.path = dir;
         link_escape_.type = type;
 
@@ -3406,7 +3406,7 @@ isAPCEscape(const char *str, uint *pos)
       // <command name=<name> dir=<dir>
 
       else if (name == "command") {
-        std::string name;
+        std::string cname;
         std::string dir;
         bool        start;
 
@@ -3415,7 +3415,7 @@ isAPCEscape(const char *str, uint *pos)
           const std::string &opt_value = name_value.second;
 
           if      (opt_name == "name")
-            name = opt_value;
+            cname = opt_value;
           else if (opt_name == "dir")
             dir  = opt_value;
           else if (opt_name == "start")
@@ -3424,7 +3424,7 @@ isAPCEscape(const char *str, uint *pos)
 
         setInEscape(false);
 
-        cmd_escape_.name  = name;
+        cmd_escape_.name  = cname;
         cmd_escape_.path  = dir;
         cmd_escape_.start = start;
 
@@ -3575,13 +3575,13 @@ isDCSEscape(const char *str, uint *pos)
 
     bool valid = true;
 
-    uint pos = 0;
+    uint pos1 = 0;
 
-    while (pos + 2 <= value_len) {
+    while (pos1 + 2 <= value_len) {
       uint i1, i2;
 
-      if (! CStrUtil::decodeHexChar(value1[pos    ], &i1) ||
-          ! CStrUtil::decodeHexChar(value1[pos + 1], &i2)) {
+      if (! CStrUtil::decodeHexChar(value1[pos1    ], &i1) ||
+          ! CStrUtil::decodeHexChar(value1[pos1 + 1], &i2)) {
         valid = false;
         break;
       }
@@ -3590,7 +3590,7 @@ isDCSEscape(const char *str, uint *pos)
 
       key += char(i1 << 4 | i2);
 
-      pos += 2;
+      pos1 += 2;
     }
 
     /* term cap keys:
@@ -3834,11 +3834,11 @@ isDCSEscape(const char *str, uint *pos)
   }
   // DCS 0 p Pt ST
   else if (value_len >= 2 && value[0] == '0' && value[1] == 'p') {
-    std::string value = value.substr(2);
+    std::string value1 = value.substr(2);
 
     CEscapeRegisState regisState;
 
-    parseRegisString(value, regisState);
+    parseRegisString(value1, regisState);
 
     setInEscape(false);
   }
@@ -3846,11 +3846,11 @@ isDCSEscape(const char *str, uint *pos)
   else if (value_len >= 2 && value[0] == 'q' && value[1] == '"') {
     std::vector<CRGBA> colors;
 
-    uint pos = 2;
+    uint pos1 = 2;
 
     int nn, *num;
 
-    if (! parseNumList(&value[0], &pos, &num, &nn))
+    if (! parseNumList(&value[0], &pos1, &num, &nn))
       return false;
 
     if (nn != 4)
@@ -3869,23 +3869,23 @@ isDCSEscape(const char *str, uint *pos)
 
     int c = 0;
 
-    while (pos < value_len && value[pos] == '#') {
-      ++pos;
+    while (pos1 < value_len && value[pos1] == '#') {
+      ++pos1;
 
-      int nn, *num;
+      int nn1, *num1;
 
-      if (! parseNumList(&value[0], &pos, &num, &nn))
+      if (! parseNumList(&value[0], &pos1, &num1, &nn1))
         return false;
 
-      if      (nn == 5) {
-        int r = num[2];
-        int g = num[3];
-        int b = num[4];
+      if      (nn1 == 5) {
+        int r = num1[2];
+        int g = num1[3];
+        int b = num1[4];
 
         colors.push_back(CRGBA(r/255.0, g/255.0, b/255.0));
       }
-      else if (nn == 1) {
-        c = num[0];
+      else if (nn1 == 1) {
+        c = num1[0];
       }
       else {
         return false;
@@ -3904,55 +3904,55 @@ isDCSEscape(const char *str, uint *pos)
     int x = 0;
     int y = 0;
 
-    while (pos < value_len) {
+    while (pos1 < value_len) {
       // repeat data
-      if      (value[pos] == '!') {
-        ++pos;
+      if      (value[pos1] == '!') {
+        ++pos1;
 
-        int num;
+        int num1;
 
-        if (! parseNumber(&value[0], &pos, &num))
+        if (! parseNumber(&value[0], &pos1, &num1))
           break;
 
         int d;
 
-        if (! parseDCSImageData(&value[0], &pos, &d))
+        if (! parseDCSImageData(&value[0], &pos1, &d))
           break;
 
-        for (int i = 0; i < num; ++i) {
-          for (int i = 0; i < 6; ++i) {
-            bool b = d & (1<<i);
+        for (int i = 0; i < num1; ++i) {
+          for (int j = 0; j < 6; ++j) {
+            bool b = d & (1<<j);
             if (! b) continue;
 
-            if (x >= w || y + i >= h)
+            if (x >= w || y + j >= h)
               return false;
 
-            data[x + (y + i)*w] = c;
+            data[x + (y + j)*w] = c;
           }
 
           ++x;
         }
       }
       // choose palette color
-      else if (value[pos] == '#') {
-        ++pos;
+      else if (value[pos1] == '#') {
+        ++pos1;
 
-        int num;
+        int num1;
 
-        if (! parseNumber(&value[0], &pos, &num))
+        if (! parseNumber(&value[0], &pos1, &num1))
           break;
 
-        c = num;
+        c = num1;
       }
       // carriage return
-      else if (value[pos] == '$') {
-        ++pos;
+      else if (value[pos1] == '$') {
+        ++pos1;
 
         x = 0;
       }
       // next line
-      else if (value[pos] == '-') {
-        ++pos;
+      else if (value[pos1] == '-') {
+        ++pos1;
 
         x = 0;
 
@@ -3962,17 +3962,17 @@ isDCSEscape(const char *str, uint *pos)
       else {
         int d;
 
-        if (! parseDCSImageData(&value[0], &pos, &d))
+        if (! parseDCSImageData(&value[0], &pos1, &d))
           break;
 
-        for (int i = 0; i < 6; ++i) {
-          bool b = d & (1<<i);
+        for (int j = 0; j < 6; ++j) {
+          bool b = d & (1<<j);
           if (! b) continue;
 
-          if (x >= w || y + i >= h)
+          if (x >= w || y + j >= h)
             return false;
 
-          data[x + (y + i)*w] = c;
+          data[x + (y + j)*w] = c;
         }
 
         ++x;
@@ -4046,14 +4046,14 @@ parseRegisString(const std::string &str, CEscapeRegisState &regisState)
     }
     // vector
     else if (c == 'V') {
-      RegisPoint p;
+      RegisPoint rp;
 
       for (const auto &value : values) {
         if      (value.parameter == "B") {
-          p = currentPoint;
+          rp = currentPoint;
         }
         else if (value.parameter == "E") {
-          currentPoint = p;
+          currentPoint = rp;
         }
         else if (value.parameter == "") {
           line_escape_.x1 = currentPoint.x;
