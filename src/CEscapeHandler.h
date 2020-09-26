@@ -515,7 +515,6 @@ class CEscapeHandler : public CEscapeParse {
   virtual void processString(const char *str) = 0;
 
   virtual void logDebug(const std::string &str) const = 0;
-//virtual void logError(const std::string &str) const = 0;
   virtual void logTrace(const std::string &str) const = 0;
 
   //---

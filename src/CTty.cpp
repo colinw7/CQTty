@@ -140,36 +140,36 @@ init()
     //------
 
     // close terminal (needed ?)
-    int fd = open(TTYNAME, O_RDWR | O_NOCTTY);
+    int fd1 = open(TTYNAME, O_RDWR | O_NOCTTY);
 
-    if (fd >= 0) {
-      ioctl(fd, TIOCNOTTY, NULL);
-      close(fd);
+    if (fd1 >= 0) {
+      ioctl(fd1, TIOCNOTTY, NULL);
+      close(fd1);
     }
 
-    fd = open(TTYNAME, O_RDWR | O_NOCTTY);
+    fd1 = open(TTYNAME, O_RDWR | O_NOCTTY);
 
-    if (fd >= 0)
-      close(fd);
+    if (fd1 >= 0)
+      close(fd1);
 
     //------
 
     // make pty slave the controlling terminal
 
 #ifdef TIOCSCTTY
-    fd = ioctl(slave_fd, TIOCSCTTY, NULL);
+    fd1 = ioctl(slave_fd, TIOCSCTTY, NULL);
 #endif
 
     //------
 
     // ensure we got a terminal (needed ?)
 
-    fd = open(TTYNAME, O_WRONLY);
+    fd1 = open(TTYNAME, O_WRONLY);
 
-    if (fd < 0)
+    if (fd1 < 0)
       exit(1);
 
-    close(fd);
+    close(fd1);
 
     //------
 
