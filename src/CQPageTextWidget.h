@@ -57,7 +57,7 @@ class CQPageTextWidget : public QWidget {
 
   virtual CTty *getTty() const { return nullptr; }
 
-  void processString(const char *str);
+  virtual void processString(const char *str);
 
   void pasteString(const char *str);
 
@@ -92,6 +92,8 @@ class CQPageTextWidget : public QWidget {
   void blinkTimeout();
 
  signals:
+  void textEntered(const QString &text);
+
   void pageSizeSignal(int rows, int cols);
   void dirChangeSignal(const QString &path);
 

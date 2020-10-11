@@ -13,11 +13,11 @@ main(int argc, char **argv)
 {
   CQApp app(argc, argv);
 
-  CQPageTextTest *test = new CQPageTextTest;
+  auto *test = new CQPageTextTest;
 
   test->show();
 
-  CQPageTextWidget *area = test->getPageText();
+  auto *area = test->getPageText();
 
   for (int i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
@@ -49,17 +49,17 @@ CQPageTextTest() :
 {
   setObjectName("test");
 
-  QVBoxLayout *layout = new QVBoxLayout(this);
+  auto *layout = new QVBoxLayout(this);
   layout->setMargin(0); layout->setSpacing(0);
 
   area_ = new CQPageTextWidget;
 
-  CQPageTextToolBar *toolBar = area_->createToolBar();
+  auto *toolBar = area_->createToolBar();
 
   toolBar->addButton(QIcon(), "");
   toolBar->addStretch();
 
-  CQPageTextStatus *statusBar = area_->createStatusBar();
+  auto *statusBar = area_->createStatusBar();
 
   statusBar->addStretch();
   statusBar->addCmdEdit();

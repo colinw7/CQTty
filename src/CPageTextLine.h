@@ -13,9 +13,9 @@ class CFile;
 
 class CPageTextLine {
  public:
-  typedef std::vector<CTextCell *>       CellList;
-  typedef std::map<int,CTextLinkCell *>  LinkList;
-  typedef std::map<int,CTextImageCell *> ImageList;
+  using CellList  = std::vector<CTextCell *>;
+  using LinkList  = std::map<int,CTextLinkCell *>;
+  using ImageList = std::map<int,CTextImageCell *>;
 
  public:
   CPageTextLine(CPageText *area);

@@ -45,9 +45,9 @@ class CPageText {
     }
   };
 
-  typedef std::vector<CPageTextLine *> LineList;
-  typedef std::vector<PixelPoint>      PixelPoints;
-  typedef std::vector<PixelLine>       PixelLines;
+  using LineList    = std::vector<CPageTextLine *>;
+  using PixelPoints = std::vector<PixelPoint>;
+  using PixelLines  = std::vector<PixelLine>;
 
  protected:
   struct Page {
@@ -349,8 +349,8 @@ class CPageText {
   PixelPoints              pixelPoints_;
   PixelLines               pixelLines_;
   PixelLines               pixel4014Lines_;
-  CWindow                 *window_ { nullptr };
-  CPageTextEscapeNotifier *notifier_ { nullptr };
+  CWindow*                 window_ { nullptr };
+  CPageTextEscapeNotifier* notifier_ { nullptr };
   bool                     showScrollBar_ { true };
   bool                     showToolBar_ { false };
   bool                     showStatusBar_ { false };

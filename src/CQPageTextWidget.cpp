@@ -173,6 +173,8 @@ CQPageTextWidget::
 processString(const char *str)
 {
   area_->processString(str);
+
+  emit textEntered(QString(str));
 }
 
 void

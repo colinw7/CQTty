@@ -156,7 +156,7 @@ class CPageTextEscapeNotifier : public CEscapeHandler {
   int get4014NumDataCols() const override;
 
  private:
-  CPageText *area_ { nullptr };
+  CPageText* area_         { nullptr };
   bool       cursor_blink_ { false };
 
   mutable CIPoint2D pos_ { 0, 0 };

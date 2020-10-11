@@ -84,12 +84,12 @@ void
 CPageTextLine::
 eraseLeft(uint col)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
-  for (uint i = 0; i <= col && i < num_cells; ++i)
+  for (uint i = 0; i <= col && i < numCells; ++i)
     clearCell(i, '\0');
 
-  if (col >= num_cells - 1)
+  if (col >= numCells - 1)
     resetLineStyle();
 }
 
@@ -97,9 +97,9 @@ void
 CPageTextLine::
 eraseRight(uint col)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
-  for (uint i = col; i < num_cells; ++i)
+  for (uint i = col; i < numCells; ++i)
     clearCell(i, '\0');
 
   if (col == 0)
@@ -135,9 +135,9 @@ void
 CPageTextLine::
 dumpLine(CFile &file)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
-  for (uint i = 0; i < num_cells; ++i) {
+  for (uint i = 0; i < numCells; ++i) {
     char c = getChar(i);
 
     if (c)
@@ -151,9 +151,9 @@ void
 CPageTextLine::
 fill(char c)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
-  for (uint i = 0; i < num_cells; ++i)
+  for (uint i = 0; i < numCells; ++i)
     clearCell(i, c);
 }
 
@@ -161,28 +161,28 @@ void
 CPageTextLine::
 shiftLeft(uint col)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
   uint col1 = col;
   uint col2 = col;
 
-  for ( ; col2 < num_cells; ++col2) {
-    CTextCell *cell = cells_[col2];
+  for ( ; col2 < numCells; ++col2) {
+    auto *cell = cells_[col2];
 
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
+    auto *charCell = dynamic_cast<CTextCharCell *>(cell);
 
-    if (! char_cell || char_cell->getChar() == '\0')
+    if (! charCell || charCell->getChar() == '\0')
       break;
   }
 
   makeColValid(col2);
 
-  CTextCell *old_cell = cells_[col1];
+  auto *oldCell = cells_[col1];
 
   for (int c = col1; c < int(col2); ++c)
     cells_[c] = cells_[c + 1];
 
-  cells_[col2] = old_cell;
+  cells_[col2] = oldCell;
 
   clearCell(col2, ' ');
 }
@@ -191,28 +191,28 @@ void
 CPageTextLine::
 shiftRight(uint col)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
   uint col1 = col;
   uint col2 = col;
 
-  for ( ; col2 < num_cells; ++col2) {
-    CTextCell *cell = cells_[col2];
+  for ( ; col2 < numCells; ++col2) {
+    auto *cell = cells_[col2];
 
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
+    auto *charCell = dynamic_cast<CTextCharCell *>(cell);
 
-    if (! char_cell || char_cell->getChar() == '\0')
+    if (! charCell || charCell->getChar() == '\0')
       break;
   }
 
   makeColValid(col2);
 
-  CTextCell *old_cell = cells_[col2];
+  auto *oldCell = cells_[col2];
 
   for (int c = col2; c > int(col1); --c)
     cells_[c] = cells_[c - 1];
 
-  cells_[col1] = old_cell;
+  cells_[col1] = oldCell;
 
   clearCell(col1, ' ');
 }
@@ -221,12 +221,12 @@ char
 CPageTextLine::
 getChar(uint col) const
 {
-  CTextCell *cell = cells_[col];
+  auto *cell = cells_[col];
 
-  CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
+  auto *charCell = dynamic_cast<CTextCharCell *>(cell);
 
-  if (char_cell)
-    return char_cell->getChar();
+  if (charCell)
+    return charCell->getChar();
   else
     return '\0';
 }
@@ -237,20 +237,20 @@ clearCell(uint col, char c)
 {
   makeColValid(col);
 
-  CTextCell *old_cell = cells_[col];
+  auto *oldCell = cells_[col];
 
-  CTextCell *new_cell = old_cell->convertTo(CTextCell::Type::CHAR);
+  auto *newCell = oldCell->convertTo(CTextCell::Type::CHAR);
 
-  CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(new_cell);
+  auto *charCell = dynamic_cast<CTextCharCell *>(newCell);
 
-  char_cell->resetStyle();
+  charCell->resetStyle();
 
-  char_cell->setChar(c);
+  charCell->setChar(c);
 
-  if (new_cell != old_cell) {
-    cells_[col] = new_cell;
+  if (newCell != oldCell) {
+    cells_[col] = newCell;
 
-    delete old_cell;
+    delete oldCell;
   }
 
   ImageList::iterator pi = images_.find(col);
@@ -274,28 +274,28 @@ void
 CPageTextLine::
 makeColValid(uint col)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
-  while (col >= num_cells) {
+  while (col >= numCells) {
     cells_.push_back(new CTextCell(this));
 
-    ++num_cells;
+    ++numCells;
   }
 }
 
 void
 CPageTextLine::
-replaceCell(CTextCell *old_cell, CTextCell *new_cell)
+replaceCell(CTextCell *oldCell, CTextCell *newCell)
 {
-  assert(old_cell != new_cell);
+  assert(oldCell != newCell);
 
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
-  for (uint i = 0; i < num_cells; ++i) {
-    if (cells_[i] != old_cell)
+  for (uint i = 0; i < numCells; ++i) {
+    if (cells_[i] != oldCell)
       continue;
 
-    cells_[i] = new_cell;
+    cells_[i] = newCell;
 
     return;
   }
@@ -305,46 +305,46 @@ replaceCell(CTextCell *old_cell, CTextCell *new_cell)
 
 void
 CPageTextLine::
-addLink(CTextLinkCell *link_cell)
+addLink(CTextLinkCell *linkCell)
 {
-  int col = link_cell->getCol();
+  int col = linkCell->getCol();
 
   LinkList::iterator pl = links_.find(col);
 
   if (pl != links_.end())
     delete (*pl).second;
 
-  links_[col] = link_cell;
+  links_[col] = linkCell;
 }
 
 void
 CPageTextLine::
-addImage(CTextImageCell *image_cell)
+addImage(CTextImageCell *imageCell)
 {
-  int col = image_cell->getCol();
+  int col = imageCell->getCol();
 
   ImageList::const_iterator pi = images_.find(col);
 
   if (pi != images_.end())
     delete (*pi).second;
 
-  images_[col] = image_cell;
+  images_[col] = imageCell;
 }
 
 bool
 CPageTextLine::
 getWordBounds(int col, uint &col1, uint &col2)
 {
-  uint num_cells = cells_.size();
+  uint numCells = cells_.size();
 
-  if (col < 0 || col >= int(num_cells)) return false;
+  if (col < 0 || col >= int(numCells)) return false;
 
-  CTextCell *cell = cells_[col];
+  auto *cell = cells_[col];
 
-  CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-  if (! char_cell) return false;
+  auto *charCell = dynamic_cast<CTextCharCell *>(cell);
+  if (! charCell) return false;
 
-  char c = char_cell->getChar();
+  char c = charCell->getChar();
 
   if (c == '\0' || isspace(c)) return false;
 
@@ -352,27 +352,27 @@ getWordBounds(int col, uint &col1, uint &col2)
   col2 = col;
 
   while (col1 > 0) {
-    CTextCell *cell = cells_[col1 - 1];
+    auto *cell1 = cells_[col1 - 1];
 
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-    if (! char_cell) break;
+    auto *charCell1 = dynamic_cast<CTextCharCell *>(cell1);
+    if (! charCell1) break;
 
-    char c = char_cell->getChar();
+    char c1 = charCell1->getChar();
 
-    if (c == '\0' || isspace(c)) break;
+    if (c1 == '\0' || isspace(c1)) break;
 
     --col1;
   }
 
-  while (col2 < num_cells - 1) {
-    CTextCell *cell = cells_[col2 + 1];
+  while (col2 < numCells - 1) {
+    auto *cell1 = cells_[col2 + 1];
 
-    CTextCharCell *char_cell = dynamic_cast<CTextCharCell *>(cell);
-    if (! char_cell) break;
+    auto *charCell1 = dynamic_cast<CTextCharCell *>(cell1);
+    if (! charCell1) break;
 
-    char c = char_cell->getChar();
+    char c1 = charCell1->getChar();
 
-    if (c == '\0' || isspace(c)) break;
+    if (c1 == '\0' || isspace(c1)) break;
 
     ++col2;
   }
