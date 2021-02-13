@@ -89,6 +89,13 @@ main(int argc, char **argv)
         do_test4 = true;
       else if (arg1 == "colors")
         do_colors = true;
+      else if (arg1 == "h" || arg1 == "help") {
+        std::cerr << "CEscapeTest [-run <file>] [-exec <file>] [-parse <file>] "
+                     "[-test1|-test2|-test3|-test4|-colors] [<arg> ...]\n";
+        std::cerr << " -run  <file> : run character file\n";
+        std::cerr << " -exec <file> : run escape file\n";
+        exit(0);
+      }
       else {
         std::cerr << "Missing option '" << arg << "'" << std::endl;
         exit(1);
@@ -183,7 +190,7 @@ main(int argc, char **argv)
     }
   }
 
-  return true;
+  return 0;
 }
 
 bool

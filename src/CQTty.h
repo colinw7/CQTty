@@ -54,16 +54,16 @@ class CQTty : public QWidget {
 
  private:
   CConfig           config_;
-  QToolBar*         toolbar_;
-  QStackedWidget*   stack_;
-  CQPageTextWidget* text_;
-  CQDirList*        dirList_;
-  CQImagePreview*   imagePreview_;
-  CQEdit*           edit_;
-  QStatusBar*       status_;
-  CTty*             tty_;
-  QTimer*           timer_;
-  int               ind_;
+  QToolBar*         toolbar_      { nullptr };
+  QStackedWidget*   stack_        { nullptr };
+  CQPageTextWidget* text_         { nullptr };
+  CQDirList*        dirList_      { nullptr };
+  CQImagePreview*   imagePreview_ { nullptr };
+  CQEdit*           edit_         { nullptr };
+  QStatusBar*       status_       { nullptr };
+  CTty*             tty_          { nullptr };
+  QTimer*           timer_        { nullptr };
+  int               ind_          { 0 };
 };
 
 #endif

@@ -31,9 +31,9 @@
 
 CQTty::
 CQTty(QWidget *parent) :
- QWidget(parent), config_("CQTty"), ind_(0)
+ QWidget(parent), config_("CQTty")
 {
-  QVBoxLayout *layout = new QVBoxLayout(this);
+  auto *layout = new QVBoxLayout(this);
   layout->setMargin(0); layout->setSpacing(0);
 
   //------
@@ -55,12 +55,12 @@ CQTty(QWidget *parent) :
 
   stack_->addWidget(text_);
 
-  CQPageTextToolBar *toolBar = text_->createToolBar();
+  auto *toolBar = text_->createToolBar();
 
   toolBar->addButton(CQPixmapCacheInst->getIcon("HOME"), "cd ${HOME}\n");
   toolBar->addStretch();
 
-  CQPageTextStatus *statusBar = text_->createStatusBar();
+  auto *statusBar = text_->createStatusBar();
 
   statusBar->addMsgLabel();
   statusBar->addStretch();
@@ -169,7 +169,7 @@ displayFile(const QString &fileName)
 #else
   showText();
 
-  CQPageText *area = text_->getArea();
+  auto *area = text_->getArea();
 
   std::string cmd = "vi " + fileName.toStdString() + "\n";
 
@@ -199,7 +199,7 @@ void
 CQTty::
 changeCurrentDir(const QString &dirName)
 {
-  CQPageText *area = text_->getArea();
+  auto *area = text_->getArea();
 
   if (area->getDirName() != dirName.toStdString()) {
     std::string cmd = "cd " + dirName.toStdString() + "\n";

@@ -613,7 +613,7 @@ addControlChar(const char *str, uint *pos, uint len)
 
         typedef std::vector<char> Chars;
 
-        CEscapeDataGS::Mode mode = CEscapeDataGS::Mode::MOVE_TO;
+        auto mode = CEscapeDataGS::Mode::MOVE_TO;
 
         if (*pos < len && str[*pos] == 7) {
           ++(*pos);
@@ -3258,7 +3258,7 @@ isAPCEscape(const char *str, uint *pos)
         setInEscape(false);
 
         if (size > 0) {
-          CImageFile *image = lookupFileImage(iname, size, size, true);
+          auto *image = lookupFileImage(iname, size, size, true);
 
           sized_image_escape_.name  = iname;
           sized_image_escape_.image = image;
@@ -3270,7 +3270,7 @@ isAPCEscape(const char *str, uint *pos)
           handleEscape(&sized_image_escape_);
         }
         else {
-          CImageFile *image = lookupFileImage(iname);
+          auto *image = lookupFileImage(iname);
 
           file_image_escape_.name  = iname;
           file_image_escape_.image = image;
@@ -3321,7 +3321,7 @@ isAPCEscape(const char *str, uint *pos)
 
             std::string color = colorNames.substr(p1, p2 - p1);
 
-            CRGBA ec = CRGBName::toRGBA(color);
+            auto ec = CRGBName::toRGBA(color);
 
             colors.push_back(CEscapeColorsInst->encode(ec));
           }
@@ -3859,7 +3859,7 @@ isDCSEscape(const char *str, uint *pos)
     int w = num[2];
     int h = num[3];
 
-    CImagePtr image = CImageMgrInst->createImage();
+    auto image = CImageMgrInst->createImage();
 
     image->setType(CFILE_TYPE_IMAGE_SIX);
 

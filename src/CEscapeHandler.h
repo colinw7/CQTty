@@ -556,8 +556,8 @@ class CEscapeHandler : public CEscapeParse {
   SaveCursor   save_cursor_;
   CRGBA        cursor_color_;
   bool         wrapChar_ { false };
-  bool         debug_ { false };
-  bool         trace_ { false };
+  bool         debug_    { false };
+  bool         trace_    { false };
 };
 
 #endif

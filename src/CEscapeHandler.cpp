@@ -223,7 +223,7 @@ handleEscape(const CEscapeData *esc)
       UNHANDLED("STX");
       break;
     }
-    // Switch to VT100 Mode (ESC  Ctrl-C)
+    // Switch to VT100 Mode (ESC Ctrl-C)
     case CEscapeType::ETX: {
       UNHANDLED("ETX");
       break;
@@ -413,7 +413,7 @@ handleEscape(const CEscapeData *esc)
       break;
     }
     case CEscapeType::GS: {
-      const CEscapeDataGS *escg = dynamic_cast<const CEscapeDataGS *>(esc);
+      const auto *escg = dynamic_cast<const CEscapeDataGS *>(esc);
 
       if (is4014()) {
         state_.add4014Point(escg->x, escg->y);
@@ -506,7 +506,7 @@ handleEscape(const CEscapeData *esc)
     }
     // DEC double-height line, top half (DECDHL).
     case CEscapeType::DECDHL: {
-      const CEscapeDataDECDHL *esc1 = dynamic_cast<const CEscapeDataDECDHL *>(esc);
+      const auto *esc1 = dynamic_cast<const CEscapeDataDECDHL *>(esc);
 
       escapeDECDHL(esc1->pos);
 
@@ -539,7 +539,7 @@ handleEscape(const CEscapeData *esc)
     }
     // Designate G0 Character Set (ISO 2022, VT100).
     case CEscapeType::G0: {
-      const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
+      const auto *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG0(escc->c);
 
@@ -548,7 +548,7 @@ handleEscape(const CEscapeData *esc)
     // Designate G1 Character Set (ISO 2022, VT100).
     // The same character sets apply as for ESC ( C.
     case CEscapeType::G1: {
-      const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
+      const auto *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG1(escc->c);
 
@@ -557,7 +557,7 @@ handleEscape(const CEscapeData *esc)
     // Designate G2 Character Set (ISO 2022, VT220).
     // The same character sets apply as for ESC ( C.
     case CEscapeType::G2: {
-      const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
+      const auto *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG2(escc->c);
 
@@ -566,7 +566,7 @@ handleEscape(const CEscapeData *esc)
     // Designate G3 Character Set (ISO 2022, VT220).
     // The same character sets apply as for ESC ( C.
     case CEscapeType::G3: {
-      const CEscapeDataC *escc = dynamic_cast<const CEscapeDataC *>(esc);
+      const auto *escc = dynamic_cast<const CEscapeDataC *>(esc);
 
       escapeDesignateG3(escc->c);
 
@@ -675,7 +675,7 @@ handleEscape(const CEscapeData *esc)
     }
     // Erase in Display (DECSED).
     case CEscapeType::DECSED: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSED(escn->num[0]);
 
@@ -683,14 +683,14 @@ handleEscape(const CEscapeData *esc)
     }
     // Erase in Line (DECSEL).
     case CEscapeType::DECSEL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSEL(escn->num[0]);
 
       break;
     }
     case CEscapeType::DA2: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDA2(escn->num, escn->nn);
 
@@ -698,7 +698,7 @@ handleEscape(const CEscapeData *esc)
     }
     // DEC Private Mode Set (DECSET)
     case CEscapeType::DECSET: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       for (int i = 0; i < escn->nn; ++i)
         escapeDECSET(escn->num[i]);
@@ -707,7 +707,7 @@ handleEscape(const CEscapeData *esc)
     }
     // Dec-specific Media Copy (DECMC)
     case CEscapeType::DECMC: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECMC(escn->num[0]);
 
@@ -715,7 +715,7 @@ handleEscape(const CEscapeData *esc)
     }
     // DEC Private Mode Reset (DECRST)
     case CEscapeType::DECRST: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       for (int i = 0; i < escn->nn; ++i)
         escapeDECRST(escn->num[i]);
@@ -724,7 +724,7 @@ handleEscape(const CEscapeData *esc)
     }
     // Printer Status Request (DECDSR)
     case CEscapeType::DECDSR: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECDSR(escn->num[0]);
 
@@ -737,21 +737,21 @@ handleEscape(const CEscapeData *esc)
       break;
     }
     case CEscapeType::DECRestorePriv: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECRestorePriv(escn->num, escn->nn);
 
       break;
     }
     case CEscapeType::DECSavePriv: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSavePriv(escn->num, escn->nn);
 
       break;
     }
     case CEscapeType::HPA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeHPA(escn->num[0]);
 
@@ -759,35 +759,35 @@ handleEscape(const CEscapeData *esc)
     }
     // Set conformance level (DECSCL)
     case CEscapeType::DECSCL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSCL(escn->num[0], escn->num[1]);
 
       break;
     }
     case CEscapeType::DECSCA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSCA(escn->num[0]);
 
       break;
     }
     case CEscapeType::DECCARA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECCARA(escn->num[0], escn->num[1], escn->num[2], escn->num[3], escn->num[4]);
 
       break;
     }
     case CEscapeType::DECRARA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECRARA(escn->num[0], escn->num[1], escn->num[2], escn->num[3], escn->num[4]);
 
       break;
     }
     case CEscapeType::DECCRA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECCRA(escn->num[0], escn->num[1], escn->num[2], escn->num[3],
                    escn->num[4], escn->num[5], escn->num[6], escn->num[7]);
@@ -795,189 +795,189 @@ handleEscape(const CEscapeData *esc)
       break;
     }
     case CEscapeType::DECEFR: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECEFR(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
     case CEscapeType::DECLRP: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECLRP(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
     case CEscapeType::DECFRA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECFRA(escn->num[0], escn->num[1], escn->num[2], escn->num[3], escn->num[4]);
 
       break;
     }
     case CEscapeType::DECSACE: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSACE(escn->num[0], escn->num[1], escn->num[2]);
 
       break;
     }
     case CEscapeType::DECELR: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECELR(escn->num[0], escn->num[1]);
 
       break;
     }
     case CEscapeType::DECERA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECERA(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
     case CEscapeType::DECSLE: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSLE(escn->num[0]);
 
       break;
     }
     case CEscapeType::DECSERA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECSERA(escn->num[0], escn->num[1], escn->num[2], escn->num[3]);
 
       break;
     }
     case CEscapeType::DECRQLP: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECRQLP(escn->num[0]);
 
       break;
     }
     case CEscapeType::ICH: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeICH(escn->num[0]);
 
       break;
     }
     case CEscapeType::CUU: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCUU(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
     case CEscapeType::CUD: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCUD(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
     case CEscapeType::CUF: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCUF(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
     case CEscapeType::CUB: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCUB(escn->nn > 0 ? escn->num[0] : 1);
 
       break;
     }
     case CEscapeType::CNL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCNL(escn->num[0]);
 
       break;
     }
     case CEscapeType::CPL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCPL(escn->num[0]);
 
       break;
     }
     case CEscapeType::CHA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCHA(escn->num[0]);
 
       break;
     }
     case CEscapeType::CUP: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCUP(escn->num[0], escn->num[1]);
 
       break;
     }
     case CEscapeType::CHT: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCHT(escn->num[0]);
 
       break;
     }
     case CEscapeType::ED: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeED(escn->num[0]);
 
       break;
     }
     case CEscapeType::EL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeEL(escn->num[0]);
 
       break;
     }
     case CEscapeType::IL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeIL(escn->num[0]);
 
       break;
     }
     case CEscapeType::DL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDL(escn->num[0]);
 
       break;
     }
     case CEscapeType::DCH: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDCH(escn->num[0]);
 
       break;
     }
     case CEscapeType::SU: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeSU(escn->num[0]);
 
       break;
     }
     case CEscapeType::SD: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeSD(escn->num[0]);
 
       break;
     }
     case CEscapeType::StartMouseTrack: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeStartMouseTrack(escn->num[0], escn->num[1], escn->num[2],
                             escn->num[3], escn->num[4]);
@@ -985,56 +985,56 @@ handleEscape(const CEscapeData *esc)
       break;
     }
     case CEscapeType::ECH: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeECH(escn->num[0]);
 
       break;
     }
     case CEscapeType::CBT: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeCBT(escn->num[0]);
 
       break;
     }
     case CEscapeType::REP: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeREP(escn->num[0]);
 
       break;
     }
     case CEscapeType::DA1: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDA1(escn->num, escn->nn);
 
       break;
     }
     case CEscapeType::VPA: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeVPA(escn->num[0]);
 
       break;
     }
     case CEscapeType::HVP: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeHVP(escn->num[0], escn->num[1]);
 
       break;
     }
     case CEscapeType::TBC: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeTBC(escn->num[0]);
 
       break;
     }
     case CEscapeType::SM: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeSM(escn->num[0]);
 
@@ -1042,7 +1042,7 @@ handleEscape(const CEscapeData *esc)
     }
     // Media Copy (MC)
     case CEscapeType::MC: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeMC(escn->num[0]);
 
@@ -1050,7 +1050,7 @@ handleEscape(const CEscapeData *esc)
     }
     // Reset Mode (RM)
     case CEscapeType::RM: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeRM(escn->num[0]);
 
@@ -1058,28 +1058,28 @@ handleEscape(const CEscapeData *esc)
     }
     // Character Attributes (SGR).
     case CEscapeType::SGR: {
-      const CEscapeDataSGR *sgr = dynamic_cast<const CEscapeDataSGR *>(esc);
+      const auto *sgr = dynamic_cast<const CEscapeDataSGR *>(esc);
 
       escapeSGR(sgr);
 
       break;
     }
     case CEscapeType::DSR: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDSR(escn->num[0]);
 
       break;
     }
     case CEscapeType::DECLL: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECLL(escn->num[0]);
 
       break;
     }
     case CEscapeType::DECSTBM: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       if      (escn->nn <= 0)
         escapeDECSTBM(-1, -1);
@@ -1095,49 +1095,49 @@ handleEscape(const CEscapeData *esc)
 
       break;
     case CEscapeType::WindowManip: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeWindowManip(escn->num);
 
       break;
     }
     case CEscapeType::DECREQTPARM: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECREQTPARM(escn->num[0]);
 
       break;
     }
     case CEscapeType::DECTST: {
-      const CEscapeDataNums *escn = dynamic_cast<const CEscapeDataNums *>(esc);
+      const auto *escn = dynamic_cast<const CEscapeDataNums *>(esc);
 
       escapeDECTST(escn->num[0]);
 
       break;
     }
     case CEscapeType::OSC: {
-      const CEscapeDataOSC *esco = dynamic_cast<const CEscapeDataOSC *>(esc);
+      const auto *esco = dynamic_cast<const CEscapeDataOSC *>(esc);
 
       escapeOSC(esco->num, esco->str);
 
       break;
     }
     case CEscapeType::TEK4014: {
-      const CEscapeDataTek4014 *esc4014 = dynamic_cast<const CEscapeDataTek4014 *>(esc);
+      const auto *esc4014 = dynamic_cast<const CEscapeDataTek4014 *>(esc);
 
       escape4014(esc4014);
 
       break;
     }
     case CEscapeType::SET_DIR: {
-      const CEscapeDataStr *escs = dynamic_cast<const CEscapeDataStr *>(esc);
+      const auto *escs = dynamic_cast<const CEscapeDataStr *>(esc);
 
       setDirName(escs->str);
 
       break;
     }
     case CEscapeType::SIZED_IMAGE: {
-      const CEscapeDataFileImage *esci = dynamic_cast<const CEscapeDataFileImage *>(esc);
+      const auto *esci = dynamic_cast<const CEscapeDataFileImage *>(esc);
 
       if (esci->x1 > 0 && esci->y1 > 0 && esci->x2 > 0 && esci->y2 > 0) {
         addSizedImageChar(esci->name, esci->image, esci->x1, esci->y1, esci->x2, esci->y2);
@@ -1150,7 +1150,7 @@ handleEscape(const CEscapeData *esc)
       break;
     }
     case CEscapeType::FILE_IMAGE: {
-      const CEscapeDataFileImage *esci = dynamic_cast<const CEscapeDataFileImage *>(esc);
+      const auto *esci = dynamic_cast<const CEscapeDataFileImage *>(esc);
 
       addImageChar(esci->name, esci->image, esci->x1, esci->y1, esci->x2, esci->y2);
 
@@ -1159,56 +1159,56 @@ handleEscape(const CEscapeData *esc)
       break;
     }
     case CEscapeType::IMAGE: {
-      const CEscapeDataImage *esci = dynamic_cast<const CEscapeDataImage *>(esc);
+      const auto *esci = dynamic_cast<const CEscapeDataImage *>(esc);
 
       addImage(esci->image);
 
       break;
     }
     case CEscapeType::PIXEL: {
-      const CEscapeDataPixel *escp = dynamic_cast<const CEscapeDataPixel *>(esc);
+      const auto *escp = dynamic_cast<const CEscapeDataPixel *>(esc);
 
       addPixel(escp->x, escp->y, escp->color);
 
       break;
     }
     case CEscapeType::LINE: {
-      const CEscapeDataLine *escl = dynamic_cast<const CEscapeDataLine *>(esc);
+      const auto *escl = dynamic_cast<const CEscapeDataLine *>(esc);
 
       addLine(escl->x1, escl->y1, escl->x2, escl->y2, escl->color, CEscapeLineStyle::SOLID);
 
       break;
     }
     case CEscapeType::LINK: {
-      const CEscapeDataLink *escl = dynamic_cast<const CEscapeDataLink *>(esc);
+      const auto *escl = dynamic_cast<const CEscapeDataLink *>(esc);
 
       addLink(escl->name, escl->path, escl->type);
 
       break;
     }
     case CEscapeType::PREVIEW_FILES: {
-      const CEscapeDataStr *escs = dynamic_cast<const CEscapeDataStr *>(esc);
+      const auto *escs = dynamic_cast<const CEscapeDataStr *>(esc);
 
       previewFile(escs->str);
 
       break;
     }
     case CEscapeType::PASTE: {
-      const CEscapeDataStr *escs = dynamic_cast<const CEscapeDataStr *>(esc);
+      const auto *escs = dynamic_cast<const CEscapeDataStr *>(esc);
 
       paste(escs->str);
 
       break;
     }
     case CEscapeType::TRACE: {
-      const CEscapeDataBool *escb = dynamic_cast<const CEscapeDataBool *>(esc);
+      const auto *escb = dynamic_cast<const CEscapeDataBool *>(esc);
 
       setTrace(escb->b);
 
       break;
     }
     case CEscapeType::DEBUG: {
-      const CEscapeDataBool *escb = dynamic_cast<const CEscapeDataBool *>(esc);
+      const auto *escb = dynamic_cast<const CEscapeDataBool *>(esc);
 
       setDebug(escb->b);
 
@@ -1227,7 +1227,7 @@ handleEscape(const CEscapeData *esc)
     //    key-code separated by a '/' from the hex-encoded key value. The key codes
     //    correspond to the DEC function-key codes (e.g., F6=17).
     case CEscapeType::DCS: {
-      const CEscapeDataDCS *escd = dynamic_cast<const CEscapeDataDCS *>(esc);
+      const auto *escd = dynamic_cast<const CEscapeDataDCS *>(esc);
 
       std::string kstr;
 
@@ -1280,7 +1280,7 @@ escapeICH(int num)
   for (int i = 0; i < num; ++i)
     shiftRight();
 
-  CIPoint2D data_pos = getDataPos();
+  auto data_pos = getDataPos();
 
   for (int i = 0; i < num; ++i)
     handleChar(' ');
@@ -1658,7 +1658,7 @@ escapeECH(int num)
 
   if (num <= 0) num = 1;
 
-  CIPoint2D data_pos = getDataPos();
+  auto data_pos = getDataPos();
 
   for (int i = 0; i < num; ++i) {
     resetCell();
@@ -2449,7 +2449,7 @@ escapeDECRST(int num)
       UNHANDLED1("DECRST", 1035);
       break;
     }
-    // Don't send ESC  when Meta modifies a key
+    // Don't send ESC when Meta modifies a key
     case 1036: {
       // TODO
       UNHANDLED1("DECRST", 1036);
@@ -2461,7 +2461,7 @@ escapeDECRST(int num)
       UNHANDLED1("DECRST", 1037);
       break;
     }
-    // Don't send ESC  when Alt modifies a key.
+    // Don't send ESC when Alt modifies a key.
     case 1039: {
       // TODO
       UNHANDLED1("DECRST", 1039);
@@ -2615,7 +2615,7 @@ escapeSGR(const CEscapeDataSGR *sgr)
 
   logTrace("<SGR;" + CStrUtil::toString(num[0]) + ">");
 
-  CCellStyle style = getStyle();
+  auto style = getStyle();
 
   updateStyleFromSGR(sgr, style);
 
@@ -2751,7 +2751,7 @@ escapeWindowManip(int *num)
   if (num[0] < 0)
     num[0] = 0;
 
-  CWindow *window = getWindow();
+  auto *window = getWindow();
 
   switch (num[0]) {
     case 0: {
@@ -3808,7 +3808,7 @@ void
 CEscapeHandler::
 escapeOSC(int num, const std::string &str1)
 {
-  CWindow *window = getWindow();
+  auto *window = getWindow();
 
   switch (num) {
     case 0: {

@@ -753,7 +753,7 @@ class CEscapeDebugParse : public CEscapeParse {
 
  private:
   bool logging_ { false };
-  int  nc_ { 0 };
+  int  nc_      { 0 };
 };
 
 #endif

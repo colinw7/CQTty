@@ -22,3 +22,6 @@ Old
  . Update selection when lines are changed
  . Scroll to off screen lines doesn’t always work
  . Selection doesn’t work outside CQTty
+
+Dependencies
+ . Optional Image, Dir, Edit support (plugins ?)
