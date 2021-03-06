@@ -2244,7 +2244,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2265,7 +2265,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2283,7 +2283,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2309,7 +2309,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2327,7 +2327,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2353,7 +2353,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2371,7 +2371,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2386,7 +2386,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2403,7 +2403,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2420,7 +2420,7 @@ isCSIEscape(const char *str, uint *pos)
         else {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c1, c3)
         }
 
         break;
@@ -2428,7 +2428,7 @@ isCSIEscape(const char *str, uint *pos)
       default: {
         setInEscape(false);
 
-        UNHANDLED1("CSI Escape", c3)
+        UNHANDLED2("CSI Escape", c1, c3)
 
         break;
       }
@@ -2462,12 +2462,12 @@ isCSIEscape(const char *str, uint *pos)
           else if (c2 == '\"') {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2485,7 +2485,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2502,7 +2502,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2519,7 +2519,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2536,7 +2536,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2561,7 +2561,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2586,7 +2586,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2611,7 +2611,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2637,7 +2637,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2654,7 +2654,7 @@ isCSIEscape(const char *str, uint *pos)
           else {
             setInEscape(false);
 
-            UNHANDLED1("CSI Escape", c3)
+            UNHANDLED2("CSI Escape", c2, c3)
           }
 
           break;
@@ -2663,7 +2663,7 @@ isCSIEscape(const char *str, uint *pos)
         default: {
           setInEscape(false);
 
-          UNHANDLED1("CSI Escape", c3)
+          UNHANDLED2("CSI Escape", c2, c3)
 
           break;
         }

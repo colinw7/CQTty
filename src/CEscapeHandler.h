@@ -92,6 +92,12 @@ class CEscapeHandler : public CEscapeParse {
     SaveCursor() { }
   };
 
+  // save titles
+  struct SaveTitles {
+    std::string windowTitle;
+    std::string iconTitle;
+  };
+
   //---
 
  public:
@@ -129,6 +135,7 @@ class CEscapeHandler : public CEscapeParse {
   void escapeCHA(int num);
   void escapeCUP(int row, int col);
   void escapeCHT(int num);
+
   void escapeDECSED(int num);
   void escapeDECSACE(int num1, int num2, int num3);
   void escapeED(int num);
@@ -144,6 +151,7 @@ class CEscapeHandler : public CEscapeParse {
   void escapeHPA(int num);
   void escapeVPA(int num);
   void escapeHVP(int row, int col);
+
   void escapeDispPos(int row, int col);
   void escapeREP(int num);
   void escapeTBC(int num);
@@ -161,16 +169,21 @@ class CEscapeHandler : public CEscapeParse {
   void escapeDECSTBM(int top, int bottom);
   void escapeDECREQTPARM(int num);
   void escapeDECTST(int num);
+
   void escapeWindowManip(int *num);
+
   void escapeDECCARA(int t, int l, int b, int r, int m);
   void escapeDECRARA(int t, int l, int b, int r, int m);
   void escapeDECCRA(int st, int sl, int sb, int sr, int dt, int dl, int db, int dr);
   void escapeDECFRA(int c, int t, int l, int b, int r);
   void escapeDECERA(int t, int l, int b, int r);
   void escapeDECSERA(int t, int l, int b, int r);
+
   void escapeS7C1T();
   void escapeS8C1T();
+
   void escapeANSIConformance(int mode);
+
   void escapeDECDHL(CEscapeDataDECDHL::Pos pos);
   void escapeDECSWL();
   void escapeDECDWL();
@@ -182,16 +195,19 @@ class CEscapeHandler : public CEscapeParse {
   void escapeDECPAM();
   void escapeDECPNM();
   void escapeRIS();
+
   void escapeMemoryLock();
   void escapeMemoryUnlock();
   void escapeLS2();
   void escapeLS3();
   void escapeISO8859_1();
   void escapeUTF_8();
+
   void escapeDesignateG0(char c);
   void escapeDesignateG1(char c);
   void escapeDesignateG2(char c);
   void escapeDesignateG3(char c);
+
   void escapeLS1R();
   void escapeLS2R();
   void escapeLS3R();
@@ -207,6 +223,7 @@ class CEscapeHandler : public CEscapeParse {
   void escapeSPA();
   void escapeEPA();
   void escapeSOS();
+
   void escapeDECDSR(int mode);
   void escapeDECSTR();
   void escapeDECSCL(int num1, int num2);
@@ -222,7 +239,7 @@ class CEscapeHandler : public CEscapeParse {
   void escapeDECCOLM(bool set);
   void escapeDECSLPP(int num_rows);
   void escapeDECSCLM(bool set);
-  void escapeDECSCNM(bool set);
+  void escapeDECSCNM(bool set); // set/reset inverse video
   void escapeDECOM(bool set);
   void escapeDECAWM(bool set);
   void escapeDECARM(bool set);
@@ -237,10 +254,14 @@ class CEscapeHandler : public CEscapeParse {
   void escapeIRM(bool set);
   void escapeSRM(bool set);
   void escapeLNM(bool set);
+
   void escapeDECSavePriv(int *modes, int num_modes);
   void escapeDECRestorePriv(int *modes, int num_modes);
+
   void escapeStartMouseTrack(int func, int x, int y, int first, int last);
+
   void escapeOSC(int num, const std::string &str1);
+
   void escape4014(const CEscapeDataTek4014 *esc4014);
 
   void incOutputRow();
@@ -554,6 +575,7 @@ class CEscapeHandler : public CEscapeParse {
   ScrollArea   scroll_area_;
   CharSet      charset_;
   SaveCursor   save_cursor_;
+  SaveTitles   save_titles_;
   CRGBA        cursor_color_;
   bool         wrapChar_ { false };
   bool         debug_    { false };

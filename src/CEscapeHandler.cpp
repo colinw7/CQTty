@@ -1834,7 +1834,7 @@ escapeDECSET(int num)
       escapeDECSCLM(true);
       break;
     }
-    // Reverse Video (DECSCNM).
+    // Set Reverse Video (DECSCNM).
     case 5: {
       escapeDECSCNM(true);
       break;
@@ -2235,7 +2235,7 @@ escapeDECRST(int num)
       escapeDECSCLM(false);
       break;
     }
-    // Normal Video (DECSCNM)
+    // Set Normal Video (Reset Inverse Video) (DECSCNM)
     case 5: {
       escapeDECSCNM(false);
       break;
@@ -2999,13 +2999,27 @@ escapeWindowManip(int *num)
     }
     // Save icon and window title on stack
     case 22: {
-      UNHANDLED1("WindowManip", num[0]);
+      if (window) {
+        window->getWindowTitle(save_titles_.windowTitle);
+        window->getIconTitle  (save_titles_.iconTitle);
+      }
+      else {
+        getWindowTitle(save_titles_.windowTitle);
+        getIconTitle  (save_titles_.iconTitle);
+      }
 
       break;
     }
     // Restore icon and window title from stack
     case 23: {
-      UNHANDLED1("WindowManip", num[0]);
+      if (window) {
+        window->setWindowTitle(save_titles_.windowTitle);
+        window->setIconTitle  (save_titles_.iconTitle);
+      }
+      else {
+        setWindowTitle(save_titles_.windowTitle);
+        setIconTitle  (save_titles_.iconTitle);
+      }
 
       break;
     }
