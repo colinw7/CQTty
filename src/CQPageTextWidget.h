@@ -82,8 +82,8 @@ class CQPageTextWidget : public QWidget {
   void repaint();
 
  private:
-  void resizeEvent(QResizeEvent *);
-  void showEvent(QShowEvent *);
+  void resizeEvent(QResizeEvent *) override;
+  void showEvent(QShowEvent *) override;
 
  private slots:
   void hscrollSlot();

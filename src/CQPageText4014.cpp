@@ -272,7 +272,7 @@ mousePressEvent(QMouseEvent *e)
 
 void
 CQPageText4014::
-mouseMotionEvent(QMouseEvent *)
+mouseMoveEvent(QMouseEvent *)
 {
 }
 

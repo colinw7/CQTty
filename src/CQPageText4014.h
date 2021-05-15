@@ -50,13 +50,13 @@ class CQPageText4014 : public QWidget {
 
   void addChar(char c);
 
-  void paintEvent(QPaintEvent *);
+  void paintEvent(QPaintEvent *) override;
 
-  void keyPressEvent(QKeyEvent *e);
+  void keyPressEvent(QKeyEvent *e) override;
 
-  void mousePressEvent(QMouseEvent *);
-  void mouseMotionEvent(QMouseEvent *);
-  void mouseReleaseEvent(QMouseEvent *);
+  void mousePressEvent(QMouseEvent *) override;
+  void mouseMoveEvent(QMouseEvent *) override;
+  void mouseReleaseEvent(QMouseEvent *) override;
 
  private:
   void drawChar(QPainter *painter, const Char &c) const;
