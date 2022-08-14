@@ -164,28 +164,28 @@ class CCellStyle {
  private:
   CEscapeColor getFgColor() const {
     if (! fg_is_rgb_)
-      return (CEscapeColor) fg_;
+      return static_cast<CEscapeColor>(fg_);
     else
       return CEscapeColor::FG;
   }
 
   CEscapeColor getBgColor() const {
     if (! bg_is_rgb_)
-      return (CEscapeColor) bg_;
+      return static_cast<CEscapeColor>(bg_);
     else
       return CEscapeColor::BG;
   }
 
   CRGB getFgRGB() const {
     if (fg_is_rgb_)
-      return CRGB::decodeRGB((uint) fg_);
+      return CRGB::decodeRGB(static_cast<uint>(fg_));
     else
       return CRGB(1,1,1);
   }
 
   CRGB getBgRGB() const {
     if (bg_is_rgb_)
-      return CRGB::decodeRGB((uint) bg_);
+      return CRGB::decodeRGB(static_cast<uint>(bg_));
     else
       return CRGB(0,0,0);
   }
