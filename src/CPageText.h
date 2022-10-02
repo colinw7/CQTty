@@ -27,8 +27,8 @@ class CPageText {
     int          x { 0 }, y { 0 };
     CEscapeColor color;
 
-    PixelPoint(int x=0, int y=0, const CEscapeColor &color=CEscapeColor::WHITE) :
-     x(x), y(y), color(color) {
+    PixelPoint(int x_=0, int y_=0, const CEscapeColor &color_=CEscapeColor::WHITE) :
+     x(x_), y(y_), color(color_) {
     }
   };
 
@@ -38,10 +38,10 @@ class CPageText {
     CEscapeColor     color;
     CEscapeLineStyle lineStyle;
 
-    PixelLine(int x1=0, int y1=0, int x2=0, int y2=0,
-              const CEscapeColor &color=CEscapeColor::WHITE,
-              const CEscapeLineStyle &lineStyle=CEscapeLineStyle::SOLID) :
-     x1(x1), y1(y1), x2(x2), y2(y2), color(color), lineStyle(lineStyle) {
+    PixelLine(int x1_=0, int y1_=0, int x2_=0, int y2_=0,
+              const CEscapeColor &color_=CEscapeColor::WHITE,
+              const CEscapeLineStyle &lineStyle_=CEscapeLineStyle::SOLID) :
+     x1(x1_), y1(y1_), x2(x2_), y2(y2_), color(color_), lineStyle(lineStyle_) {
     }
   };
 

@@ -21,15 +21,15 @@ class CEscapeHandler : public CEscapeParse {
 
     bool isSet() const { return is_set_; }
 
-    int getTop   () const { return start_row_; }
-    int getBottom() const { return end_row_  ; }
+    int getTop   () const { return int(start_row_); }
+    int getBottom() const { return int(end_row_  ); }
 
     void set(int start_row, int end_row) {
       assert(start_row < end_row);
 
       is_set_    = true;
-      start_row_ = start_row;
-      end_row_   = end_row;
+      start_row_ = uint(start_row);
+      end_row_   = uint(end_row);
     }
 
     void clear() {

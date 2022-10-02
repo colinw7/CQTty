@@ -314,7 +314,7 @@ selectWord(int row, int col)
 
     LineList &lines = getCurrentPage().lines;
 
-    uint num_lines = lines.size();
+    uint num_lines = uint(lines.size());
 
     if (row1 >= 0 && row1 < int(num_lines)) {
       CPageTextLine *line = lines[row1];
@@ -548,7 +548,7 @@ setPageSize(uint rows, uint cols)
     for (uint i = 0; i < num_extra; ++i) {
       CPageTextLine *old_line = lines[0];
 
-      uint num_lines = lines.size();
+      uint num_lines = uint(lines.size());
 
       for (uint j = 1; j < num_lines; ++j)
         lines[j - 1] = lines[j];
@@ -568,7 +568,7 @@ setPageSize(uint rows, uint cols)
 
         oldLines_.pop_back();
 
-        uint num_lines = lines.size();
+        uint num_lines = uint(lines.size());
 
         lines.push_back(nullptr);
 
@@ -600,21 +600,21 @@ uint
 CPageText::
 getCharWidth() const
 {
-  return fonts_.getFont(CFONT_STYLE_NORMAL)->getCharWidth();
+  return uint(fonts_.getFont(CFONT_STYLE_NORMAL)->getCharWidth());
 }
 
 uint
 CPageText::
 getCharHeight() const
 {
-  return fonts_.getFont(CFONT_STYLE_NORMAL)->getCharHeight();
+  return uint(fonts_.getFont(CFONT_STYLE_NORMAL)->getCharHeight());
 }
 
 uint
 CPageText::
 getCharAscent() const
 {
-  return fonts_.getFont(CFONT_STYLE_NORMAL)->getCharAscent();
+  return uint(fonts_.getFont(CFONT_STYLE_NORMAL)->getCharAscent());
 }
 
 void
@@ -669,7 +669,7 @@ CPageText::
 getNumOldLines() const
 {
   if (! isAlt())
-    return oldLines_.size();
+    return uint(oldLines_.size());
   else
     return 0;
 }
@@ -710,7 +710,7 @@ getLinesHeight() const
 {
   const LineList &lines = getCurrentPage().lines;
 
-  return lines.size()*getCharHeight();
+  return uint(lines.size())*getCharHeight();
 }
 
 CFontPtr
@@ -840,7 +840,7 @@ CPageText::
 clearAbove()
 {
   LineList &lines     = this->lines();
-  uint      num_lines = lines.size();
+  uint      num_lines = uint(lines.size());
 
   for (uint i = 0; i < uint(getRow()) && i < num_lines; ++i)
     lines[i]->erase();
@@ -851,7 +851,7 @@ CPageText::
 clearBelow()
 {
   LineList &lines     = this->lines();
-  uint      num_lines = lines.size();
+  uint      num_lines = uint(lines.size());
 
   for (uint i = getRow() + 1; i < num_lines; ++i)
     lines[i]->erase();
@@ -1022,7 +1022,7 @@ void
 CPageText::
 insertText(const std::string &str)
 {
-  uint num_chars = str.size();
+  uint num_chars = uint(str.size());
 
   for (uint i = 0; i < num_chars; ++i)
     insertChar(str[i]);
@@ -1179,7 +1179,7 @@ CPageText::
 makePosValid(const CTextPos &pos)
 {
   LineList &lines     = this->lines();
-  uint      num_lines = lines.size();
+  uint      num_lines = uint(lines.size());
 
   uint row = pos.getRow();
 
@@ -1342,7 +1342,7 @@ loadCmdLine(const std::string &line)
     std::string str = CEscape::stringToEscape(line);
 
     if (str != "") {
-      addEscapeChars(str.c_str(), str.size());
+      addEscapeChars(str.c_str(), int(str.size()));
     }
     else
       std::cerr << "Invalid command name \"" << cmd << "\"" << std::endl;
@@ -1363,16 +1363,16 @@ loadEsc(const std::string &fileName)
 
   while ((c = file.getC()) != EOF) {
     if (c == '') {
-      buffer += c;
+      buffer += char(c);
 
       while ((c = file.getC()) != EOF) {
-        buffer += c;
+        buffer += char(c);
 
         if (buffer.size() > bufferSize_)
           break;
       }
 
-      addEscapeChars(buffer.c_str(), buffer.size());
+      addEscapeChars(buffer.c_str(), int(buffer.size()));
 
       buffer.clear();
     }
@@ -1380,16 +1380,16 @@ loadEsc(const std::string &fileName)
 #if 0
       notifier->addOutputChar(char(c));
 #else
-      buffer += c;
+      buffer += char(c);
 
       while ((c = file.getC()) != EOF) {
-        buffer += c;
+        buffer += char(c);
 
         if (buffer.size() > bufferSize_)
           break;
       }
 
-      addEscapeChars(buffer.c_str(), buffer.size());
+      addEscapeChars(buffer.c_str(), int(buffer.size()));
 
       buffer.clear();
     }
@@ -1458,9 +1458,8 @@ processString(const char *str)
 
   if (tty)
     tty->write(str);
-  else {
-    addEscapeChars(str, strlen(str));
-  }
+  else
+    addEscapeChars(str, int(strlen(str)));
 
   flush();
 }
@@ -1499,7 +1498,7 @@ flush()
     notifier->logTrace(output);
   }
 
-  addEscapeChars(output.c_str(), output.size());
+  addEscapeChars(output.c_str(), int(output.size()));
 
   notifyTty();
 

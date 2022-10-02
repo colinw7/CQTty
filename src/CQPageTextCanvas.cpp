@@ -15,6 +15,7 @@
 #include <CQUtil.h>
 #include <CQFontUtil.h>
 #include <CQImageUtil.h>
+#include <CQWidgetUtil.h>
 #include <CFileUtil.h>
 
 #include <QPainter>
@@ -697,7 +698,7 @@ mousePressEvent(QMouseEvent *e)
       update();
     }
   }
-  else if (e->button() == Qt::MidButton) {
+  else if (e->button() == Qt::MiddleButton) {
     CQPageText *area = area_->getArea();
 
     std::string str = area->getSelectionText();
@@ -857,12 +858,14 @@ void
 CQPageTextCanvas::
 wheelEvent(QWheelEvent *event)
 {
-  CQPageText *area = area_->getArea();
+  auto *area = area_->getArea();
 
   if (area->getShowScrollBar()) {
-    QScrollBar *vbar = area_->getVScroll();
+    auto *vbar = area_->getVScroll();
 
-    double num = -(1.0*event->delta())/vbar->singleStep();
+    auto delta = CQWidgetUtil::wheelDelta(event);
+
+    double num = -(1.0*delta)/vbar->singleStep();
 
     int value = vbar->value();
 

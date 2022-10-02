@@ -91,9 +91,9 @@ struct RegisData {
 };
 
 bool regisValueToPoint(const std::string &str, RegisPoint &point) {
-  int pos = 0;
-  int len = str.size();
-  int num = 0;
+  uint pos = 0;
+  auto len = str.size();
+  int  num = 0;
 
   std::string str1;
 
@@ -126,7 +126,7 @@ bool regisValueToPoint(const std::string &str, RegisPoint &point) {
 
 bool getRegisData(const std::string &str, uint &pos, std::vector<RegisData> &values)
 {
-  uint len = str.size();
+  auto len = str.size();
 
   while (pos < len) {
     if      (str[pos] == '(') {
@@ -359,7 +359,7 @@ void
 CEscapeParse::
 addOutputChars(const std::string &str)
 {
-  addOutputChars(str.c_str(), str.size());
+  addOutputChars(str.c_str(), uint(str.size()));
 }
 
 void
@@ -382,7 +382,7 @@ addOutputChars(const char *str, uint len)
 
     preBuffer = "";
 
-    addOutputChars(buffer1.c_str(), buffer1.size());
+    addOutputChars(buffer1.c_str(), uint(buffer1.size()));
 
     return;
   }
@@ -421,9 +421,9 @@ addOutputChars(const char *str, uint len)
       uint pos = 0;
 
       if (isEscape(escape_buf_.getChars(), &pos)) {
-        int len1 = escape_buf_.getLen() - pos;
+        uint len1 = escape_buf_.getLen() - pos;
 
-        assert(len1 >= 0 && len1 <= int(len));
+        assert(len1 <= len);
 
         i = len - len1;
 
@@ -432,9 +432,9 @@ addOutputChars(const char *str, uint len)
         pos = 0;
 
         while (i < len && getInEscape() && isEscape(escape_buf_.getChars(), &pos)) {
-          int len2 = escape_buf_.getLen() - pos;
+          uint len2 = escape_buf_.getLen() - pos;
 
-          assert(len2 >= 0 && len2 <= int(len));
+          assert(len2 <= len);
 
           i = len - len2;
 
@@ -457,7 +457,7 @@ addOutputChars(const char *str, uint len)
 
     postBuffer.clear();
 
-    addOutputChars(buffer1.c_str(), buffer1.size());
+    addOutputChars(buffer1.c_str(), uint(buffer1.size()));
   }
 }
 
@@ -609,7 +609,7 @@ addControlChar(const char *str, uint *pos, uint len)
         static int last_x1 = 0 , last_y1 = 0;
 
         // Graph Mode
-        int pos1 = *pos;
+        uint pos1 = *pos;
 
         typedef std::vector<char> Chars;
 
@@ -639,7 +639,7 @@ addControlChar(const char *str, uint *pos, uint len)
         // Low X : 64-95   High X : 32-63
         // Low Y : 96-127  High Y : 32-63
         uint ic = 0;
-        uint nc = chars.size();
+        auto nc = chars.size();
 
         while (true) {
           // read yl, yh
@@ -843,7 +843,7 @@ addEscapeChar(char c)
     if (i < escape_buf_.getLen()) {
       std::string buf(&escape_buf_.getChars()[i], escape_buf_.getLen() - i);
 
-      addOutputChars(buf.c_str(), buf.size());
+      addOutputChars(buf.c_str(), uint(buf.size()));
     }
   }
 }
@@ -3135,7 +3135,7 @@ isOSCEscape(const char *str, uint *pos)
   if (! isOSCEscape(str, pos, &osc_len))
     return false;
 
-  (*pos) += osc_len;
+  (*pos) += uint(osc_len);
 
   //--------
 
@@ -3167,7 +3167,7 @@ isAPCEscape(const char *str, uint *pos)
   if (! isAPCEscape(str, pos, &apc_len))
     return false;
 
-  (*pos) += apc_len;
+  (*pos) += uint(apc_len);
 
   //---
 
@@ -3244,15 +3244,15 @@ isAPCEscape(const char *str, uint *pos)
           if      (opt_name == "filename")
             iname = opt_value;
           else if (opt_name == "size")
-            size = CStrUtil::toInteger(opt_value);
+            size = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "x1")
-            x1 = CStrUtil::toInteger(opt_value);
+            x1 = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "y1")
-            y1 = CStrUtil::toInteger(opt_value);
+            y1 = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "x2")
-            x2 = CStrUtil::toInteger(opt_value);
+            x2 = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "y2")
-            y2 = CStrUtil::toInteger(opt_value);
+            y2 = int(CStrUtil::toInteger(opt_value));
         }
 
         setInEscape(false);
@@ -3326,9 +3326,9 @@ isAPCEscape(const char *str, uint *pos)
             colors.push_back(CEscapeColorsInst->encode(ec));
           }
           else if (opt_name == "x")
-            x = CStrUtil::toInteger(opt_value);
+            x = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "y")
-            y = CStrUtil::toInteger(opt_value);
+            y = int(CStrUtil::toInteger(opt_value));
         }
 
         setInEscape(false);
@@ -3356,13 +3356,13 @@ isAPCEscape(const char *str, uint *pos)
           if      (opt_name == "color")
             color = CRGBName::toRGBA(opt_value);
           else if (opt_name == "x1")
-            x1 = CStrUtil::toInteger(opt_value);
+            x1 = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "y1")
-            y1 = CStrUtil::toInteger(opt_value);
+            y1 = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "x2")
-            x2 = CStrUtil::toInteger(opt_value);
+            x2 = int(CStrUtil::toInteger(opt_value));
           else if (opt_name == "y2")
-            y2 = CStrUtil::toInteger(opt_value);
+            y2 = int(CStrUtil::toInteger(opt_value));
         }
 
         setInEscape(false);
@@ -3532,9 +3532,9 @@ isDCSEscape(const char *str, uint *pos)
   if (! isDCSTerm(str, pos, &dcs_len))
     return false;
 
-  (*pos) += dcs_len;
+  (*pos) += uint(dcs_len);
 
-  uint value_len = value.size();
+  auto value_len = value.size();
 
   // DCS $ q Pt ST
   //   Request Status String (DECRQSS). The string following the "q" is one of the following:
@@ -3580,8 +3580,8 @@ isDCSEscape(const char *str, uint *pos)
     while (pos1 + 2 <= value_len) {
       uint i1, i2;
 
-      if (! CStrUtil::decodeHexChar(value1[pos1    ], &i1) ||
-          ! CStrUtil::decodeHexChar(value1[pos1 + 1], &i2)) {
+      if (! CStrUtil::decodeHexChar(uchar(value1[pos1    ]), &i1) ||
+          ! CStrUtil::decodeHexChar(uchar(value1[pos1 + 1]), &i2)) {
         valid = false;
         break;
       }
@@ -3899,7 +3899,7 @@ isDCSEscape(const char *str, uint *pos)
 
     //---
 
-    uint *data = new uint [w*h];
+    uint *data = new uint [uint(w*h)];
 
     int x = 0;
     int y = 0;
@@ -3927,7 +3927,7 @@ isDCSEscape(const char *str, uint *pos)
             if (x >= w || y + j >= h)
               return false;
 
-            data[x + (y + j)*w] = c;
+            data[uint(x + (y + j)*w)] = uint(c);
           }
 
           ++x;
@@ -3972,7 +3972,7 @@ isDCSEscape(const char *str, uint *pos)
           if (x >= w || y + j >= h)
             return false;
 
-          data[x + (y + j)*w] = c;
+          data[x + (y + j)*w] = uint(c);
         }
 
         ++x;
@@ -4018,12 +4018,12 @@ parseRegisString(const std::string &str, CEscapeRegisState &regisState)
   static std::string chars = "PVCFTSRWL@";
 
   uint pos = 0;
-  uint len = str.size();
+  auto len = str.size();
 
   RegisPoint currentPoint;
 
   while (pos < len) {
-    char c = toupper(str[pos]);
+    char c = char(toupper(str[pos]));
 
     auto p = chars.find(c);
 
@@ -4383,7 +4383,7 @@ updateStyleFromSGR(const CEscapeDataSGR *sgr, CCellStyle &style)
     //  36 -> Cyan.
     //  37 -> White.
     case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37: {
-      style.setFg((CEscapeColor) (num[0] - 30));
+      style.setFg(CEscapeColor(num[0] - 30));
       break;
     }
     // Set foreground color to the closest match in xterm's palette for the given RGB Pr/Pg/Pb
@@ -4407,7 +4407,7 @@ updateStyleFromSGR(const CEscapeDataSGR *sgr, CCellStyle &style)
     //  46 -> Cyan.
     //  47 -> White.
     case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47: {
-      style.setBg((CEscapeColor) (num[0] - 40));
+      style.setBg(CEscapeColor(num[0] - 40));
       break;
     }
     // Set background color to the closest match in xterm's palette for the given RGB Pr/Pg/Pb
@@ -4431,7 +4431,7 @@ updateStyleFromSGR(const CEscapeDataSGR *sgr, CCellStyle &style)
     //  96 -> Cyan.
     //  97 -> White.
     case 90: case 91: case 92: case 93: case 94: case 95: case 96: case 97: {
-      style.setFg((CEscapeColor) (num[0] - 80));
+      style.setFg(CEscapeColor(num[0] - 80));
       break;
     }
     // Set background color (16-color support):
@@ -4444,7 +4444,7 @@ updateStyleFromSGR(const CEscapeDataSGR *sgr, CCellStyle &style)
     //  106 -> Cyan.
     //  107 -> White.
     case 100: case 101: case 102: case 103: case 104: case 105: case 106: case 107: {
-      style.setBg((CEscapeColor) (num[0] - 90));
+      style.setBg(CEscapeColor(num[0] - 90));
       break;
     }
     default: {

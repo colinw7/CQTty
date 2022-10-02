@@ -182,8 +182,8 @@ struct CEscapeData {
 struct CEscapeDataC : public CEscapeData {
   char c { '\0' };
 
-  CEscapeDataC(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataC(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -195,8 +195,8 @@ struct CEscapeDataC : public CEscapeData {
 struct CEscapeDataBool : public CEscapeData {
   bool b { false };
 
-  CEscapeDataBool(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataBool(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -208,8 +208,8 @@ struct CEscapeDataBool : public CEscapeData {
 struct CEscapeDataStr : public CEscapeData {
   std::string str;
 
-  CEscapeDataStr(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataStr(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -228,8 +228,8 @@ struct CEscapeDataGS : public CEscapeData {
   int  y    { 0 };
   Mode mode { Mode::NONE };
 
-  CEscapeDataGS(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataGS(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -242,8 +242,8 @@ struct CEscapeDataDECDHL : public CEscapeData {
 
   Pos pos { Pos::TOP };
 
-  CEscapeDataDECDHL(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataDECDHL(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -256,8 +256,8 @@ struct CEscapeDataDCS : public CEscapeData {
   CKeyType    key { CKEY_TYPE_NUL };
   std::string value;
 
-  CEscapeDataDCS(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataDCS(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -270,8 +270,8 @@ struct CEscapeDataNums : public CEscapeData {
   int *num { nullptr };
   int  nn  { 0 };
 
-  CEscapeDataNums(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataNums(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -281,8 +281,8 @@ struct CEscapeDataNums : public CEscapeData {
 
 // SGR
 struct CEscapeDataSGR : public CEscapeDataNums {
-  CEscapeDataSGR(CEscapeType type) :
-   CEscapeDataNums(type) {
+  CEscapeDataSGR(CEscapeType type1) :
+   CEscapeDataNums(type1) {
   }
 };
 
@@ -349,8 +349,8 @@ struct CEscapeDataFileImage : public CEscapeData {
   CImageFile * image { nullptr };
   int          x1 { 0 }, y1 { 0 }, x2 { 0 }, y2 { 0 };
 
-  CEscapeDataFileImage(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataFileImage(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -362,8 +362,8 @@ struct CEscapeDataFileImage : public CEscapeData {
 struct CEscapeDataImage : public CEscapeData {
   CImagePtr image;
 
-  CEscapeDataImage(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataImage(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -376,8 +376,8 @@ struct CEscapeDataPixel : public CEscapeData {
   CEscapeColor color { CEscapeColor::BLACK };
   int          x { 0 }, y { 0 };
 
-  CEscapeDataPixel(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataPixel(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;
@@ -391,8 +391,8 @@ struct CEscapeDataLine : public CEscapeData {
   int          x1 { 0 }, y1 { 0 };
   int          x2 { 1 }, y2 { 1 };
 
-  CEscapeDataLine(CEscapeType type) :
-   CEscapeData(type) {
+  CEscapeDataLine(CEscapeType type1) :
+   CEscapeData(type1) {
   }
 
   void print(std::ostream &os) const;

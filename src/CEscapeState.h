@@ -8,8 +8,10 @@ class CEscapeState {
     int x { 0 };
     int y { 0 };
 
-    Point(int x=0, int y=0) :
-     x(x), y(y) {
+    Point() { }
+
+    Point(int x1, int y1) :
+     x(x1), y(y1) {
     }
   };
 

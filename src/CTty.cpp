@@ -365,13 +365,13 @@ setPageSize(int rows, int cols)
   if (ioctl(master_fd_, TIOCGWINSZ, &ts) == -1)
     return false;
 
-  if (ts.ws_col != 0) ts.ws_xpixel = cols*(ts.ws_xpixel/ts.ws_col);
-  if (ts.ws_row != 0) ts.ws_ypixel = rows*(ts.ws_ypixel/ts.ws_row);
+  if (ts.ws_col != 0) ts.ws_xpixel = short(cols*(ts.ws_xpixel/ts.ws_col));
+  if (ts.ws_row != 0) ts.ws_ypixel = short(rows*(ts.ws_ypixel/ts.ws_row));
 
-  ts.ws_row = rows;
-  ts.ws_col = cols;
+  ts.ws_row = ushort(rows);
+  ts.ws_col = ushort(cols);
 
-  ioctl(master_fd_, TIOCSWINSZ, (char *) &ts);
+  ioctl(master_fd_, TIOCSWINSZ, reinterpret_cast<char *>(&ts));
 
   return true;
 }

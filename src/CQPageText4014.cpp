@@ -4,6 +4,7 @@
 #include <CVFont.h>
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QMouseEvent>
 
 // 4014 Graphics is 4096, 3072

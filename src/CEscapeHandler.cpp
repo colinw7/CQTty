@@ -121,7 +121,7 @@ handleChar(char c)
       int i1, i2;
 
       if (CUtf8::indexChar(utf_chars, ind, i1, i2)) {
-        utf_char = CUtf8::readNextChar(utf_chars, i1, utf_chars.length());
+        utf_char = CUtf8::readNextChar(utf_chars, i1, uint(utf_chars.length()));
         is_utf   = true;
       }
     }
@@ -138,7 +138,7 @@ handleChar(char c)
   int x = getDataPos().x;
   int y = getDataPos().y;
 
-  int num_cols = getNumDataCols();
+  int num_cols = int(getNumDataCols());
 
   //---
 
@@ -167,9 +167,9 @@ handleChar(char c)
   //---
 
   if (is_utf)
-    notifyUtfChar(x, y, utf_char);
+    notifyUtfChar(uint(x), uint(y), utf_char);
   else
-    notifyChar(x, y, c);
+    notifyChar(uint(x), uint(y), c);
 
   //---
 
@@ -179,15 +179,15 @@ handleChar(char c)
   if (visible) {
     if (is_utf) {
       if (getInAPCType())
-        setUtfLinkCell(y, x, utf_char, getStyle(), getAPCTypeType(), getAPCTypeValue());
+        setUtfLinkCell(uint(y), uint(x), utf_char, getStyle(), getAPCTypeType(), getAPCTypeValue());
       else
-        setUtfCell(y, x, utf_char, getStyle());
+        setUtfCell(uint(y), uint(x), utf_char, getStyle());
     }
     else {
       if (getInAPCType())
-        setLinkCell(y, x, c, getStyle(), getAPCTypeType(), getAPCTypeValue());
+        setLinkCell(uint(y), uint(x), c, getStyle(), getAPCTypeType(), getAPCTypeValue());
       else
-        setCell(y, x, c, getStyle());
+        setCell(uint(y), uint(x), c, getStyle());
     }
   }
 
@@ -1315,7 +1315,7 @@ escapeCUD(int num)
 
   if (num <= 0) num = 1;
 
-  int num_rows = getNumDataRows();
+  int num_rows = int(getNumDataRows());
 
   if (getDataPos().y + num >= num_rows)
     num = num_rows - 1 - getDataPos().y;
@@ -1334,7 +1334,7 @@ escapeCUF(int num)
 
   if (num <= 0) num = 1;
 
-  int num_cols = getNumDataCols();
+  int num_cols = int(getNumDataCols());
 
   if (getDataPos().x + num >= num_cols)
     num = num_cols - 1 - getDataPos().x;
@@ -1371,7 +1371,7 @@ escapeCUB(int num)
         if (row > 0) {
           --row;
 
-          col = cols - 1;
+          col = int(cols - 1);
 
           setDispPos(row, col);
         }
@@ -1473,8 +1473,8 @@ escapeDispPos(int row, int col)
 
   // if origin mode make sure it is in scroll region
   if (getOriginMode()) {
-    int scroll_bottom = getScrollBottom();
-    int scroll_top    = getScrollTop   ();
+    int scroll_bottom = int(getScrollBottom());
+    int scroll_top    = int(getScrollTop   ());
 
     row += scroll_top - 1;
 
@@ -1591,7 +1591,7 @@ escapeIL(int num)
 
   if (num <= 0) num = 1;
 
-  insertLine(num);
+  insertLine(uint(num));
 }
 
 // Deletes N lines, starting at line with cursor.
@@ -1607,7 +1607,7 @@ escapeDL(int num)
 
   if (num <= 0) num = 1;
 
-  deleteLine(num);
+  deleteLine(uint(num));
 }
 
 // Deletes N characters, starting with the character at cursor position.
@@ -1717,7 +1717,7 @@ escapeTBC(int num)
   logTrace("<TBC;" + CStrUtil::toString(num) + ">");
 
   if      (num == 0)
-    clearTab(getDataPos().x);
+    clearTab(uint(getDataPos().x));
   else if (num == 3)
     clearTabAll();
   else
@@ -2638,7 +2638,7 @@ escapeDECSTBM(int top, int bottom)
 
     getDispSize(&rows, &cols);
 
-    bottom = rows;
+    bottom = int(rows);
   }
 
   if (top > 0 && bottom > 0 && top < bottom) {
@@ -2791,9 +2791,9 @@ escapeWindowManip(int *num)
     // Zero parameters use the display's height or width.
     case 4: {
       if (window)
-        window->resize(num[2], num[1]);
+        window->resize(uint(num[2]), uint(num[1]));
       else
-        resizeWindow(num[2], num[1]);
+        resizeWindow(uint(num[2]), uint(num[1]));
 
       break;
     }
@@ -2833,9 +2833,9 @@ escapeWindowManip(int *num)
       charsToPixels(num[2], num[1], &w, &h);
 
       if (window)
-        window->resize(w, h);
+        window->resize(uint(w), uint(h));
       else
-        resizeWindow(w, h);
+        resizeWindow(uint(w), uint(h));
 
       break;
     }
@@ -2958,7 +2958,7 @@ escapeWindowManip(int *num)
 
       int rows, cols;
 
-      pixelsToChars(width, height, &cols, &rows);
+      pixelsToChars(int(width), int(height), &cols, &rows);
 
       std::string str = CSI("9;") + CStrUtil::toString(rows) + ";" +
                                     CStrUtil::toString(cols) + "t";
@@ -3130,11 +3130,11 @@ escapeDECDHL(CEscapeDataDECDHL::Pos pos)
   int y = getDataPos().y;
 
   if (pos == CEscapeDataDECDHL::Pos::TOP)
-    setLineHeightStyle(y, CCellLineHeightStyle::DOUBLE_TOP);
+    setLineHeightStyle(uint(y), CCellLineHeightStyle::DOUBLE_TOP);
   else
-    setLineHeightStyle(y, CCellLineHeightStyle::DOUBLE_BOTTOM);
+    setLineHeightStyle(uint(y), CCellLineHeightStyle::DOUBLE_BOTTOM);
 
-  setLineWidthStyle(y, CCellLineWidthStyle::DOUBLE);
+  setLineWidthStyle(uint(y), CCellLineWidthStyle::DOUBLE);
 }
 
 // DEC Single Width Line
@@ -3144,8 +3144,8 @@ escapeDECSWL()
 {
   int y = getDataPos().y;
 
-  setLineWidthStyle (y, CCellLineWidthStyle ::SINGLE);
-  setLineHeightStyle(y, CCellLineHeightStyle::SINGLE);
+  setLineWidthStyle (uint(y), CCellLineWidthStyle ::SINGLE);
+  setLineHeightStyle(uint(y), CCellLineHeightStyle::SINGLE);
 }
 
 // DEC Double Width Line
@@ -3155,8 +3155,8 @@ escapeDECDWL()
 {
   int y = getDataPos().y;
 
-  setLineWidthStyle (y, CCellLineWidthStyle ::DOUBLE);
-  setLineHeightStyle(y, CCellLineHeightStyle::SINGLE);
+  setLineWidthStyle (uint(y), CCellLineWidthStyle ::DOUBLE);
+  setLineHeightStyle(uint(y), CCellLineHeightStyle::SINGLE);
 }
 
 void
@@ -3356,7 +3356,7 @@ void
 CEscapeHandler::
 escapeIND()
 {
-  int num_rows = getNumDataRows();
+  int num_rows = int(getNumDataRows());
 
   if (getDataPos().y >= num_rows - 1)
     scrollUp();
@@ -3370,7 +3370,7 @@ void
 CEscapeHandler::
 escapeNEL()
 {
-  int num_rows = getNumDataRows();
+  int num_rows = int(getNumDataRows());
 
   if (getDataPos().y >= num_rows - 1)
     scrollUp();
@@ -3399,7 +3399,7 @@ void
 CEscapeHandler::
 escapeHTS()
 {
-  setTab(getDataPos().x);
+  setTab(uint(getDataPos().x));
 }
 
 // Moves cursor up one line in same column.
@@ -3623,9 +3623,9 @@ void
 CEscapeHandler::
 escapeDECSLPP(int num_rows)
 {
-  int num_cols = getNumDataCols();
+  int num_cols = int(getNumDataCols());
 
-  setDispSize(num_rows, num_cols);
+  setDispSize(uint(num_rows), uint(num_cols));
 }
 
 void
@@ -3896,10 +3896,10 @@ escapeOSC(int num, const std::string &str1)
 
       CStrUtil::addFields(str1, words, ";");
 
-      uint num_words = words.size();
+      auto num_words = words.size();
 
       for (uint i = 0; i < num_words; ++i) {
-        uint pos = i + start;
+        uint pos = i + uint(start);
 
         switch (pos) {
           case 0: // Text Foreground Color
@@ -4003,7 +4003,7 @@ incOutputRow()
 
   ++row;
 
-  int scroll_bottom = getScrollBottom();
+  int scroll_bottom = int(getScrollBottom());
 
   if (row > scroll_bottom - 1)
     scrollUp();
@@ -4023,7 +4023,7 @@ decOutputRow()
 
   --row;
 
-  int scroll_top = getScrollTop();
+  int scroll_top = int(getScrollTop());
 
   if (row < scroll_top - 1)
     scrollDown();
@@ -4330,7 +4330,7 @@ nextTab()
   if (tabs_.nextPos(col, &col1))
     setDispPos(row, col1);
   else
-    setDispPos(row, cols - 1);
+    setDispPos(row, int(cols - 1));
 }
 
 void
@@ -4383,7 +4383,7 @@ CEscapeHandler::
 getScrollTop() const
 {
   if (scroll_area_.isSet())
-    return scroll_area_.getTop();
+    return uint(scroll_area_.getTop());
   else
     return 1;
 }
@@ -4393,7 +4393,7 @@ CEscapeHandler::
 getScrollBottom() const
 {
   if (scroll_area_.isSet())
-    return scroll_area_.getBottom();
+    return uint(scroll_area_.getBottom());
   else {
     uint rows, cols;
 

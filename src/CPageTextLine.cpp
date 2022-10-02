@@ -84,7 +84,7 @@ void
 CPageTextLine::
 eraseLeft(uint col)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   for (uint i = 0; i <= col && i < numCells; ++i)
     clearCell(i, '\0');
@@ -97,7 +97,7 @@ void
 CPageTextLine::
 eraseRight(uint col)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   for (uint i = col; i < numCells; ++i)
     clearCell(i, '\0');
@@ -135,7 +135,7 @@ void
 CPageTextLine::
 dumpLine(CFile &file)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   for (uint i = 0; i < numCells; ++i) {
     char c = getChar(i);
@@ -151,7 +151,7 @@ void
 CPageTextLine::
 fill(char c)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   for (uint i = 0; i < numCells; ++i)
     clearCell(i, c);
@@ -161,7 +161,7 @@ void
 CPageTextLine::
 shiftLeft(uint col)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   uint col1 = col;
   uint col2 = col;
@@ -191,7 +191,7 @@ void
 CPageTextLine::
 shiftRight(uint col)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   uint col1 = col;
   uint col2 = col;
@@ -274,7 +274,7 @@ void
 CPageTextLine::
 makeColValid(uint col)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   while (col >= numCells) {
     cells_.push_back(new CTextCell(this));
@@ -289,7 +289,7 @@ replaceCell(CTextCell *oldCell, CTextCell *newCell)
 {
   assert(oldCell != newCell);
 
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   for (uint i = 0; i < numCells; ++i) {
     if (cells_[i] != oldCell)
@@ -335,7 +335,7 @@ bool
 CPageTextLine::
 getWordBounds(int col, uint &col1, uint &col2)
 {
-  uint numCells = cells_.size();
+  uint numCells = uint(cells_.size());
 
   if (col < 0 || col >= int(numCells)) return false;
 

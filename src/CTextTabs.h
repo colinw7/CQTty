@@ -33,14 +33,14 @@ class CTextTabs {
   bool nextPos(int pos, int *pos1) {
     // move to next tab pos greater than supplied pos
     for (const auto &tab : tabs_) {
-      if (tab > pos) {
-        *pos1 = tab;
+      if (int(tab) > pos) {
+        *pos1 = int(tab);
         return true;
       }
     }
 
     // fail if at right edge
-    if (pos >= (int) length_ - 1)
+    if (pos >= int(length_ - 1))
       return false;
 
     // move to next default tab stop (every 8 characters)
@@ -48,8 +48,8 @@ class CTextTabs {
 
     *pos1 = pos + d;
 
-    if (*pos1 >= (int) length_)
-      *pos1 = length_ - 1;
+    if (*pos1 >= int(length_))
+      *pos1 = int(length_ - 1);
 
     return true;
   }
@@ -61,8 +61,8 @@ class CTextTabs {
     TabList::const_reverse_iterator p1, p2;
 
     for (p1 = tabs_.rbegin(), p2 = tabs_.rend(); p1 != p2; ++p1) {
-      if (*p1 < pos) {
-        *pos1 = *p1;
+      if (int(*p1) < pos) {
+        *pos1 = int(*p1);
         return true;
       }
     }
@@ -88,7 +88,7 @@ class CTextTabs {
   //---
 
  private:
-  typedef std::set<int> TabList;
+  typedef std::set<uint> TabList;
 
   TabList tabs_;
   uint    length_ { 80 };
