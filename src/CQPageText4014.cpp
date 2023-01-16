@@ -1,6 +1,8 @@
 #include <CQPageText4014.h>
 #include <CPageTextEscapeNotifier.h>
 #include <CQUtil.h>
+#include <CQUtilRGBA.h>
+#include <CQUtilEvent.h>
 #include <CVFont.h>
 
 #include <QPainter>

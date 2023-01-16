@@ -6,6 +6,7 @@
 #include <CQColorChooser.h>
 #include <CQIntegerEdit.h>
 #include <CQUtil.h>
+#include <CQUtilRGBA.h>
 
 #include <QTabWidget>
 #include <QVBoxLayout>

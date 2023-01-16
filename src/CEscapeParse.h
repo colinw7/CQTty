@@ -186,7 +186,7 @@ struct CEscapeDataC : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -199,7 +199,7 @@ struct CEscapeDataBool : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -212,7 +212,7 @@ struct CEscapeDataStr : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -232,7 +232,7 @@ struct CEscapeDataGS : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -246,7 +246,7 @@ struct CEscapeDataDECDHL : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -260,7 +260,7 @@ struct CEscapeDataDCS : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -274,7 +274,7 @@ struct CEscapeDataNums : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -297,7 +297,7 @@ struct CEscapeDataOSC : public CEscapeData {
    CEscapeData(CEscapeType::OSC) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -338,7 +338,7 @@ struct CEscapeDataTek4014 : public CEscapeData {
    CEscapeData(CEscapeType::TEK4014) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -353,7 +353,7 @@ struct CEscapeDataFileImage : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -366,7 +366,7 @@ struct CEscapeDataImage : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -380,7 +380,7 @@ struct CEscapeDataPixel : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -395,7 +395,7 @@ struct CEscapeDataLine : public CEscapeData {
    CEscapeData(type1) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -410,7 +410,7 @@ struct CEscapeDataLink : public CEscapeData {
    CEscapeData(CEscapeType::LINK) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -425,7 +425,7 @@ struct CEscapeDataCmd : public CEscapeData {
    CEscapeData(CEscapeType::COMMAND) {
   }
 
-  void print(std::ostream &os) const;
+  void print(std::ostream &os) const override;
 };
 
 //---
@@ -534,13 +534,13 @@ class CEscapeParse : public CEscapeParseIFace {
   bool updateStyleFromSGR(const CEscapeDataSGR *sgr, CCellStyle &style);
 
   // virtual interface
-  virtual void handleChar   (char c) = 0;
-  virtual void handleGraphic(char c) = 0;
-  virtual void handleEscape (const CEscapeData *esc) = 0;
+  void handleChar   (char c) override = 0;
+  void handleGraphic(char c) override = 0;
+  void handleEscape (const CEscapeData *esc) override = 0;
 
-  virtual void log(const std::string &str) const = 0;
+  void log(const std::string &str) const override = 0;
 
-  virtual void logError(const std::string &str) const = 0;
+  void logError(const std::string &str) const override = 0;
 
  private:
   // private data

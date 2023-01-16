@@ -13,6 +13,9 @@
 #include <CUtf8.h>
 
 #include <CQUtil.h>
+#include <CQUtilRGBA.h>
+#include <CQUtilGeom.h>
+#include <CQUtilEvent.h>
 #include <CQFontUtil.h>
 #include <CQImageUtil.h>
 #include <CQWidgetUtil.h>

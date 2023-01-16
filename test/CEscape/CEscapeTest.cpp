@@ -165,13 +165,13 @@ main(int argc, char **argv)
       std::vector<std::string> args;
 
       if      (CEscape::decodeWindowOp(res, op, arg1, arg2)) {
-        std::cout << (int) op << ":" << arg1 << ":" << arg2 << std::endl;
+        std::cout << int(op) << ":" << arg1 << ":" << arg2 << std::endl;
       }
       else if (test.parseEscape(res, args)) {
         std::cout << CStrUtil::toString(args, ";") << std::endl;
       }
       else {
-        uint len = res.size();
+        uint len = uint(res.size());
 
         for (uint i = 0; i < len; ++i) {
           char c = res[i];
@@ -314,14 +314,14 @@ bool
 CEscapeTest::
 parseEscape(const std::string &str, std::vector<std::string> &args)
 {
-  int len = str.size();
+  auto len = str.size();
 
   if (len < 3) return false;
 
   if (str[0] != '' || str[1] != '[' || ! isalpha(str[len - 1]))
     return false;
 
-  int i = 2;
+  uint i = 2;
 
   while (i < len && ! isalpha(str[i])) {
     std::string arg;

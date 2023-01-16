@@ -9,15 +9,15 @@ class CQTtyPageTextWidget : public CQPageTextWidget {
    CQPageTextWidget(nullptr), tty_(qtty) {
   }
 
-  void showFileBrowser() {
+  void showFileBrowser() override {
     tty_->showFileBrowser();
   }
 
-  void showImage() {
+  void showImage() override {
     tty_->showImage();
   }
 
-  CTty *getTty() const { return tty_->getTty(); }
+  CTty *getTty() const override { return tty_->getTty(); }
 
  private:
   CQTty *tty_ { nullptr };
