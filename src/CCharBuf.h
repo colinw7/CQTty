@@ -13,7 +13,7 @@ class CCharBuf {
 
  public:
   CCharBuf() :
-   chars_(0), chars_len_(0), chars_max_(0) {
+   chars_(nullptr), chars_len_(0), chars_max_(0) {
     grow(32);
 
     chars_[chars_len_] = '\0';
@@ -74,7 +74,7 @@ class CCharBuf {
 
     char *chars = new char [chars_max + 1];
 
-    if (chars_ != 0) {
+    if (chars_) {
       memcpy(chars, chars_, (chars_max_ + 1)*sizeof(char));
 
       delete [] chars_;

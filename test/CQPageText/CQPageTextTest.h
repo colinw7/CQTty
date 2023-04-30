@@ -14,9 +14,9 @@ class CQPageTextTest : public QWidget {
 
   CQPageTextWidget *getPageText() const { return area_; }
 
-  void resizeEvent(QResizeEvent *);
+  void resizeEvent(QResizeEvent *) override;
 
-  QSize sizeHint() const;
+  QSize sizeHint() const override;
 
  private slots:
   void fitAreaSlot();

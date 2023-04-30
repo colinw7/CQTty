@@ -47,7 +47,7 @@ class CTextStyleCell : public CTextCell {
    CTextCell(line, type) {
   }
 
-  const CCellStyle &getStyle() const { return style_; }
+  const CCellStyle &getStyle() const override { return style_; }
   void setStyle(const CCellStyle &style);
 
   void resetStyle();
