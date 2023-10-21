@@ -4,6 +4,9 @@
 #  . make empty build directory
 #  . cp build.sh to empty build directory
 #  . Run ./build.sh
+#
+# Extra (system) dependencies
+#  jpeg, png, tre, curses
 
 set cdir = `pwd`
 
