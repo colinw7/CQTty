@@ -1967,7 +1967,7 @@ isVT52AlphaEscape(const char *str, uint *pos)
     case 'A': {
       setInEscape(false);
 
-      CUU_escape_.num = 0;
+      CUU_escape_.num = nullptr;
       CUU_escape_.nn  = 0;
 
       handleEscape(&CUU_escape_);
@@ -1978,7 +1978,7 @@ isVT52AlphaEscape(const char *str, uint *pos)
     case 'B': {
       setInEscape(false);
 
-      CUD_escape_.num = 0;
+      CUD_escape_.num = nullptr;
       CUD_escape_.nn  = 0;
 
       handleEscape(&CUD_escape_);
@@ -1989,7 +1989,7 @@ isVT52AlphaEscape(const char *str, uint *pos)
     case 'C': {
       setInEscape(false);
 
-      CUF_escape_.num = 0;
+      CUF_escape_.num = nullptr;
       CUF_escape_.nn  = 0;
 
       handleEscape(&CUF_escape_);
@@ -2000,7 +2000,7 @@ isVT52AlphaEscape(const char *str, uint *pos)
     case 'D': {
       setInEscape(false);
 
-      CUB_escape_.num = 0;
+      CUB_escape_.num = nullptr;
       CUB_escape_.nn  = 0;
 
       handleEscape(&CUB_escape_);

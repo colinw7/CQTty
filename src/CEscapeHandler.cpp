@@ -3,6 +3,7 @@
 #include <CEscape.h>
 #include <CCellStyle.h>
 #include <CWindow.h>
+#include <CStrUtil.h>
 #include <CRGBName.h>
 #include <CUtf8.h>
 #include <limits>
